@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>PastorAbayomi Bible Stories — Bible Heroes Adventure | David & Goliath</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Loading Screen -->
+  <div id="loading-screen">
+    <div class="loader-content">
+      <h1>PastorAbayomi Bible Stories</h1>
+      <h2>Bible Heroes Adventure</h2>
+      <div class="spinner"></div>
+      <p id="loading-text">Loading Level 1: David & Goliath...</p>
+    </div>
+  </div>
+
+  <!-- Main Menu -->
+  <div id="main-menu" class="screen hidden">
+    <div class="menu-container">
+      <div class="logo-area">
+        <h1 class="brand">PastorAbayomi Bible Stories</h1>
+        <h2 class="title">Bible Heroes Adventure</h2>
+        <p class="subtitle">Level 1 — David & Goliath</p>
+      </div>
+      <div class="menu-buttons">
+        <button id="btn-play" class="menu-btn primary">PLAY</button>
+        <button id="btn-map" class="menu-btn">ADVENTURE MAP</button>
+        <button id="btn-howto" class="menu-btn">HOW TO PLAY</button>
+        <button id="btn-achievements" class="menu-btn">ACHIEVEMENTS</button>
+        <button id="btn-settings" class="menu-btn">SETTINGS</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Intro Cinematic -->
+  <div id="intro-screen" class="screen hidden">
+    <div class="intro-content">
+      <h1 class="intro-title">DAVID & GOLIATH</h1>
+      <p class="intro-text" id="intro-narration">David was a young shepherd who trusted God. While others were afraid of Goliath, David believed that God would help him.</p>
+      <p class="intro-mission">MISSION: Prepare for the battlefield.</p>
+      <button id="btn-skip-intro" class="menu-btn">SKIP INTRO</button>
+    </div>
+  </div>
+
+  <!-- Game Canvas Container -->
+  <div id="game-container" class="hidden">
+    <canvas id="game-canvas"></canvas>
+
+    <!-- HUD -->
+    <div id="hud">
+      <div id="hud-left">
+        <div class="hud-name">DAVID</div>
+        <div class="hud-stat">
+          <span class="icon">❤️</span>
+          <span class="label">LIFE</span>
+          <div class="bar-bg"><div id="life-bar" class="bar life"></div></div>
+          <span id="life-text">100 / 100</span>
+        </div>
+        <div class="hud-stat">
+          <span class="icon">🛡️</span>
+          <span class="label">ARMOR</span>
+          <div class="bar-bg"><div id="armor-bar" class="bar armor"></div></div>
+          <span id="armor-text">50 / 50</span>
+        </div>
+        <div class="hud-stat">
+          <span class="icon">⚡</span>
+          <span class="label">FAITH</span>
+          <div class="bar-bg"><div id="faith-bar" class="bar faith"></div></div>
+          <span id="faith-text">100 / 100</span>
+        </div>
+      </div>
+      <div id="hud-right">
+        <div class="score-box">⭐ <span id="score-text">0</span></div>
+      </div>
+      <div id="hud-mission">
+        <div class="mission-label">CURRENT MISSION</div>
+        <div id="mission-text">Explore the Israelite camp</div>
+      </div>
+      <div id="hud-message" class="hidden"></div>
+      <div id="boss-hud" class="hidden">
+        <div class="boss-name">GOLIATH</div>
+        <div class="bar-bg boss"><div id="boss-bar" class="bar boss"></div></div>
+        <div id="boss-text">1000 / 1000</div>
+      </div>
+    </div>
+
+    <!-- Mobile Controls -->
+    <div id="mobile-controls" class="hidden">
+      <div id="joystick-zone">
+        <div id="joystick-base">
+          <div id="joystick-stick"></div>
+        </div>
+      </div>
+      <div id="action-buttons">
+        <button id="btn-jump" class="action-btn">JUMP</button>
+        <button id="btn-attack" class="action-btn attack">ATTACK</button>
+        <button id="btn-special" class="action-btn special">FAITH</button>
+        <button id="btn-interact" class="action-btn">E</button>
+      </div>
+    </div>
+
+    <!-- Pause Menu -->
+    <div id="pause-menu" class="screen hidden">
+      <div class="menu-container small">
+        <h2>PAUSED</h2>
+        <button id="btn-resume" class="menu-btn primary">RESUME</button>
+        <button id="btn-restart" class="menu-btn">RESTART LEVEL</button>
+        <button id="btn-settings-pause" class="menu-btn">SETTINGS</button>
+        <button id="btn-quit" class="menu-btn">QUIT TO MENU</button>
+      </div>
+    </div>
+
+    <!-- Victory Screen -->
+    <div id="victory-screen" class="screen hidden">
+      <div class="victory-content">
+        <h1>GOLIATH DEFEATED!</h1>
+        <h2>DAVID'S FAITH HAS WON!</h2>
+        <p class="reward">⭐ +500 SCORE</p>
+        <p class="badge">🏅 DAVID THE BRAVE</p>
+        <h3>LEVEL 1 COMPLETE!</h3>
+        <div class="stars" id="victory-stars">⭐⭐⭐</div>
+        <p>SCORE: <span id="victory-score">0</span></p>
+        <p>ITEMS FOUND: <span id="victory-items">0</span></p>
+        <p class="unlock">UNLOCKED: LEVEL 2 — THE WALLS OF JERICHO</p>
+        <button id="btn-continue" class="menu-btn primary">CONTINUE</button>
+      </div>
+    </div>
+
+    <!-- How to Play -->
+    <div id="howto-screen" class="screen hidden">
+      <div class="menu-container">
+        <h2>HOW TO PLAY</h2>
+        <div class="howto-grid">
+          <div><strong>Desktop</strong><br>WASD Move · SHIFT Run · SPACE Jump<br>Mouse look · LMB Attack · Q Faith · E Interact · ESC Pause</div>
+          <div><strong>Mobile</strong><br>Left joystick to move<br>Large buttons: Jump, Attack, Faith, Interact</div>
+        </div>
+        <p>Collect 5 Smooth Stones and the Sling. Defeat Shadow Guardians. Reach the battlefield and defeat Goliath with faith!</p>
+        <button id="btn-howto-back" class="menu-btn">BACK</button>
+      </div>
+    </div>
+
+    <!-- Settings -->
+    <div id="settings-screen" class="screen hidden">
+      <div class="menu-container small">
+        <h2>SETTINGS</h2>
+        <label class="setting-row"><span>Sound</span><input type="checkbox" id="set-sound" checked></label>
+        <label class="setting-row"><span>Music</span><input type="checkbox" id="set-music" checked></label>
+        <label class="setting-row"><span>Graphics</span>
+          <select id="set-graphics">
+            <option value="low">LOW</option>
+            <option value="medium" selected>MEDIUM</option>
+            <option value="high">HIGH</option>
+          </select>
+        </label>
+        <label class="setting-row"><span>Mobile Sensitivity</span>
+          <input type="range" id="set-sensitivity" min="0.5" max="2" step="0.1" value="1">
+        </label>
+        <button id="btn-settings-back" class="menu-btn">BACK</button>
+      </div>
+    </div>
+
+    <!-- Adventure Map -->
+    <div id="map-screen" class="screen hidden">
+      <div class="menu-container">
+        <h2>ADVENTURE MAP</h2>
+        <div class="level-list" id="level-list"></div>
+        <button id="btn-map-back" class="menu-btn">BACK</button>
+      </div>
+    </div>
+
+    <!-- Achievements -->
+    <div id="achievements-screen" class="screen hidden">
+      <div class="menu-container">
+        <h2>ACHIEVEMENTS</h2>
+        <ul id="achievements-list">
+          <li>🏅 David the Brave — Defeat Goliath</li>
+          <li>⭐ Stone Collector — Find all 5 smooth stones</li>
+          <li>🛡️ Protector — Max armor during level</li>
+          <li>⚡ Faithful — Use Faith Shield 5 times</li>
+        </ul>
+        <button id="btn-ach-back" class="menu-btn">BACK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Three.js CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="src/save.js"></script>
+  <script src="src/ui.js"></script>
+  <script src="src/player.js"></script>
+  <script src="src/enemies.js"></script>
+  <script src="src/world.js"></script>
+  <script src="src/combat.js"></script>
+  <script src="src/levels.js"></script>
+  <script src="src/game.js"></script>
+</body>
+</html>
