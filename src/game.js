@@ -31,6 +31,10 @@ const Game = {
       this.state = 'menu';
       this.populateMap();
       if (window.UI) UI.setWorldDisplay(SaveSystem.getContinueLevel());
+      try {
+        const params = new URLSearchParams(window.location.search || '');
+        if (params.get('play') === '1') this.startLevel(SaveSystem.getContinueLevel() || 1);
+      } catch (e) {}
     }, 1200);
   },
 
@@ -190,12 +194,7 @@ const Game = {
     }
     this.currentWorld = n;
     if (window.UI) UI.setWorldDisplay(n);
-    this.state = 'intro';
-    UI.showWorldIntro(n);
-    const expected = n;
-    setTimeout(() => {
-      if (this.state === 'intro' && this.currentWorld === expected) this.startLevel(expected);
-    }, 4000);
+    this.startLevel(n);
   },
 
   startLevel(id) {
@@ -288,27 +287,44 @@ const Game = {
 
     if (!this.renderer) {
       this.renderer = new THREE.WebGLRenderer({
-        canvas,
-        antialias: true,
+        canvas: canvas,
+        antialias: false,
         alpha: false,
-        powerPreference: 'high-performance'
+        failIfMajorPerformanceCaveat: false
       });
-      this.renderer.shadowMap.enabled = true;
-      this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      this.renderer.shadowMap.enabled = false;
     }
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
-    this.renderer.setSize(w, h, true);
-    this.renderer.setClearColor(0x87b8e0, 1);
-    if (this.renderer.domElement) {
-      this.renderer.domElement.style.display = 'block';
-      this.renderer.domElement.style.width = '100%';
-      this.renderer.domElement.style.height = '100%';
-    }
-    this.applyGraphics();
+    this.renderer.setPixelRatio(1);
+    this.renderer.setSize(w, h, false);
+    this.renderer.setClearColor(0x7ec8e8, 1);
+    this.renderer.autoClear = true;
+    canvas.style.display = 'block';
+    canvas.style.position = 'absolute';
+    canvas.style.left = '0';
+    canvas.style.top = '0';
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
+    canvas.style.zIndex = '2';
+    canvas.style.background = '#7ec8e8';
 
     this.world = new World(this.scene, this.currentWorld || 1);
     const theme = window.getWorldTheme ? window.getWorldTheme(this.currentWorld || 1) : {};
-    if (theme.sky != null) this.renderer.setClearColor(theme.sky, 1);
+    const skyCol = (theme.sky != null) ? theme.sky : 0x7ec8e8;
+    this.scene.background = new THREE.Color(skyCol);
+    this.renderer.setClearColor(skyCol, 1);
+    // Unlit sky shell + ground so the view cannot render as a black void
+    const skyShell = new THREE.Mesh(
+      new THREE.SphereGeometry(80, 16, 12),
+      new THREE.MeshBasicMaterial({ color: skyCol, side: THREE.BackSide })
+    );
+    this.scene.add(skyShell);
+    const visGround = new THREE.Mesh(
+      new THREE.PlaneGeometry(120, 160),
+      new THREE.MeshBasicMaterial({ color: theme.ground || 0x4c8a46 })
+    );
+    visGround.rotation.x = -Math.PI / 2;
+    visGround.position.y = 0.02;
+    this.scene.add(visGround);
     this.player = new Player(this.scene, this.camera);
     this.player.updateCamera(true);
     this.player.enableSling();
@@ -339,6 +355,18 @@ const Game = {
       this._resizeBound = true;
       window.addEventListener('resize', () => this.onResize());
     }
+
+    const box = document.getElementById('game-container');
+    if (box) {
+      box.classList.remove('hidden');
+      box.style.display = 'block';
+      box.style.visibility = 'visible';
+      box.style.opacity = '1';
+      box.style.zIndex = '5';
+    }
+    this.onResize();
+    this.player.updateCamera(true);
+    this.renderer.render(this.scene, this.camera);
   },
 
   onResize() {
@@ -371,8 +399,12 @@ const Game = {
       }
     }
 
-    this.player.update(dt, this.world.bounds);
-    this.world.update(dt);
+    try {
+      this.player.update(dt, this.world.bounds);
+      this.world.update(dt);
+    } catch (err) {
+      console.error('update error', err);
+    }
 
     const playerPos = this.player.getPosition();
 
@@ -758,5 +790,14 @@ window.addEventListener('keydown', (e) => {
 
 // Boot
 window.addEventListener('DOMContentLoaded', () => {
-  Game.init();
+  try {
+    Game.init();
+  } catch (err) {
+    console.error('Game.init failed', err);
+    const el = document.getElementById('boot-error');
+    if (el) {
+      el.textContent = 'Game failed to start: ' + (err && err.message ? err.message : err);
+      el.classList.remove('hidden');
+    }
+  }
 });

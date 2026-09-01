@@ -794,3 +794,23 @@ kbd {
   .bible-panel-inner { padding: 1.1rem; }
   .bible-panel-inner h2 { font-size: 1.35rem; }
 }
+
+
+#boot-error {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 400;
+  background: #8b1e1e;
+  color: #fff;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-weight: 700;
+}
+
+#game-container:not(.hidden) {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}

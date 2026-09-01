@@ -56,9 +56,11 @@
     </div>
   </div>
 
+  <div id="boot-error" class="hidden"></div>
+
   <!-- Game Canvas Container -->
   <div id="game-container" class="hidden">
-    <canvas id="game-canvas"></canvas>
+    <canvas id="game-canvas" width="1280" height="720"></canvas>
 
     <!-- HUD -->
     <div id="hud">
@@ -296,7 +298,6 @@
 
   <!-- Three.js CDN -->
   <script src="src/three.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="src/save.js"></script>
   <script src="src/audio.js"></script>
   <script src="src/ui.js"></script>
