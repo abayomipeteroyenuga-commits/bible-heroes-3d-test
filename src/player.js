@@ -557,6 +557,18 @@ class Player {
         return;
       }
 
+      // K / N / G = same attack only if a living enemy is in range
+      const isEnemyAttackKey =
+        code === 'KeyK' || code === 'KeyN' || code === 'KeyG' ||
+        key === 'k' || key === 'n' || key === 'g';
+      if (isEnemyAttackKey) {
+        e.preventDefault();
+        if (this.hasEnemyInAttackRange()) {
+          this.tryAttack();
+        }
+        return;
+      }
+
       if (code === 'KeyQ' || key === 'q') {
         e.preventDefault();
         this.tryFaithShield();
@@ -686,6 +698,23 @@ class Player {
       this.state = 'JUMP';
       this.anim.walkCycle = 0;
     }
+  }
+
+  // Same range as Game.spawnProjectile auto-aim (nearest living enemy / Goliath)
+  hasEnemyInAttackRange(range = 25) {
+    if (!window.Game) return false;
+    const origin = this.getPosition();
+    if (window.Game.enemies) {
+      for (let i = 0; i < window.Game.enemies.length; i++) {
+        const e = window.Game.enemies[i];
+        if (!e || !e.alive || !e.group) continue;
+        if (origin.distanceTo(e.group.position) < range) return true;
+      }
+    }
+    if (window.Game.goliath && window.Game.goliath.alive && window.Game.goliath.group) {
+      if (origin.distanceTo(window.Game.goliath.group.position) < range) return true;
+    }
+    return false;
   }
 
   tryAttack() {
