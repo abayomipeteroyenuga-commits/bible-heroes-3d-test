@@ -141,6 +141,8 @@ const Game = {
       const muteBtn = document.getElementById('btn-mute');
       if (muteBtn) muteBtn.textContent = sound ? '🔊' : '🔇';
     }
+    this.applyGraphics();
+    if (this.player) this.player.lookSensitivity = el('set-sensitivity') ? parseFloat(el('set-sensitivity').value) : 1;
   },
 
   populateMap() {
@@ -148,8 +150,10 @@ const Game = {
     UI.populateMap(data.unlockedLevels, data.stars, (levelId) => {
       if (levelId === 1) {
         this.startIntro();
+      } else if (data.unlockedLevels.indexOf(levelId) !== -1) {
+        UI.showMessage('Level ' + levelId + ' is unlocked. Full world coming in a future update.', 2800);
       } else {
-        UI.showMessage('Coming soon! Complete earlier levels.', 2500);
+        UI.showMessage('This level is locked. Complete earlier adventures first.', 2500);
       }
     });
   },
@@ -164,6 +168,7 @@ const Game = {
   },
 
   startLevel() {
+    this.teardownLevel();
     this.state = 'playing';
     UI.showGame();
     this.initThree();
@@ -178,25 +183,53 @@ const Game = {
       AudioSystem.exploreMusic();
     }
     this.clock = new THREE.Clock();
-    this.loop();
+    if (!this._loopRunning) this.loop();
+  },
+
+  teardownLevel() {
+    cancelAnimationFrame(this.animFrame);
+    this._loopRunning = false;
+    if (this.player && typeof this.player.destroy === 'function') {
+      this.player.destroy();
+    }
+    this.player = null;
+    this.enemies = [];
+    this.goliath = null;
+    this.combat = null;
+    if (this.scene) {
+      while (this.scene.children.length) this.scene.remove(this.scene.children[0]);
+    }
+  },
+
+  applyGraphics() {
+    if (!this.renderer) return;
+    const data = SaveSystem.load();
+    const g = (data.settings && data.settings.graphics) || 'medium';
+    const cap = g === 'low' ? 1 : g === 'high' ? 2 : 1.5;
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, cap));
+    this.renderer.shadowMap.enabled = g !== 'low';
   },
 
   initThree() {
-    const container = document.getElementById('game-container');
     const canvas = document.getElementById('game-canvas');
 
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 200);
     this.camera.position.set(0, 5, 15);
 
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    if (!this.renderer) {
+      this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+      this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    }
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.applyGraphics();
 
     this.world = new World(this.scene);
     this.player = new Player(this.scene, this.camera);
+    const data = SaveSystem.load();
+    if (this.player && data.settings && data.settings.sensitivity) {
+      this.player.lookSensitivity = data.settings.sensitivity;
+    }
     this.combat = new CombatSystem(this.scene);
 
     // Enemies
@@ -214,7 +247,10 @@ const Game = {
 
     this.goliath = null;
 
-    window.addEventListener('resize', () => this.onResize());
+    if (!this._resizeBound) {
+      this._resizeBound = true;
+      window.addEventListener('resize', () => this.onResize());
+    }
   },
 
   onResize() {
@@ -225,7 +261,11 @@ const Game = {
   },
 
   loop() {
-    if (this.state !== 'playing' && this.state !== 'paused') return;
+    if (this.state !== 'playing' && this.state !== 'paused') {
+      this._loopRunning = false;
+      return;
+    }
+    this._loopRunning = true;
     this.animFrame = requestAnimationFrame(() => this.loop());
     if (this.state === 'paused') return;
 
@@ -456,28 +496,18 @@ const Game = {
   resume() {
     this.state = 'playing';
     UI.showGame();
-    this.clock.getDelta(); // reset delta
-    this.loop();
+    if (this.clock) this.clock.getDelta(); // reset delta
+    if (!this._loopRunning) this.loop();
   },
 
   restartLevel() {
-    cancelAnimationFrame(this.animFrame);
-    // Clean scene
-    while (this.scene && this.scene.children.length) {
-      this.scene.remove(this.scene.children[0]);
-    }
-    this.enemies = [];
-    this.goliath = null;
     this.startLevel();
   },
 
   quitToMenu() {
-    cancelAnimationFrame(this.animFrame);
     this.state = 'menu';
     if (window.AudioSystem) AudioSystem.stopMusic();
-    if (this.scene) {
-      while (this.scene.children.length) this.scene.remove(this.scene.children[0]);
-    }
+    this.teardownLevel();
     UI.show('mainMenu');
     this.populateMap();
   }

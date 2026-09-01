@@ -35,6 +35,7 @@ class Player {
     this.cameraAngle = 0;
     this.cameraPitch = 0.35;
     this.cameraDistance = 7;
+    this.lookSensitivity = 1;
     this.joystick = { active: false, x: 0, y: 0 };
     this.isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth < 800;
     this.checkpoint = new THREE.Vector3(0, 1, 8);
@@ -591,36 +592,42 @@ class Player {
       if (e.code) this.keys[e.code] = false;
     };
 
-    // Capture on window so F works with pointer-lock / no canvas focus.
-    // Single target avoids double-firing the same key event.
+    this._onMouseMove = (e) => {
+      if (!this.isMobile && this.mouse.locked) {
+        const s = this.lookSensitivity || 1;
+        this.cameraAngle -= e.movementX * 0.003 * s;
+        this.cameraPitch = Math.max(0.1, Math.min(1.2, this.cameraPitch + e.movementY * 0.002 * s));
+      }
+    };
+
+    this._onMouseDown = (e) => {
+      if (e.button !== 0) return;
+      if (!window.Game || window.Game.state !== 'playing') return;
+      const t = e.target;
+      if (t && t.closest && t.closest('button, a, input, select, label, .screen, .menu-btn, .mute-btn, .action-btn')) {
+        return;
+      }
+      this.tryAttack();
+    };
+
+    this._onCanvasClick = () => {
+      const canvas = document.getElementById('game-canvas');
+      if (!this.isMobile && canvas && window.Game && window.Game.state === 'playing') {
+        canvas.requestPointerLock && canvas.requestPointerLock();
+      }
+    };
+
+    this._onPointerLock = () => {
+      this.mouse.locked = document.pointerLockElement === document.getElementById('game-canvas');
+    };
+
     window.addEventListener('keydown', this._onKeyDown, true);
     window.addEventListener('keyup', this._onKeyUp, true);
-
-    document.addEventListener('mousemove', e => {
-      if (!this.isMobile && this.mouse.locked) {
-        this.cameraAngle -= e.movementX * 0.003;
-        this.cameraPitch = Math.max(0.1, Math.min(1.2, this.cameraPitch + e.movementY * 0.002));
-      }
-    });
-
-    // Left click still uses the same tryAttack (unchanged)
-    document.addEventListener('mousedown', e => {
-      if (e.button === 0 && window.Game && window.Game.state === 'playing') {
-        this.tryAttack();
-      }
-    });
-
+    document.addEventListener('mousemove', this._onMouseMove);
+    document.addEventListener('mousedown', this._onMouseDown);
     const canvas = document.getElementById('game-canvas');
-    if (canvas) {
-      canvas.addEventListener('click', () => {
-        if (!this.isMobile && window.Game && window.Game.state === 'playing') {
-          canvas.requestPointerLock && canvas.requestPointerLock();
-        }
-      });
-    }
-    document.addEventListener('pointerlockchange', () => {
-      this.mouse.locked = document.pointerLockElement === document.getElementById('game-canvas');
-    });
+    if (canvas) canvas.addEventListener('click', this._onCanvasClick);
+    document.addEventListener('pointerlockchange', this._onPointerLock);
 
     this.setupJoystick();
     this.setupMobileButtons();
@@ -630,50 +637,54 @@ class Player {
     const base = document.getElementById('joystick-base');
     const stick = document.getElementById('joystick-stick');
     if (!base) return;
+    this._joyBase = base;
+    this._joyStick = stick;
 
     const maxDist = 40;
-    let startX, startY;
+    this._joyStartX = 0;
+    this._joyStartY = 0;
 
-    const onStart = (e) => {
+    this._onJoyStart = (e) => {
       e.preventDefault();
       this.joystick.active = true;
       const rect = base.getBoundingClientRect();
-      startX = rect.left + rect.width / 2;
-      startY = rect.top + rect.height / 2;
+      this._joyStartX = rect.left + rect.width / 2;
+      this._joyStartY = rect.top + rect.height / 2;
     };
 
-    const onMove = (e) => {
+    this._onJoyMove = (e) => {
       if (!this.joystick.active) return;
       e.preventDefault();
       const t = e.touches ? e.touches[0] : e;
-      let dx = t.clientX - startX;
-      let dy = t.clientY - startY;
+      let dx = t.clientX - this._joyStartX;
+      let dy = t.clientY - this._joyStartY;
       const dist = Math.sqrt(dx * dx + dy * dy);
       if (dist > maxDist) {
         dx = (dx / dist) * maxDist;
         dy = (dy / dist) * maxDist;
       }
-      stick.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+      if (stick) stick.style.transform = 'translate(calc(-50% + ' + dx + 'px), calc(-50% + ' + dy + 'px))';
       this.joystick.x = dx / maxDist;
       this.joystick.y = dy / maxDist;
     };
 
-    const onEnd = () => {
+    this._onJoyEnd = () => {
       this.joystick.active = false;
       this.joystick.x = 0;
       this.joystick.y = 0;
-      stick.style.transform = 'translate(-50%, -50%)';
+      if (stick) stick.style.transform = 'translate(-50%, -50%)';
     };
 
-    base.addEventListener('touchstart', onStart, { passive: false });
-    base.addEventListener('touchmove', onMove, { passive: false });
-    base.addEventListener('touchend', onEnd);
-    base.addEventListener('mousedown', onStart);
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onEnd);
+    base.addEventListener('touchstart', this._onJoyStart, { passive: false });
+    base.addEventListener('touchmove', this._onJoyMove, { passive: false });
+    base.addEventListener('touchend', this._onJoyEnd);
+    base.addEventListener('mousedown', this._onJoyStart);
+    window.addEventListener('mousemove', this._onJoyMove);
+    window.addEventListener('mouseup', this._onJoyEnd);
   }
 
   setupMobileButtons() {
+    this._mobileHandlers = [];
     const map = {
       'btn-jump': () => this.tryJump(),
       'btn-attack': () => this.tryAttack(),
@@ -682,12 +693,44 @@ class Player {
     };
     Object.keys(map).forEach(id => {
       const btn = document.getElementById(id);
-      if (btn) {
-        const handler = (e) => { e.preventDefault(); map[id](); };
-        btn.addEventListener('touchstart', handler, { passive: false });
-        btn.addEventListener('mousedown', handler);
-      }
+      if (!btn) return;
+      const handler = (e) => { e.preventDefault(); map[id](); };
+      btn.addEventListener('touchstart', handler, { passive: false });
+      btn.addEventListener('mousedown', handler);
+      this._mobileHandlers.push({ btn, handler });
     });
+  }
+
+  destroy() {
+    window.removeEventListener('keydown', this._onKeyDown, true);
+    window.removeEventListener('keyup', this._onKeyUp, true);
+    document.removeEventListener('mousemove', this._onMouseMove);
+    document.removeEventListener('mousedown', this._onMouseDown);
+    document.removeEventListener('pointerlockchange', this._onPointerLock);
+    const canvas = document.getElementById('game-canvas');
+    if (canvas && this._onCanvasClick) canvas.removeEventListener('click', this._onCanvasClick);
+
+    if (this._joyBase) {
+      this._joyBase.removeEventListener('touchstart', this._onJoyStart);
+      this._joyBase.removeEventListener('touchmove', this._onJoyMove);
+      this._joyBase.removeEventListener('touchend', this._onJoyEnd);
+      this._joyBase.removeEventListener('mousedown', this._onJoyStart);
+    }
+    window.removeEventListener('mousemove', this._onJoyMove);
+    window.removeEventListener('mouseup', this._onJoyEnd);
+
+    if (this._mobileHandlers) {
+      this._mobileHandlers.forEach(h => {
+        h.btn.removeEventListener('touchstart', h.handler);
+        h.btn.removeEventListener('mousedown', h.handler);
+      });
+      this._mobileHandlers = [];
+    }
+
+    this.joystick.active = false;
+    this.joystick.x = 0;
+    this.joystick.y = 0;
+    this.keys = {};
   }
 
   tryJump() {
