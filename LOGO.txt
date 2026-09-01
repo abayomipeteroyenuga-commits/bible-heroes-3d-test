@@ -1,0 +1,7 @@
+Place the original Pastor Abayomi Bible Stories logo here as:
+
+  assets/ui/pastor-abayomi-bible-stories-logo.png
+
+Do not crop, recolor, or redesign it.
+The game screens load this relative path.
+If the PNG is missing, the existing assets/ui/logo.svg is used as a fallback only.
