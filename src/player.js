@@ -708,11 +708,12 @@ class Player {
       for (let i = 0; i < window.Game.enemies.length; i++) {
         const e = window.Game.enemies[i];
         if (!e || !e.alive || !e.group) continue;
-        if (origin.distanceTo(e.group.position) < range) return true;
+        if (origin.distanceTo(e.group.position) <= range) return true;
       }
     }
+    // Same auto-aim targets as Game.spawnProjectile (Goliath included)
     if (window.Game.goliath && window.Game.goliath.alive && window.Game.goliath.group) {
-      if (origin.distanceTo(window.Game.goliath.group.position) < range) return true;
+      if (origin.distanceTo(window.Game.goliath.group.position) <= range) return true;
     }
     return false;
   }
