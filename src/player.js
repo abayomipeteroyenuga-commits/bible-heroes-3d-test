@@ -555,23 +555,14 @@ class Player {
 
       if (!playing) return;
 
-      // F = Fire Sling (existing tryAttack — no duplicate system)
-      const isF = code === 'KeyF' || key === 'f';
-      if (isF) {
+      // F / G / T / K = Fire Sling (same tryAttack path)
+      const isSlingKey =
+        code === 'KeyF' || code === 'KeyG' || code === 'KeyT' || code === 'KeyK' ||
+        key === 'f' || key === 'g' || key === 't' || key === 'k';
+      if (isSlingKey) {
         e.preventDefault();
+        if (e.repeat) return;
         this.tryAttack();
-        return;
-      }
-
-      // K / N / G = same attack only if a living enemy is in range
-      const isEnemyAttackKey =
-        code === 'KeyK' || code === 'KeyN' || code === 'KeyG' ||
-        key === 'k' || key === 'n' || key === 'g';
-      if (isEnemyAttackKey) {
-        e.preventDefault();
-        if (this.hasEnemyInAttackRange()) {
-          this.tryAttack();
-        }
         return;
       }
 
