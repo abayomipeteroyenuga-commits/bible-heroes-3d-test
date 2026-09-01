@@ -30,6 +30,7 @@ const Game = {
       UI.show('mainMenu');
       this.state = 'menu';
       this.populateMap();
+      if (window.UI) UI.setWorldDisplay(SaveSystem.getContinueLevel());
     }, 1200);
   },
 
@@ -51,7 +52,9 @@ const Game = {
       UI.show('achievements');
     });
     click('btn-settings', () => { this.loadSettings(); UI.show('settings'); });
-    click('btn-skip-intro', () => this.startLevel(1));
+    click('btn-skip-intro', () => this.startLevel(this.currentWorld));
+    click('btn-bible', () => UI.showBibleMoment(this.currentWorld));
+    click('btn-bible-close', () => UI.hideBibleMoment());
     click('btn-resume', () => this.resume());
     click('btn-pause-howto', () => UI.show('howto'));
     click('btn-pause-restart', () => this.restartLevel());
@@ -117,10 +120,12 @@ const Game = {
     if (window.AudioSystem) {
       AudioSystem.setSoundEnabled(s.sound !== false);
       AudioSystem.setMusicEnabled(s.music !== false);
-      if (AudioSystem.musicGain) AudioSystem.musicVolume = s.musicVolume != null ? s.musicVolume : 0.35;
-      if (AudioSystem.masterGain) AudioSystem.volume = s.sfxVolume != null ? s.sfxVolume : 0.7;
+      AudioSystem.musicVolume = s.musicVolume != null ? s.musicVolume : 0.35;
+      AudioSystem.volume = s.sfxVolume != null ? s.sfxVolume : 0.7;
+      if (AudioSystem.musicGain) AudioSystem.musicGain.gain.value = AudioSystem.musicVolume;
+      if (AudioSystem.masterGain) AudioSystem.masterGain.gain.value = AudioSystem.volume;
       const muteBtn = document.getElementById('btn-mute');
-      if (muteBtn) muteBtn.textContent = (s.sound !== false) ? '🔊' : '🔇';
+      if (muteBtn) muteBtn.textContent = (s.sound !== false && s.music !== false) ? '🔊' : '🔇';
     }
   },
 
@@ -146,7 +151,7 @@ const Game = {
       if (AudioSystem.musicGain) AudioSystem.musicGain.gain.value = musicVolume;
       if (AudioSystem.masterGain) AudioSystem.masterGain.gain.value = sfxVolume;
       const muteBtn = document.getElementById('btn-mute');
-      if (muteBtn) muteBtn.textContent = sound ? '🔊' : '🔇';
+      if (muteBtn) muteBtn.textContent = (sound && music) ? '🔊' : '🔇';
     }
     this.applyGraphics();
     if (this.player) this.player.lookSensitivity = el('set-sensitivity') ? parseFloat(el('set-sensitivity').value) : 1;
@@ -154,6 +159,7 @@ const Game = {
 
   populateMap() {
     const data = SaveSystem.load();
+    if (window.UI) UI.setWorldDisplay(data.currentLevel || SaveSystem.getContinueLevel());
     UI.populateMap(data, (levelId) => {
       this.startWorld(levelId);
     });
@@ -183,18 +189,13 @@ const Game = {
       return;
     }
     this.currentWorld = n;
-    if (n === 1) {
-      this.state = 'intro';
-      const title = document.querySelector('#intro-screen .intro-title');
-      const lv = window.LEVELS && window.LEVELS[0];
-      if (title && lv) title.textContent = 'WORLD 1 — ' + lv.name.toUpperCase();
-      UI.show('intro');
-      setTimeout(() => {
-        if (this.state === 'intro') this.startLevel(1);
-      }, 4000);
-    } else {
-      this.startLevel(n);
-    }
+    if (window.UI) UI.setWorldDisplay(n);
+    this.state = 'intro';
+    UI.showWorldIntro(n);
+    const expected = n;
+    setTimeout(() => {
+      if (this.state === 'intro' && this.currentWorld === expected) this.startLevel(expected);
+    }, 4000);
   },
 
   startLevel(id) {
@@ -205,6 +206,7 @@ const Game = {
     this._victoryQueued = false;
     this._worldCompletionHandled = false;
     this._victoryScreenShown = false;
+    UI.hideBibleMoment();
     this.hiddenPathFound = false;
     this.mountainPassCrossed = false;
     this.rockyWildernessCrossed = false;
@@ -213,6 +215,7 @@ const Game = {
     this.fortressReached = false;
     this.goliathTerritoryEntered = false;
     UI.showGame();
+    if (window.UI) UI.setWorldDisplay(this.currentWorld);
     this.initThree();
     this.missions = new MissionSystem(this.currentWorld);
     UI.setMission(this.missions.getCurrent().text);
@@ -220,6 +223,9 @@ const Game = {
     this.enemiesDefeated = 0;
     this.goliathDefeated = false;
     this.itemsCollected = 0;
+    this.sheepChecked = 0; this.rockMarkers = 0; this.torchesLit = 0;
+    this.suppliesSecured = 0; this.bannersCaptured = 0; this.standardsSecured = 0;
+    this.footprintsInspected = 0; this.gateOpened = false; this.mountainSummitReached = false;
     if (window.AudioSystem) {
       AudioSystem.unlock();
       AudioSystem.exploreMusic();
@@ -230,6 +236,10 @@ const Game = {
 
   teardownLevel() {
     cancelAnimationFrame(this.animFrame);
+    if (this._finishTimer) {
+      clearTimeout(this._finishTimer);
+      this._finishTimer = null;
+    }
     this._loopRunning = false;
     if (this.player && typeof this.player.destroy === 'function') {
       this.player.destroy();
@@ -260,8 +270,11 @@ const Game = {
     this.camera.position.set(0, 5, 15);
 
     if (!this.renderer) {
-      this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+      this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
       this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      this.renderer.outputEncoding = THREE.sRGBEncoding;
+      this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      this.renderer.toneMappingExposure = 1.05;
     }
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.applyGraphics();
@@ -280,6 +293,9 @@ const Game = {
     const theme = window.getWorldTheme ? window.getWorldTheme(this.currentWorld || 1) : {};
     this._worldTheme = theme;
     this._waveIndex = 0;
+    this._spawningWave = false;
+    // A level with exactly one wave is complete once that wave is cleared;
+    // multi-wave levels remain incomplete until every wave has spawned and died.
     this.wavesComplete = !(theme.waves && theme.waves.length > 1);
     const spots = window.enemySpawnsFor ? window.enemySpawnsFor(this.currentWorld || 1) : [];
     const stats = { health: theme.enemyHp || 30, damage: theme.enemyDmg || 5, speed: theme.enemySpd || 3.2 };
@@ -331,21 +347,26 @@ const Game = {
 
     const playerPos = this.player.getPosition();
 
-    // Exploration check
-    if (!this.exploredCamp && playerPos.z < 5 && (Math.abs(playerPos.x) > 3 || playerPos.z < 2)) {
-      this.exploredCamp = true;
+    // Exploration check: leave the starting camp/area by a meaningful distance.
+    // This prevents the first mission from completing almost immediately.
+    if (!this.exploredCamp) {
+      const start = new THREE.Vector3(0, 0, 8);
+      if (playerPos.distanceTo(start) >= 6) this.exploredCamp = true;
     }
-    if (this.currentWorld === 3 && playerPos.x < -13 && playerPos.z < -18 && playerPos.z > -28) {
+
+    // Keep legacy flags for HUD/compatibility, but make them match the same
+    // visible landmarks used by MissionSystem.
+    if (this.currentWorld === 3 && playerPos.distanceTo(new THREE.Vector3(-15, 0, -22)) < 5) {
       this.hiddenPathFound = true;
     }
-    if (this.currentWorld === 5 && Math.abs(playerPos.x) < 4 && playerPos.z < -24 && playerPos.z > -36) {
+    if (this.currentWorld === 5 && playerPos.distanceTo(new THREE.Vector3(0, 0, -30)) < 4.5) {
       this.mountainPassCrossed = true;
     }
-    if (this.currentWorld === 2 && playerPos.z < -52) this.rockyWildernessCrossed = true;
-    if (this.currentWorld === 4 && playerPos.z < -58) this.caveEscaped = true;
-    if (this.currentWorld === 6 && Math.abs(playerPos.x) < 8 && playerPos.z < -20 && playerPos.z > -26) this.outpostBroken = true;
-    if (this.currentWorld === 7 && playerPos.z < -24 && Math.abs(playerPos.x) < 10) this.fortressReached = true;
-    if (this.currentWorld === 9 && playerPos.z < -50) this.goliathTerritoryEntered = true;
+    if (this.currentWorld === 2 && playerPos.distanceTo(new THREE.Vector3(0, 0, -56)) < 7) this.rockyWildernessCrossed = true;
+    if (this.currentWorld === 4 && playerPos.distanceTo(new THREE.Vector3(0, 0, -62)) < 7) this.caveEscaped = true;
+    if (this.currentWorld === 6 && playerPos.distanceTo(new THREE.Vector3(0, 0, -22)) < 5) this.outpostBroken = true;
+    if (this.currentWorld === 7 && playerPos.distanceTo(new THREE.Vector3(0, 0, -29)) < 6) this.fortressReached = true;
+    if (this.currentWorld === 9 && playerPos.distanceTo(new THREE.Vector3(0, 0, -60)) < 6) this.goliathTerritoryEntered = true;
 
     // Enemies
     this.enemies.forEach(e => {
@@ -362,9 +383,16 @@ const Game = {
     // Combat
     this.combat.update(dt, this.enemies, this.goliath, this.player);
 
+    // World-specific interactions make every world play differently.
+    const unique = this.world.getNearbyInteractable(playerPos);
+    if (unique) {
+      // The prompt is intentionally lightweight; E/Interact performs the action.
+      unique.beacon.material.opacity = 0.65 + Math.sin(Date.now() * 0.006) * 0.25;
+    }
+
     // Checkpoints
     const cp = this.world.getNearbyCheckpoint(playerPos);
-    if (cp) {
+    if (cp && !cp.activated) {
       cp.activated = true;
       this.player.setCheckpoint(cp.pos);
       UI.showMessage('CHECKPOINT SAVED: ' + cp.name);
@@ -390,11 +418,42 @@ const Game = {
       this.collectItem(item);
       return;
     }
+    const unique = this.world.getNearbyInteractable(playerPos);
+    if (unique) {
+      this.activateUniqueInteraction(unique);
+      return;
+    }
     // Prayer location (campfire)
     if (this.world.campfire && playerPos.distanceTo(this.world.campfire.position) < 3) {
       this.player.addFaith(25);
       UI.showMessage('FAITH RESTORED! +25');
     }
+  },
+
+  activateUniqueInteraction(item) {
+    if (!item || item.used) return;
+    item.used = true;
+    const t = item.type;
+    if (t === 'sheep') this.sheepChecked++;
+    else if (t === 'marker') this.rockMarkers++;
+    else if (t === 'hiddenPath') this.hiddenPathFound = true;
+    else if (t === 'torch') this.torchesLit++;
+    else if (t === 'bridge') this.mountainPassCrossed = true;
+    else if (t === 'summit') this.mountainSummitReached = true;
+    else if (t === 'supply') this.suppliesSecured++;
+    else if (t === 'banner') this.bannersCaptured++;
+    else if (t === 'gateSwitch') this.gateOpened = true;
+    else if (t === 'standard') this.standardsSecured++;
+    else if (t === 'footprint') this.footprintsInspected++;
+    else if (t === 'arena') { /* World 10 arena entry is handled by the mission proximity check. */ }
+    if (item.group) {
+      this.combat.spawnParticles(item.group.position, 0xf1c40f, 14);
+      this.scene.remove(item.group);
+    }
+    if (window.AudioSystem) AudioSystem.collect();
+    UI.showMessage(item.label + ' ✓', 1200);
+    this.player.addScore(75);
+    this.updateHUD();
   },
 
   collectItem(item) {
@@ -468,19 +527,23 @@ const Game = {
 
   trySpawnNextWave() {
     const theme = this._worldTheme;
-    if (!theme || !theme.waves || theme.waves.length < 2) return;
+    if (!theme || !Array.isArray(theme.waves) || theme.waves.length < 2) return;
+    if (this._spawningWave) return;
     const living = this.enemies.some(e => e.alive);
     if (living) return;
     if (this._waveIndex >= theme.waves.length - 1) {
       this.wavesComplete = true;
       return;
     }
+    this._spawningWave = true;
     this._waveIndex++;
     const next = theme.waves[this._waveIndex] || [];
     const stats = this._enemyStats || {};
     next.forEach((p, i) => {
       this.enemies.push(new ShadowGuardian(this.scene, new THREE.Vector3(p[0], p[1], p[2]), i % 3, stats));
     });
+    this.wavesComplete = false;
+    this._spawningWave = false;
     if (window.UI) UI.showMessage('WAVE ' + (this._waveIndex + 1) + '!', 1600);
     if (window.AudioSystem) AudioSystem.battleMusic();
   },
@@ -571,8 +634,17 @@ const Game = {
     const nextLv = nextId && window.LEVELS ? window.LEVELS[nextId - 1] : null;
 
     const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-    setTxt('victory-title', worldId === 10 ? 'DAVID & GOLIATH — FINAL VICTORY' : ('WORLD ' + worldId + ' COMPLETE!'));
-    setTxt('victory-subtitle', worldId === 10 ? 'GIANT SLAYER' : lv.name.toUpperCase());
+    setTxt('victory-title', 'WORLD ' + worldId + ' COMPLETE!');
+    if (worldId >= 10) {
+      setTxt('victory-subtitle', 'THE BIBLE HEROES ADVENTURE IS COMPLETE!');
+      setTxt('victory-reward', 'GIANT SLAYER!');
+      setTxt('victory-badge', '🏅 GIANT SLAYER');
+    } else {
+      setTxt('victory-subtitle', 'NEXT WORLD: WORLD ' + (worldId + 1));
+      setTxt('victory-reward', (lv.name || ('World ' + worldId)).toUpperCase());
+      setTxt('victory-badge', '🏅 WORLD ' + worldId + ' CLEARED');
+    }
+    UI.populateVictoryBible(worldId);
     setTxt('victory-score', score);
     setTxt('victory-items', this.itemsCollected);
     setTxt('victory-enemies', this.enemiesDefeated);
@@ -581,23 +653,31 @@ const Game = {
     const unlockEl = document.querySelector('#victory-screen .unlock');
     if (unlockEl) {
       unlockEl.textContent = worldId === 10
-        ? 'THE ADVENTURE IS COMPLETE! GIANT SLAYER!'
-        : (nextLv ? ('NEXT WORLD UNLOCKED: WORLD ' + nextId + ' — ' + nextLv.name.toUpperCase()) : 'WORLD COMPLETE');
+        ? 'THE BIBLE HEROES ADVENTURE IS COMPLETE!'
+        : ('NEXT WORLD: WORLD ' + nextId + (nextLv ? ' — ' + nextLv.name.toUpperCase() : ''));
     }
     const nextBtn = document.getElementById('btn-next-world');
-    if (nextBtn) nextBtn.classList.toggle('hidden', worldId >= 10 || !nextId);
+    if (nextBtn) {
+      const showNext = worldId < 10 && nextId;
+      nextBtn.classList.toggle('hidden', !showNext);
+      if (showNext) nextBtn.textContent = 'PLAY WORLD ' + nextId;
+    }
+    const mapBtn = document.getElementById('btn-continue');
+    if (mapBtn) mapBtn.textContent = 'RETURN TO ADVENTURE MAP';
 
     UI.show('victory');
   },
 
   continueNextWorld() {
-    const next = (this.currentWorld || 1) + 1;
-    if (next <= 10 && SaveSystem.isUnlocked(next)) this.startWorld(next);
-    else {
-      this.quitToMenu();
-      this.populateMap();
-      UI.show('map');
+    const completed = (this._pendingVictory && this._pendingVictory.worldId) || this.currentWorld || 1;
+    const next = completed + 1;
+    if (next <= 10 && SaveSystem.isUnlocked(next)) {
+      this.startWorld(next);
+      return;
     }
+    this.quitToMenu();
+    this.populateMap();
+    UI.show('map');
   },
 
   updateHUD() {
@@ -634,10 +714,18 @@ const Game = {
     this.teardownLevel();
     UI.show('mainMenu');
     this.populateMap();
+    if (window.UI) UI.setWorldDisplay(SaveSystem.getContinueLevel());
   }
 };
 
 window.Game = Game;
+
+window.addEventListener('keydown', (e) => {
+  if (e.key && e.key.toLowerCase() === 'b' && Game.state === 'playing') {
+    if (UI.elements && UI.elements.biblePanel && !UI.elements.biblePanel.classList.contains('hidden')) UI.hideBibleMoment();
+    else UI.showBibleMoment(Game.currentWorld);
+  }
+});
 
 // Boot
 window.addEventListener('DOMContentLoaded', () => {

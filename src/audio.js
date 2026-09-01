@@ -70,7 +70,7 @@ const AudioSystem = {
       this.masterGain.connect(this.ctx.destination);
       this.musicGain = this.ctx.createGain();
       this.musicGain.gain.value = this.musicVolume;
-      this.musicGain.connect(this.masterGain);
+      this.musicGain.connect(this.ctx.destination);
 
       // Decode all buffers
       await Promise.all(Object.keys(this.FILES).map(async key => {
@@ -100,7 +100,7 @@ const AudioSystem = {
         const src = this.ctx.createBufferSource();
         src.buffer = this.buffers[name];
         const g = this.ctx.createGain();
-        g.gain.value = vol * this.volume;
+        g.gain.value = vol;
         src.connect(g);
         g.connect(this.masterGain);
         src.start(0);
@@ -144,7 +144,7 @@ const AudioSystem = {
     if (tag) {
       try {
         tag.loop = loop;
-        tag.volume = this.musicVolume * this.volume;
+        tag.volume = this.musicVolume;
         tag.currentTime = 0;
         tag.play().catch(() => {});
         this.musicSource = tag;
@@ -167,14 +167,21 @@ const AudioSystem = {
   },
 
   setSoundEnabled(on) {
+    // Sound effects and music are independent settings. Turning SFX off
+    // must never stop the background music.
     this.enabled = !!on;
-    if (!on) this.stopMusic();
   },
 
   setMusicEnabled(on) {
-    this.musicEnabled = !!on;
-    if (!on) this.stopMusic();
-    else if (this.musicName) {
+    const next = !!on;
+    if (next === this.musicEnabled) return;
+    this.musicEnabled = next;
+    if (!next) {
+      // Preserve the selected track so music can resume when re-enabled.
+      const current = this.musicName;
+      this.stopMusic();
+      this.musicName = current;
+    } else if (this.musicName) {
       const n = this.musicName;
       this.musicName = null;
       this.playMusic(n);

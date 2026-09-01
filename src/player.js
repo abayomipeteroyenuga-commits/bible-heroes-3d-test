@@ -46,9 +46,9 @@ class Player {
 
   buildModel() {
     // Polished cartoon shepherd — materials
-    const skinMat = new THREE.MeshLambertMaterial({ color: 0xf0c4a0 });
-    const skinShadowMat = new THREE.MeshLambertMaterial({ color: 0xe0a880 });
-    const tunicMat = new THREE.MeshLambertMaterial({ color: 0x3f9a5c });
+    const skinMat = new THREE.MeshPhongMaterial({ color: 0xf0c4a0, shininess: 28, specular: 0x442211 });
+    const skinShadowMat = new THREE.MeshPhongMaterial({ color: 0xe0a880, shininess: 18 });
+    const tunicMat = new THREE.MeshPhongMaterial({ color: 0x3f9a5c, shininess: 12 });
     const tunicMidMat = new THREE.MeshLambertMaterial({ color: 0x348a50 });
     const tunicDarkMat = new THREE.MeshLambertMaterial({ color: 0x2a6e40 });
     const beltMat = new THREE.MeshLambertMaterial({ color: 0x8B5A2B });
@@ -246,6 +246,8 @@ class Player {
     browR.position.set(0.11, 0.15, 0.27);
     browR.rotation.z = -0.12;
     this.headGroup.add(browR);
+    this.browL = browL;
+    this.browR = browR;
 
     // Cheeks
     const cheekGeo = new THREE.SphereGeometry(0.055, 8, 6);
@@ -275,6 +277,9 @@ class Player {
     smile.position.set(0, -0.1, 0.27);
     smile.rotation.set(Math.PI, 0, Math.PI);
     this.headGroup.add(smile);
+    this.smileMesh = smile;
+    this.eyeL = eyeL;
+    this.eyeR = eyeR;
 
     // Ears
     const earGeo = new THREE.SphereGeometry(0.06, 8, 6);
@@ -694,9 +699,15 @@ class Player {
     Object.keys(map).forEach(id => {
       const btn = document.getElementById(id);
       if (!btn) return;
-      const handler = (e) => { e.preventDefault(); map[id](); };
-      btn.addEventListener('touchstart', handler, { passive: false });
-      btn.addEventListener('mousedown', handler);
+      // Use one PointerEvent instead of touchstart + mousedown. Browsers
+      // synthesize a mousedown after touch, which previously caused some
+      // mobile actions (attack/jump/interact) to fire twice.
+      const handler = (e) => {
+        e.preventDefault();
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        map[id]();
+      };
+      btn.addEventListener('pointerdown', handler);
       this._mobileHandlers.push({ btn, handler });
     });
   }
@@ -721,8 +732,7 @@ class Player {
 
     if (this._mobileHandlers) {
       this._mobileHandlers.forEach(h => {
-        h.btn.removeEventListener('touchstart', h.handler);
-        h.btn.removeEventListener('mousedown', h.handler);
+        h.btn.removeEventListener('pointerdown', h.handler);
       });
       this._mobileHandlers = [];
     }
@@ -988,6 +998,31 @@ class Player {
     lerp3(cur.head, tgt.head);
     cur.rootY += (tgt.rootY - cur.rootY) * k;
     cur.bodyZ += (tgt.bodyZ - cur.bodyZ) * k;
+    this._updateFace(dt);
+  }
+
+  _updateFace(dt) {
+    if (!this.browL || !this.smileMesh) return;
+    let brow = 0.12;
+    let browY = 0.15;
+    let smileScale = 1;
+    let smileY = -0.1;
+    if (this.state === 'ATTACK') { brow = -0.08; browY = 0.17; smileScale = 0.4; }
+    else if (this.state === 'HIT') { brow = 0.28; browY = 0.18; smileScale = 0.2; smileY = -0.08; }
+    else if (this.state === 'VICTORY') { brow = -0.02; smileScale = 1.25; smileY = -0.11; }
+    else if (this.state === 'RUN' || this.state === 'JUMP') { brow = 0.02; browY = 0.16; }
+    else if (this.state === 'IDLE') { brow = 0.12 + Math.sin(this.animTime * 1.4) * 0.04; }
+    this.browL.rotation.z = brow;
+    this.browR.rotation.z = -brow;
+    this.browL.position.y = browY;
+    this.browR.position.y = browY;
+    this.smileMesh.scale.set(smileScale, smileScale, 1);
+    this.smileMesh.position.y = smileY;
+    if (this.eyeL && this.eyeR) {
+      const blink = (Math.sin(this.animTime * 0.8) > 0.97) ? 0.15 : 1.2;
+      this.eyeL.scale.y = blink;
+      this.eyeR.scale.y = blink;
+    }
   }
 
   _computeTargetPose(target, dt, isMoving, isRunningKey) {

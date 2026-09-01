@@ -40,12 +40,15 @@ const UI = {
       armorText: document.getElementById('armor-text'),
       faithText: document.getElementById('faith-text'),
       scoreText: document.getElementById('score-text'),
+      hudWorld: document.getElementById('hud-world'),
+      hudWorldName: document.getElementById('hud-world-name'),
       missionText: document.getElementById('mission-text'),
       hudMessage: document.getElementById('hud-message'),
       bossHud: document.getElementById('boss-hud'),
       bossBar: document.getElementById('boss-bar'),
       bossText: document.getElementById('boss-text'),
-      mobileControls: document.getElementById('mobile-controls')
+      mobileControls: document.getElementById('mobile-controls'),
+      biblePanel: document.getElementById('bible-panel')
     };
   },
 
@@ -60,7 +63,12 @@ const UI = {
     if (screen !== 'game' && this.elements.mobileControls) {
       this.elements.mobileControls.classList.add('hidden');
     }
-    if (this.elements[screen]) this.elements[screen].classList.remove('hidden');
+    const target = this.elements[screen];
+    if (!target) {
+      console.error('Missing UI screen:', screen);
+      return;
+    }
+    target.classList.remove('hidden');
   },
 
   showGame() {
@@ -85,7 +93,92 @@ const UI = {
   },
 
   setMission(text) {
-    this.elements.missionText.textContent = text;
+    if (this.elements.missionText) this.elements.missionText.textContent = text;
+  },
+
+  getWorldInfo(worldId) {
+    const n = Math.max(1, Math.min(10, parseInt(worldId, 10) || 1));
+    const lv = (window.getLevel && window.getLevel(n)) ||
+      (window.LEVELS && window.LEVELS[n - 1]) ||
+      { id: n, name: 'World ' + n };
+    const theme = (window.getWorldTheme && window.getWorldTheme(n)) || {};
+    return { id: n, name: lv.name || ('World ' + n), icon: lv.icon || '📖', objective: theme.objective || '' };
+  },
+
+  setWorldDisplay(worldId) {
+    const info = this.getWorldInfo(worldId);
+    const label = 'WORLD ' + info.id;
+    const name = String(info.name).toUpperCase();
+    if (this.elements.hudWorld) this.elements.hudWorld.textContent = label;
+    if (this.elements.hudWorldName) this.elements.hudWorldName.textContent = name;
+    const pause = document.getElementById('pause-title');
+    if (pause) pause.textContent = '⏸️ PAUSED — ' + label;
+    const play = document.getElementById('btn-play');
+    if (play && window.SaveSystem) {
+      const data = SaveSystem.load();
+      const done = (data.completedLevels || []).length >= 10;
+      const next = SaveSystem.getContinueLevel();
+      play.textContent = done ? '🗺️ ADVENTURE MAP' : ('▶️ PLAY WORLD ' + next);
+    }
+    return info;
+  },
+
+  showWorldIntro(worldId) {
+    const info = this.getWorldInfo(worldId);
+    const labelEl = document.getElementById('intro-world-label');
+    const titleEl = document.getElementById('intro-title') || document.querySelector('#intro-screen .intro-title');
+    const narrEl = document.getElementById('intro-narration');
+    const missionEl = document.getElementById('intro-mission');
+    if (labelEl) labelEl.textContent = 'WORLD ' + info.id;
+    if (titleEl) titleEl.textContent = info.name.toUpperCase();
+    const bible = window.getBibleWorldData ? window.getBibleWorldData(info.id) : null;
+    if (narrEl) {
+      narrEl.textContent = bible ? bible.story : ('World ' + info.id + ': ' + info.name + '. ' + (info.objective || 'Continue the adventure.'));
+    }
+    const set = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value || ''; };
+    if (bible) {
+      set('intro-bible-event', '📖 BIBLE MOMENT: ' + bible.event);
+      set('intro-bible-passage', bible.passage);
+      set('intro-bible-story', bible.story);
+      set('intro-memory-verse', bible.verse);
+      set('intro-lesson', bible.lesson);
+    }
+    if (missionEl) missionEl.textContent = 'MISSION: ' + (info.objective || info.name);
+    const skip = document.getElementById('btn-skip-intro');
+    if (skip) skip.textContent = 'BEGIN WORLD ' + info.id;
+    this.show('intro');
+  },
+
+  getBibleInfo(worldId) {
+    return window.getBibleWorldData ? window.getBibleWorldData(worldId) : null;
+  },
+
+  showBibleMoment(worldId) {
+    const bible = this.getBibleInfo(worldId);
+    if (!bible) return;
+    const set = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value || ''; };
+    set('bible-panel-title', bible.event);
+    set('bible-panel-passage', bible.passage);
+    set('bible-panel-story', bible.story);
+    set('bible-panel-verse', bible.verse);
+    set('bible-panel-lesson', bible.lesson);
+    set('bible-panel-prayer', bible.prayer);
+    if (this.elements.biblePanel) this.elements.biblePanel.classList.remove('hidden');
+  },
+
+  hideBibleMoment() {
+    if (this.elements.biblePanel) this.elements.biblePanel.classList.add('hidden');
+  },
+
+  populateVictoryBible(worldId) {
+    const bible = this.getBibleInfo(worldId);
+    if (!bible) return;
+    const set = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value || ''; };
+    set('victory-bible-event', bible.event);
+    set('victory-bible-passage', bible.passage);
+    set('victory-bible-story', bible.story);
+    set('victory-bible-lesson', bible.lesson);
+    set('victory-bible-prayer', bible.prayer);
   },
 
   showMessage(text, duration) {
@@ -116,11 +209,19 @@ const UI = {
 
   populateMap(saveData, onSelect) {
     const list = document.getElementById('level-list');
-    if (!list || !window.LEVELS) return;
-    const unlocked = (saveData && saveData.unlockedLevels) || [1];
-    const completed = (saveData && saveData.completedLevels) || [];
-    const stars = (saveData && saveData.stars) || {};
-    const current = (saveData && saveData.currentLevel) || 1;
+    if (!list) {
+      console.error('Missing UI container:', 'level-list');
+      return;
+    }
+    if (!window.LEVELS) {
+      console.error('LEVELS not loaded');
+      return;
+    }
+    const data = saveData || (window.SaveSystem ? SaveSystem.load() : {});
+    const unlocked = Array.isArray(data.unlockedLevels) && data.unlockedLevels.length ? data.unlockedLevels : [1];
+    const completed = Array.isArray(data.completedLevels) ? data.completedLevels : [];
+    const stars = data.stars || {};
+    const current = Number(data.currentLevel) || 1;
     list.innerHTML = window.LEVELS.map(function(lv) {
       const isUnlocked = unlocked.indexOf(lv.id) !== -1;
       const isDone = completed.indexOf(lv.id) !== -1;
@@ -147,9 +248,13 @@ const UI = {
 
   populateAchievements(achievements) {
     const list = document.getElementById('achievements-list');
-    if (!list) return;
+    if (!list) {
+      console.error('Missing UI container:', 'achievements-list');
+      return;
+    }
+    const data = achievements || {};
     list.innerHTML = this.ACHIEVEMENTS.map(function(a) {
-      const unlocked = !!(achievements && achievements[a.key]);
+      const unlocked = !!data[a.key];
       return '<div class="ach-card ' + (unlocked ? 'unlocked' : 'locked') + '">' +
         '<span class="ach-icon">' + a.icon + '</span>' +
         '<div class="ach-text"><strong>' + a.title + '</strong><span>' + a.desc + '</span></div>' +

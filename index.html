@@ -16,7 +16,7 @@
       <img src="assets/ui/pastor-abayomi-bible-stories-logo.png" alt="Pastor Abayomi Bible Stories" class="brand-logo brand-logo-lg" onerror="this.onerror=null;this.src='assets/ui/logo.svg'" />
       <h2>David &amp; Goliath</h2>
       <div class="spinner"></div>
-      <p id="loading-text">Loading World 1 — Shepherd's Valley...</p>
+      <p id="loading-text">Loading Bible Heroes Adventure...</p>
     </div>
   </div>
 
@@ -29,7 +29,7 @@
         <p class="subtitle">10-World Adventure</p>
       </div>
       <div class="menu-buttons">
-        <button id="btn-play" class="menu-btn primary">▶️ PLAY ADVENTURE</button>
+        <button id="btn-play" class="menu-btn primary">▶️ PLAY WORLD 1</button>
         <button id="btn-map" class="menu-btn">🗺️ ADVENTURE MAP</button>
         <button id="btn-howto" class="menu-btn">📖 HOW TO PLAY</button>
         <button id="btn-achievements" class="menu-btn">🏅 ACHIEVEMENTS</button>
@@ -41,10 +41,18 @@
   <!-- Intro Cinematic -->
   <div id="intro-screen" class="screen hidden">
     <div class="intro-content">
-      <h1 class="intro-title">DAVID & GOLIATH</h1>
-      <p class="intro-text" id="intro-narration">David was a young shepherd who trusted God. While others were afraid of Goliath, David believed that God would help him.</p>
-      <p class="intro-mission">MISSION: Prepare for the battlefield.</p>
-      <button id="btn-skip-intro" class="menu-btn">SKIP INTRO</button>
+      <p class="intro-kicker" id="intro-world-label">WORLD 1</p>
+      <h1 class="intro-title" id="intro-title">SHEPHERD'S VALLEY</h1>
+      <p class="intro-text" id="intro-narration">David was a young shepherd who trusted God.</p>
+      <div class="bible-intro-card">
+        <div class="bible-event" id="intro-bible-event">📖 BIBLE MOMENT: David the Shepherd</div>
+        <div class="bible-passage" id="intro-bible-passage">1 Samuel 17:12–15</div>
+        <p id="intro-bible-story">David was a young shepherd who trusted God.</p>
+        <div class="bible-verse"><strong>MEMORY VERSE</strong><span id="intro-memory-verse"></span></div>
+        <div class="bible-lesson"><strong>LESSON</strong><span id="intro-lesson"></span></div>
+      </div>
+      <p class="intro-mission" id="intro-mission">MISSION: Learn and survive — prepare for Goliath</p>
+      <button id="btn-skip-intro" class="menu-btn">BEGIN WORLD</button>
     </div>
   </div>
 
@@ -76,14 +84,33 @@
         </div>
       </div>
       <div id="hud-right">
+        <div id="hud-world">WORLD 1</div>
+        <div id="hud-world-name">SHEPHERD'S VALLEY</div>
         <div class="score-box">⭐ <span id="score-text">0</span></div>
-        <button id="btn-mute" class="mute-btn" type="button" title="Mute / Unmute">🔊</button>
+        <div class="hud-quick-actions">
+          <button id="btn-bible" class="hud-bible-btn" type="button" title="Bible Moment">📖 BIBLE</button>
+          <button id="btn-mute" class="mute-btn" type="button" title="Mute / Unmute">🔊</button>
+        </div>
       </div>
       <div id="hud-mission">
         <div class="mission-label">CURRENT MISSION</div>
         <div id="mission-text">Explore the Israelite camp</div>
       </div>
       <div id="hud-message" class="hidden"></div>
+      <div id="bible-panel" class="hidden" role="dialog" aria-modal="true" aria-label="Bible Moment">
+        <div class="bible-panel-inner">
+          <button id="btn-bible-close" class="bible-close" type="button" aria-label="Close Bible Moment">×</button>
+          <div class="bible-panel-kicker">📖 BIBLE MOMENT</div>
+          <h2 id="bible-panel-title">David the Shepherd</h2>
+          <div class="bible-panel-passage" id="bible-panel-passage">1 Samuel 17:12–15</div>
+          <p id="bible-panel-story"></p>
+          <div class="bible-panel-section"><strong>MEMORY VERSE</strong><p id="bible-panel-verse"></p></div>
+          <div class="bible-panel-section"><strong>LESSON LEARNED</strong><p id="bible-panel-lesson"></p></div>
+          <div class="bible-panel-section prayer"><strong>LET'S PRAY</strong><p id="bible-panel-prayer"></p></div>
+          <p class="bible-panel-tip">Press B anytime to open this Bible Moment.</p>
+        </div>
+      </div>
+
       <div id="boss-hud" class="hidden">
         <div class="boss-name">GOLIATH</div>
         <div class="boss-subtitle">THE PHILISTINE GIANT</div>
@@ -106,12 +133,13 @@
         <button id="btn-interact" class="action-btn">E</button>
       </div>
     </div>
+  </div>
 
     <!-- Pause Menu -->
     <div id="pause-menu" class="screen hidden">
       <div class="menu-container small">
         <img src="assets/ui/pastor-abayomi-bible-stories-logo.png" alt="Pastor Abayomi Bible Stories" class="brand-logo brand-logo-sm" onerror="this.onerror=null;this.src='assets/ui/logo.svg'" />
-        <h2>⏸️ PAUSED</h2>
+        <h2 id="pause-title">⏸️ PAUSED</h2>
         <button id="btn-resume" class="menu-btn primary">▶️ RESUME</button>
         <button id="btn-pause-howto" class="menu-btn">📖 HOW TO PLAY</button>
         <button id="btn-settings-pause" class="menu-btn">⚙️ SETTINGS</button>
@@ -126,17 +154,25 @@
       <div class="victory-content">
         <img src="assets/ui/pastor-abayomi-bible-stories-logo.png" alt="Pastor Abayomi Bible Stories" class="brand-logo brand-logo-lg" onerror="this.onerror=null;this.src='assets/ui/logo.svg'" />
         <p class="brand-kicker">PASTOR ABAYOMI BIBLE STORIES</p>
-        <h1 id="victory-title">WORLD COMPLETE!</h1>
-        <h2 id="victory-subtitle">DAVID'S FAITH HAS WON!</h2>
-        <p class="reward">⭐ WORLD COMPLETE</p>
-        <p class="badge">🏅 DAVID THE BRAVE</p>
+        <h1 id="victory-title">WORLD 1 COMPLETE!</h1>
+        <h2 id="victory-subtitle">NEXT WORLD: WORLD 2</h2>
+        <p class="reward" id="victory-reward">⭐ WORLD COMPLETE</p>
+        <p class="badge" id="victory-badge">🏅 DAVID THE BRAVE</p>
+        <div class="victory-bible-card">
+          <div class="bible-panel-kicker">📖 BIBLE MOMENT</div>
+          <h3 id="victory-bible-event">David the Shepherd</h3>
+          <div class="bible-panel-passage" id="victory-bible-passage">1 Samuel 17:12–15</div>
+          <p id="victory-bible-story"></p>
+          <div class="victory-lesson"><strong>LESSON</strong><span id="victory-bible-lesson"></span></div>
+          <div class="victory-prayer"><strong>PRAYER</strong><span id="victory-bible-prayer"></span></div>
+        </div>
         <div class="stars" id="victory-stars">⭐⭐⭐</div>
         <p>SCORE: <span id="victory-score">0</span></p>
         <p>ITEMS FOUND: <span id="victory-items">0</span></p>
         <p>ENEMIES DEFEATED: <span id="victory-enemies">0</span></p>
         <p class="unlock">NEXT WORLD UNLOCKED</p>
-        <button id="btn-next-world" class="menu-btn primary">CONTINUE TO NEXT WORLD</button>
-        <button id="btn-continue" class="menu-btn">RETURN TO MAP</button>
+        <button id="btn-next-world" class="menu-btn primary">PLAY WORLD 2</button>
+        <button id="btn-continue" class="menu-btn">RETURN TO ADVENTURE MAP</button>
       </div>
     </div>
 
@@ -171,7 +207,7 @@
           </div>
           <div class="info-card">
             <h3>🎯 Adventure Tips</h3>
-            <p>David starts with his sling. Press F or Left Click to fire. Defeat Shadow Guardians. Reach the battlefield and defeat Goliath with courage and faith!</p>
+            <p>David starts with his sling. Press F or Left Click to fire. Defeat Shadow Guardians. Finish the current world mission to unlock the next world. Use the Adventure Map to replay unlocked worlds. Stars save from your best run.</p>
           </div>
         </div>
         <button id="btn-howto-back" class="menu-btn">BACK</button>
@@ -257,7 +293,6 @@
         <button id="btn-ach-back" class="menu-btn">BACK</button>
       </div>
     </div>
-  </div>
 
   <!-- Three.js CDN -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>

@@ -1,3 +1,83 @@
+
+// Bible-story layer: each world is anchored to a specific moment from 1 Samuel 17.
+const BIBLE_WORLD_DATA = {
+  1: {
+    event: 'David the Shepherd', passage: '1 Samuel 17:12–15',
+    story: 'David was the youngest son in his family and cared for his father’s sheep. He was learning courage and faithfulness in ordinary work.',
+    verse: '“The LORD is my shepherd; I shall not want.” — Psalm 23:1',
+    lesson: 'God can prepare you through small responsibilities before a big assignment.',
+    prayer: 'Lord, help me be faithful in the little things and trust You every day. Amen.'
+  },
+  2: {
+    event: 'David Is Sent to His Brothers', passage: '1 Samuel 17:17–20',
+    story: 'Jesse sent David to take food to his brothers at the army camp. David obeyed and went where he was needed.',
+    verse: '“Obey my voice, and I will be your God.” — Jeremiah 7:23',
+    lesson: 'Obedience can place us exactly where God wants us to learn and serve.',
+    prayer: 'Father, give me a willing heart to obey and serve others with joy. Amen.'
+  },
+  3: {
+    event: 'David Hears Goliath', passage: '1 Samuel 17:23–26',
+    story: 'David heard Goliath challenge the army of Israel. While many soldiers were afraid, David wondered why anyone should defy the living God.',
+    verse: '“Who is this uncircumcised Philistine, that he should defy the armies of the living God?” — 1 Samuel 17:26',
+    lesson: 'Faith helps us see God as greater than the problem in front of us.',
+    prayer: 'God, when I face something frightening, help me remember that You are greater. Amen.'
+  },
+  4: {
+    event: 'David Chooses Faith', passage: '1 Samuel 17:32–37',
+    story: 'David told Saul that God had rescued him from a lion and a bear. He believed the same God could rescue him from Goliath.',
+    verse: '“The LORD that delivered me out of the paw of the lion... he will deliver me.” — 1 Samuel 17:37',
+    lesson: 'Remembering God’s past faithfulness gives courage for today’s challenge.',
+    prayer: 'Lord, remind me of the ways You have helped me before, and strengthen my faith today. Amen.'
+  },
+  5: {
+    event: 'David Refuses Saul’s Armor', passage: '1 Samuel 17:38–39',
+    story: 'Saul offered David his armor, but David had not tested it. He chose what he could use confidently and prepared to face Goliath.',
+    verse: '“I cannot go with these; for I have not proved them.” — 1 Samuel 17:39',
+    lesson: 'Do not copy someone else’s method. Use the gifts and preparation God has given you.',
+    prayer: 'Lord, help me use my gifts wisely and not compare myself with others. Amen.'
+  },
+  6: {
+    event: 'Five Smooth Stones', passage: '1 Samuel 17:40',
+    story: 'David took his staff, sling, and five smooth stones from the brook. He prepared carefully before stepping toward the giant.',
+    verse: '“And he took his staff in his hand, and chose him five smooth stones.” — 1 Samuel 17:40',
+    lesson: 'Faith does not cancel preparation. Trust God and do your part carefully.',
+    prayer: 'Father, teach me to prepare well while trusting You with the result. Amen.'
+  },
+  7: {
+    event: 'Goliath Challenges David', passage: '1 Samuel 17:41–44',
+    story: 'Goliath mocked David because he looked young and small. David did not measure his future by Goliath’s opinion.',
+    verse: '“And when the Philistine looked about, and saw David, he disdained him.” — 1 Samuel 17:42',
+    lesson: 'People may underestimate you, but their opinion does not determine what God can do through you.',
+    prayer: 'Lord, keep me humble and courageous when others doubt me. Amen.'
+  },
+  8: {
+    event: 'David Declares His Faith', passage: '1 Samuel 17:45–47',
+    story: 'David told Goliath that he came in the name of the LORD. He wanted everyone to know that victory belongs to God.',
+    verse: '“The battle is the LORD’s.” — 1 Samuel 17:47',
+    lesson: 'Our confidence should point people to God, not to ourselves.',
+    prayer: 'God, let my courage and victories bring honor to You. Amen.'
+  },
+  9: {
+    event: 'David Faces the Giant', passage: '1 Samuel 17:48–49',
+    story: 'David ran toward the battle line, took a stone from his bag, and used his sling. He acted with courage instead of running away.',
+    verse: '“David hasted, and ran toward the army to meet the Philistine.” — 1 Samuel 17:48',
+    lesson: 'Faith can move us from fear to courageous action.',
+    prayer: 'Lord, help me face my challenges with wisdom, courage, and trust in You. Amen.'
+  },
+  10: {
+    event: 'Goliath Falls', passage: '1 Samuel 17:50–51',
+    story: 'David defeated Goliath with a sling and a stone. Israel saw that God can give victory through someone the world might overlook.',
+    verse: '“So David prevailed over the Philistine with a sling and with a stone.” — 1 Samuel 17:50',
+    lesson: 'God is able to work through ordinary people who trust Him and step forward in faith.',
+    prayer: 'Lord, make me brave, faithful, and ready to trust You when challenges seem too big. Amen.'
+  }
+};
+
+function getBibleWorldData(id) {
+  const n = parseInt(id, 10) || 1;
+  return BIBLE_WORLD_DATA[n] || BIBLE_WORLD_DATA[1];
+}
+
 // 10 David vs Goliath adventure worlds
 const LEVELS = [
   { id: 1, name: "Shepherd's Valley", icon: '🌿', achievement: 'valleyExplorer' },
@@ -146,8 +226,19 @@ const WORLD_THEMES = {
   }
 };
 
+function getLevel(worldId) {
+  const n = parseInt(worldId, 10) || 1;
+  if (window.LEVELS) {
+    for (let i = 0; i < LEVELS.length; i++) {
+      if (LEVELS[i].id === n) return LEVELS[i];
+    }
+  }
+  return LEVELS[0];
+}
+
 function getWorldTheme(id) {
-  return WORLD_THEMES[id] || WORLD_THEMES[1];
+  const n = parseInt(id, 10) || 1;
+  return WORLD_THEMES[n] || WORLD_THEMES[1];
 }
 
 function enemySpawnsFor(worldId) {
@@ -167,118 +258,58 @@ class MissionSystem {
     this.missions = this.buildMissions();
   }
 
+  // Keep level objectives tied to visible landmarks/areas rather than fragile
+  // one-dimensional coordinate checks. This makes objectives work even when
+  // the player approaches from a different direction.
+  nearPoint(game, x, z, radius = 5) {
+    if (!game || !game.player) return false;
+    const p = game.player.getPosition();
+    return Math.hypot(p.x - x, p.z - z) <= radius;
+  }
+
   buildMissions() {
     const id = this.worldId;
-    const need = this.theme.needEnemies;
-    const obj = this.theme.objective || 'Complete the world';
-    const waves = !!(this.theme.waves && this.theme.waves.length);
-    const goliath = !!this.theme.spawnGoliath;
-
+    const waves = Array.isArray(this.theme.waves) && this.theme.waves.length > 0;
+    const need = waves ? this.theme.waves.reduce((sum, wave) => sum + wave.length, 0)
+      : (this.theme.needEnemies != null ? this.theme.needEnemies : (this.theme.spawns || []).length);
     const explore = {
-      id: 'explore',
-      text: obj,
-      check: (g) => g.exploredCamp,
-      onComplete: (g) => { UI.showMessage('Keep going!'); this.next(g); }
+      id: 'explore', text: this.theme.introObjective || 'Explore the area',
+      check: g => !!g.exploredCamp,
+      onComplete: g => { UI.showMessage('Area explored!'); this.next(g); }
     };
     const fight = {
-      id: 'enemies',
-      text: waves ? 'Survive every enemy wave' : ('Defeat the Shadow Guardians (' + need + ')'),
-      check: (g) => g.enemiesDefeated >= need && g.wavesComplete !== false,
-      onComplete: (g) => { UI.showMessage('Guardians fall!'); this.next(g); }
+      id: 'enemies', text: waves ? 'Survive every enemy wave' : ('Defeat the Shadow Guardians (' + need + ')'),
+      check: g => g.enemiesDefeated >= need && (!waves || g.wavesComplete === true),
+      onComplete: g => { UI.showMessage('Guardians defeated!'); this.next(g); }
     };
-
-    if (id === 1) {
-      return [explore, fight, {
-        id: 'goal', text: "Reach the valley's far end",
-        check: (g) => g.player.getPosition().z < -48,
-        onComplete: (g) => this.finishWorld(g, "Shepherd's Valley is cleared!")
-      }];
-    }
-    if (id === 2) {
-      return [explore, fight, {
-        id: 'goal', text: 'Reach the wilderness exit',
-        check: (g) => !!g.rockyWildernessCrossed,
-        onComplete: (g) => this.finishWorld(g, 'Rocky Wilderness crossed!')
-      }];
-    }
-    if (id === 3) {
-      return [explore, {
-        id: 'path', text: 'Find the Hidden Path (west grove)',
-        check: (g) => !!g.hiddenPathFound,
-        onComplete: (g) => { UI.showMessage('Hidden path found!'); this.next(g); }
-      }, fight, {
-        id: 'goal', text: 'Reach the forest shrine',
-        check: (g) => g.player.getPosition().distanceTo(new THREE.Vector3(-15, 0, -22)) < 5,
-        onComplete: (g) => this.finishWorld(g, 'The hidden path is yours!')
-      }];
-    }
-    if (id === 4) {
-      return [explore, fight, {
-        id: 'goal', text: 'Reach the cave exit',
-        check: (g) => !!g.caveEscaped,
-        onComplete: (g) => this.finishWorld(g, 'You escaped the Cave of Shadows!')
-      }];
-    }
-    if (id === 5) {
-      return [explore, {
-        id: 'bridge', text: 'Cross the mountain bridge',
-        check: (g) => !!g.mountainPassCrossed,
-        onComplete: (g) => { UI.showMessage('Bridge crossed!'); this.next(g); }
-      }, fight, {
-        id: 'goal', text: 'Reach the mountain exit',
-        check: (g) => g.player.getPosition().z < -58,
-        onComplete: (g) => this.finishWorld(g, 'Mountain Pass cleared!')
-      }];
-    }
-    if (id === 6) {
-      return [explore, fight, {
-        id: 'goal', text: 'Reach the outpost gate',
-        check: (g) => !!g.outpostBroken,
-        onComplete: (g) => this.finishWorld(g, 'Outpost broken!')
-      }];
-    }
-    if (id === 7) {
-      return [explore, fight, {
-        id: 'goal', text: 'Enter the fortress courtyard',
-        check: (g) => !!g.fortressReached,
-        onComplete: (g) => this.finishWorld(g, 'Fortress reached!')
-      }];
-    }
-    if (id === 8) {
-      return [explore, fight, {
-        id: 'goal', text: 'Hold the battlefield after the last wave',
-        check: (g) => g.wavesComplete === true && g.enemiesDefeated >= need,
-        onComplete: (g) => this.finishWorld(g, 'Battlefield survived!')
-      }];
-    }
-    if (id === 9) {
-      return [explore, fight, {
-        id: 'goal', text: "Reach Goliath's landmark",
-        check: (g) => !!g.goliathTerritoryEntered,
-        onComplete: (g) => this.finishWorld(g, 'THE GIANT IS NEAR...')
-      }];
-    }
-    // World 10
-    return [explore, fight, {
-      id: 'arena', text: 'Reach the final arena',
-      check: (g) => g.player.getPosition().z < -58,
-      onComplete: (g) => {
-        UI.showMessage('WARNING — A GREAT ENEMY APPROACHES...');
-        g.spawnGoliath();
-        this.next(g);
-      }
-    }, {
-      id: 'goliath', text: 'Defeat Goliath',
-      check: (g) => g.goliathDefeated,
-      onComplete: (g) => this.finishWorld(g, 'GIANT SLAYER!')
-    }];
+    const useCount = (flag, count, text, doneText) => ({
+      id: flag, text,
+      check: g => (g[flag] || 0) >= count,
+      onComplete: g => { UI.showMessage(doneText); this.next(g); }
+    });
+    if (id === 1) return [explore, { id:'sheep', text:'Check on the 3 sheep', check:g=>g.sheepChecked>=3, onComplete:g=>{UI.showMessage('The flock is safe!');this.next(g);} }, fight, { id:'goal', text:"Reach the valley's far end", check:g=>this.nearPoint(g,0,-52,6), onComplete:g=>this.finishWorld(g,"Shepherd's Valley is cleared!") }];
+    if (id === 2) return [explore, { id:'markers', text:'Find 3 safe paths through the rocks', check:g=>g.rockMarkers>=3, onComplete:g=>{UI.showMessage('You found the safe rocky route!');this.next(g);} }, fight, { id:'goal', text:'Reach the wilderness arch', check:g=>this.nearPoint(g,0,-56,8), onComplete:g=>this.finishWorld(g,'Rocky Wilderness crossed!') }];
+    if (id === 3) return [explore, { id:'path', text:'Reveal the Hidden Path', check:g=>!!g.hiddenPathFound, onComplete:g=>{UI.showMessage('A hidden path is revealed!');this.next(g);} }, fight, { id:'goal', text:'Reach the forest shrine', check:g=>this.nearPoint(g,-15,-22,5), onComplete:g=>this.finishWorld(g,'The hidden path is yours!') }];
+    if (id === 4) return [explore, { id:'torches', text:'Light all 4 cave torches', check:g=>g.torchesLit>=4, onComplete:g=>{UI.showMessage('The cave path is lit!');this.next(g);} }, fight, { id:'goal', text:'Escape through the crystal exit', check:g=>this.nearPoint(g,0,-62,7), onComplete:g=>this.finishWorld(g,'You escaped the Cave of Shadows!') }];
+    if (id === 5) return [explore, { id:'bridge', text:'Cross the mountain bridge', check:g=>!!g.mountainPassCrossed, onComplete:g=>{UI.showMessage('Bridge crossed! Keep climbing.');this.next(g);} }, fight, { id:'goal', text:'Reach the mountain summit', check:g=>this.nearPoint(g,0,-62,7), onComplete:g=>this.finishWorld(g,'Mountain Pass cleared!') }];
+    if (id === 6) return [explore, { id:'supplies', text:'Secure 4 supply crates', check:g=>g.suppliesSecured>=4, onComplete:g=>{UI.showMessage('The outpost supplies are secured!');this.next(g);} }, fight, { id:'goal', text:'Reach the outpost gate', check:g=>this.nearPoint(g,0,-22,5), onComplete:g=>this.finishWorld(g,'Outpost broken!') }];
+    if (id === 7) return [explore, { id:'banners', text:'Capture the 4 fortress banners', check:g=>g.bannersCaptured>=4, onComplete:g=>{UI.showMessage('All fortress banners captured!');this.next(g);} }, fight, { id:'gate', text:'Open the fortress gate', check:g=>!!g.gateOpened, onComplete:g=>{UI.showMessage('The fortress gate is open!');this.next(g);} }, { id:'goal', text:'Enter the fortress courtyard', check:g=>this.nearPoint(g,0,-29,6), onComplete:g=>this.finishWorld(g,'Fortress reached!') }];
+    if (id === 8) return [explore, { id:'standards', text:'Secure 5 battlefield standards', check:g=>g.standardsSecured>=5, onComplete:g=>{UI.showMessage('The battlefield is secured!');this.next(g);} }, fight, { id:'goal', text:'Hold the final battlefield', check:g=>g.wavesComplete===true&&g.enemiesDefeated>=need&&this.nearPoint(g,0,-58,9), onComplete:g=>this.finishWorld(g,'Battlefield survived!') }];
+    if (id === 9) return [explore, { id:'footprints', text:'Follow 5 giant footprints', check:g=>g.footprintsInspected>=5, onComplete:g=>{UI.showMessage('You have found the giant\'s trail!');this.next(g);} }, fight, { id:'goal', text:"Reach Goliath's landmark", check:g=>this.nearPoint(g,0,-60,7), onComplete:g=>this.finishWorld(g,'THE GIANT IS NEAR...') }];
+    return [explore, fight, { id:'arena', text:'Enter the final arena', check:g=>this.nearPoint(g,0,-70,12), onComplete:g=>{UI.showMessage('WARNING — A GREAT ENEMY APPROACHES...');g.spawnGoliath();this.next(g);} }, { id:'goliath', text:'Defeat Goliath', check:g=>!!g.goliathDefeated, onComplete:g=>this.finishWorld(g,'GIANT SLAYER!') }];
   }
 
   finishWorld(game, msg) {
     if (game._victoryQueued || game._worldCompletionHandled) return;
     game._victoryQueued = true;
+    const worldId = game.currentWorld;
     if (window.UI && msg) UI.showMessage(msg, 2200);
-    setTimeout(() => {
+    // Store the timer so restarting/leaving a level cannot accidentally
+    // complete the old level 900ms later.
+    if (game._finishTimer) clearTimeout(game._finishTimer);
+    game._finishTimer = setTimeout(() => {
+      game._finishTimer = null;
+      if (game.state !== 'playing' || game.currentWorld !== worldId) return;
       if (game.completeCurrentWorld) game.completeCurrentWorld();
     }, 900);
   }
@@ -306,8 +337,11 @@ class MissionSystem {
   }
 }
 
+window.BIBLE_WORLD_DATA = BIBLE_WORLD_DATA;
+window.getBibleWorldData = getBibleWorldData;
 window.LEVELS = LEVELS;
 window.WORLD_THEMES = WORLD_THEMES;
+window.getLevel = getLevel;
 window.getWorldTheme = getWorldTheme;
 window.enemySpawnsFor = enemySpawnsFor;
 window.MissionSystem = MissionSystem;

@@ -7,6 +7,7 @@ class World {
     this.collectibles = [];
     this.checkpoints = [];
     this.interactables = [];
+    this.uniqueObjects = [];
     this.bounds = { minX: -45, maxX: 45, minZ: -90, maxZ: 30 };
     this.build();
   }
@@ -21,7 +22,7 @@ class World {
     this.createTerrain();
     if (this.hasFeature('camp') || this.hasFeature('outpost') || this.hasFeature('camps')) this.createCamp();
     this.createPath();
-    this.createTreesAndRocks();
+    if (![4, 6, 7, 8, 10].includes(this.worldId)) this.createTreesAndRocks();
     if (this.hasFeature('forest')) this.createDenseForest();
     if (this.hasFeature('cliffs') || this.hasFeature('mountains')) this.createCliffs();
     if (this.hasFeature('cave')) this.createCaveShell();
@@ -31,12 +32,14 @@ class World {
     if (this.hasFeature('towers') || this.hasFeature('walls') || this.hasFeature('gates')) this.createFort();
     if (this.hasFeature('banners') || this.hasFeature('battlefield') || this.hasFeature('final')) this.createBanners();
     if (this.hasFeature('giantMarks') || this.hasFeature('territory')) this.createGiantMarks();
-    this.createEnemyArea();
-    this.createBattlefield();
-    this.createGoliathArena();
+    if (this.worldId >= 6) this.createEnemyArea();
+    if ([8, 10].includes(this.worldId)) this.createBattlefield();
+    if (this.worldId === 10) this.createGoliathArena();
     this.placeCollectibles();
     this.placeCheckpoints();
     this.createLandmark();
+    this.createUniqueSetpieces();
+    this.prepareShadows();
   }
 
   createLighting() {
@@ -59,8 +62,10 @@ class World {
     this.scene.add(sun);
     this.sun = sun;
 
-    // Soft fill
-    const fill = new THREE.DirectionalLight(0xa0c0ff, 0.25);
+    // Soft sky fill keeps cartoon characters readable while preserving depth.
+    const hemi = new THREE.HemisphereLight(this.theme.sky || 0x9ec8ea, this.theme.ground || 0x45643a, this.theme.dark ? 0.5 : 0.8);
+    this.scene.add(hemi);
+    const fill = new THREE.DirectionalLight(0xa0c0ff, 0.22);
     fill.position.set(-20, 20, -30);
     this.scene.add(fill);
   }
@@ -82,15 +87,8 @@ class World {
   createTerrain() {
     // Main ground
     const groundGeo = new THREE.PlaneGeometry(100, 140, 40, 50);
-    // Simple height variation
-    const pos = groundGeo.attributes.position;
-    for (let i = 0; i < pos.count; i++) {
-      const x = pos.getX(i);
-      const z = pos.getY(i); // plane is XY before rotation
-      const h = Math.sin(x * 0.08) * 0.6 + Math.cos(z * 0.06) * 0.5 + Math.sin(x * 0.2 + z * 0.15) * 0.3;
-      pos.setZ(i, h);
-    }
-    groundGeo.computeVertexNormals();
+    // Keep terrain visually flat because the controller uses a 0-height ground plane.
+    // This prevents props, collectibles and David from visibly floating/sinking.
     const groundMat = new THREE.MeshLambertMaterial({ color: this.theme.ground || 0x5a8f4a });
     const ground = new THREE.Mesh(groundGeo, groundMat);
     ground.rotation.x = -Math.PI / 2;
@@ -267,6 +265,153 @@ class World {
     }
   }
 
+  createUniqueSetpieces() {
+    const id = this.worldId;
+    if (id === 1) this.createShepherdValleySetpiece();
+    if (id === 2) this.createRockMazeSetpiece();
+    if (id === 3) this.createHiddenGroveSetpiece();
+    if (id === 4) this.createTorchCaveSetpiece();
+    if (id === 5) this.createMountainPassSetpiece();
+    if (id === 6) this.createOutpostSetpiece();
+    if (id === 7) this.createFortressSetpiece();
+    if (id === 8) this.createBattlefieldSetpiece();
+    if (id === 9) this.createGoliathTerritorySetpiece();
+    if (id === 10) this.createFinalBattleSetpiece();
+  }
+
+  addInteractable(type, position, label, color = 0xf1c40f) {
+    const group = new THREE.Group();
+    const base = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.55, 0.7, 0.25, 10),
+      new THREE.MeshLambertMaterial({ color, emissive: 0x332200 })
+    );
+    base.position.y = 0.13;
+    const beacon = new THREE.Mesh(
+      new THREE.OctahedronGeometry(0.42),
+      new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.9 })
+    );
+    beacon.position.y = 0.75;
+    group.add(base, beacon);
+    group.position.copy(position);
+    this.scene.add(group);
+    const item = { type, label, group, position: group.position.clone(), used: false, beacon };
+    this.interactables.push(item);
+    return item;
+  }
+
+  createSign(position, text, color = 0x8b5a2b) {
+    const group = new THREE.Group();
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 1.8, 6), new THREE.MeshLambertMaterial({ color: 0x5c4033 }));
+    post.position.y = 0.9;
+    post.castShadow = true;
+    const board = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.9, 0.18), new THREE.MeshLambertMaterial({ color }));
+    board.position.y = 1.65;
+    board.castShadow = true;
+    group.add(post, board);
+
+    // Readable 3D label, facing the camera from either side.
+    const canvas = document.createElement('canvas');
+    canvas.width = 512; canvas.height = 160;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#fff8e7'; ctx.fillRect(12, 12, 488, 136);
+    ctx.strokeStyle = '#5c4033'; ctx.lineWidth = 8; ctx.strokeRect(12, 12, 488, 136);
+    ctx.fillStyle = '#2b241b'; ctx.font = 'bold 34px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const words = String(text).toUpperCase().split(' ');
+    let line = '', lines = [];
+    words.forEach(w => { const test = line ? line + ' ' + w : w; if (ctx.measureText(test).width > 450) { lines.push(line); line = w; } else line = test; });
+    if (line) lines.push(line);
+    lines.slice(0,2).forEach((ln,i)=>ctx.fillText(ln,256,72 + (i-(Math.min(lines.length,2)-1)/2)*38));
+    const tex = new THREE.CanvasTexture(canvas); tex.needsUpdate = true;
+    const label = new THREE.Mesh(new THREE.PlaneGeometry(2.55,0.8), new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide }));
+    label.position.set(0,1.65,0.11);
+    group.add(label);
+    group.position.copy(position);
+    this.scene.add(group);
+    return group;
+  }
+
+  createSheep(x, z) {
+    const g = new THREE.Group();
+    const wool = new THREE.MeshLambertMaterial({ color: 0xf3eee0 });
+    const dark = new THREE.MeshLambertMaterial({ color: 0x4b3a32 });
+    const body = new THREE.Mesh(new THREE.SphereGeometry(0.8, 16, 10), wool); body.scale.set(1.25, 0.8, 0.8); body.position.y = 0.85;
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.38, 12, 8), dark); head.position.set(0.8, 1.0, 0);
+    g.add(body, head);
+    [-0.45,0.45].forEach(lx=>[-0.28,0.28].forEach(lz=>{ const leg=new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.07,0.5,7),dark); leg.position.set(lx,0.35,lz); g.add(leg); }));
+    const earL=new THREE.Mesh(new THREE.ConeGeometry(0.07,0.22,6),dark); earL.position.set(0.8,1.25,-0.2); earL.rotation.z=-0.7; g.add(earL);
+    const earR=earL.clone(); earR.position.z=0.2; earR.rotation.z=-0.7; g.add(earR);
+    g.traverse(o=>{ if(o.isMesh){o.castShadow=true;o.receiveShadow=true;} });
+    g.position.set(x,0,z); this.scene.add(g); return g;
+  }
+
+  createShepherdValleySetpiece() {
+    [[-8,0],[8,2],[-5,-10]].forEach(p => this.createSheep(p[0],p[1]));
+    this.createSign(new THREE.Vector3(0,0,2), 'SHEPHERD CAMP');
+    [[-8,0,2],[0,0,-8],[8,0,-18]].forEach((p,i) => this.addInteractable('sheep', new THREE.Vector3(p[0],0,p[2]), 'Check sheep '+(i+1), 0x9bd36a));
+  }
+
+  createRockMazeSetpiece() {
+    const mat = new THREE.MeshLambertMaterial({ color: 0x706050 });
+    const walls = [[-8,-18,10,2],[8,-30,10,2],[-8,-42,10,2],[8,-50,10,2]];
+    walls.forEach(w => { const m=new THREE.Mesh(new THREE.BoxGeometry(w[2],3,w[3]),mat); m.position.set(w[0],1.5,w[1]); this.scene.add(m); });
+    [[-14,-18],[14,-30],[-14,-42]].forEach((p,i)=>this.addInteractable('marker',new THREE.Vector3(p[0],0,p[1]),'Mark rock '+(i+1),0xd6a85b));
+    this.createSign(new THREE.Vector3(0,0,-4),'ROCKY PASS');
+  }
+
+  createHiddenGroveSetpiece() {
+    const leaf = new THREE.MeshLambertMaterial({ color: 0x174b26 });
+    for(let i=0;i<8;i++){ const g=new THREE.Mesh(new THREE.SphereGeometry(2.1,8,6),leaf); g.position.set(-15+(i%2)*3,2,-16-Math.floor(i/2)*4); this.scene.add(g); }
+    this.addInteractable('hiddenPath',new THREE.Vector3(-15,0,-22),'Reveal hidden path',0x8ee08e);
+    this.createSign(new THREE.Vector3(5,0,-8),'LOOK CAREFULLY');
+  }
+
+  createTorchCaveSetpiece() {
+    [[-6,-18],[6,-30],[-6,-42],[6,-54]].forEach((p,i)=>{
+      const pole=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.16,2.4,6),new THREE.MeshLambertMaterial({color:0x5c4033})); pole.position.set(p[0],1.2,p[1]);
+      const flame=new THREE.Mesh(new THREE.ConeGeometry(0.28,0.7,8),new THREE.MeshBasicMaterial({color:0xffa020})); flame.position.set(p[0],2.6,p[1]);
+      const light=new THREE.PointLight(0xff9a3d,1.15,8); light.position.set(p[0],2.3,p[1]);
+      this.scene.add(pole,flame,light); this.addInteractable('torch',new THREE.Vector3(p[0],0,p[1]),'Light torch '+(i+1),0xffb347);
+    });
+  }
+
+  createMountainPassSetpiece() {
+    const snow=new THREE.MeshLambertMaterial({color:0xdce8ef});
+    for(let i=0;i<5;i++){ const m=new THREE.Mesh(new THREE.ConeGeometry(5,12,5),snow); m.position.set(-30+i*15,6,-70); this.scene.add(m); }
+    this.addInteractable('bridge',new THREE.Vector3(0,0,-30),'Cross mountain bridge',0x8b6914);
+    this.addInteractable('summit',new THREE.Vector3(0,0,-62),'Reach mountain summit',0xe8f2ff);
+  }
+
+  createOutpostSetpiece() {
+    const crateMat=new THREE.MeshLambertMaterial({color:0x7a4b2b});
+    [[-10,-20],[10,-20],[-8,-40],[8,-40]].forEach((p,i)=>{
+      const c=new THREE.Mesh(new THREE.BoxGeometry(2,1.5,2),crateMat); c.position.set(p[0],0.75,p[1]); this.scene.add(c);
+      this.addInteractable('supply',new THREE.Vector3(p[0],0,p[1]),'Secure supply '+(i+1),0xe6b04a);
+    });
+    this.createSign(new THREE.Vector3(0,0,-6),'PHILISTINE OUTPOST');
+  }
+
+  createFortressSetpiece() {
+    [[-12,-12],[12,-12],[-12,-36],[12,-36]].forEach((p,i)=>this.addInteractable('banner',new THREE.Vector3(p[0],0,p[1]),'Capture banner '+(i+1),0xd94a4a));
+    this.addInteractable('gateSwitch',new THREE.Vector3(0,0,-22),'Open fortress gate',0xf1d15b);
+  }
+
+  createBattlefieldSetpiece() {
+    [[-10,-14],[10,-26],[-10,-40],[10,-54],[0,-66]].forEach((p,i)=>this.addInteractable('standard',new THREE.Vector3(p[0],0,p[1]),'Secure battlefield standard '+(i+1),0xd94a4a));
+  }
+
+  createGoliathTerritorySetpiece() {
+    [[-3,-18],[3,-28],[-3,-38],[3,-48],[-3,-58]].forEach((p,i)=>{
+      const mark=new THREE.Mesh(new THREE.CircleGeometry(2.1,12),new THREE.MeshLambertMaterial({color:0x35261e})); mark.rotation.x=-Math.PI/2; mark.position.set(p[0],0.07,p[1]); this.scene.add(mark);
+      this.addInteractable('footprint',new THREE.Vector3(p[0],0,p[1]),'Inspect giant footprint '+(i+1),0xc49a6c);
+    });
+  }
+
+  createFinalBattleSetpiece() {
+    const stoneMat=new THREE.MeshLambertMaterial({color:0xa6adb4});
+    for(let i=0;i<5;i++){ const s=new THREE.Mesh(new THREE.DodecahedronGeometry(0.55,0),stoneMat); const a=(i/5)*Math.PI*2; s.position.set(Math.cos(a)*5,0.5,-70+Math.sin(a)*5); this.scene.add(s); }
+    this.addInteractable('arena',new THREE.Vector3(0,0,-70),'Enter final arena',0xf4d35e);
+  }
+
   placeCollectibles() {
     const custom = this.theme && this.theme.collectibles;
     const stonePositions = custom
@@ -376,9 +521,9 @@ class World {
       this.scene.add(hut);
     } else if (kind === 'arch') {
       const mat = new THREE.MeshLambertMaterial({ color: 0x7a6a58 });
-      const l = new THREE.Mesh(new THREE.BoxGeometry(1.5, 8, 1.5), mat); l.position.set(-4, 4, -18);
-      const r = new THREE.Mesh(new THREE.BoxGeometry(1.5, 8, 1.5), mat); r.position.set(4, 4, -18);
-      const t = new THREE.Mesh(new THREE.BoxGeometry(10, 1.5, 1.5), mat); t.position.set(0, 8.2, -18);
+      const l = new THREE.Mesh(new THREE.BoxGeometry(1.5, 8, 1.5), mat); l.position.set(-4, 4, -56);
+      const r = new THREE.Mesh(new THREE.BoxGeometry(1.5, 8, 1.5), mat); r.position.set(4, 4, -56);
+      const t = new THREE.Mesh(new THREE.BoxGeometry(10, 1.5, 1.5), mat); t.position.set(0, 8.2, -56);
       this.scene.add(l); this.scene.add(r); this.scene.add(t);
     } else if (kind === 'shrine') {
       const base = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.6, 0.5, 8), new THREE.MeshLambertMaterial({ color: 0xc8c0a0 }));
@@ -388,7 +533,7 @@ class World {
       this.scene.add(base); this.scene.add(stone);
     } else if (kind === 'crystal') {
       const c = new THREE.Mesh(new THREE.OctahedronGeometry(2.2), new THREE.MeshLambertMaterial({ color: 0x88ccff, emissive: 0x224466 }));
-      c.position.set(0, 2.2, -20);
+      c.position.set(0, 2.2, -62);
       this.scene.add(c);
     } else if (kind === 'tower') {
       const tw = new THREE.Mesh(new THREE.BoxGeometry(3.5, 10, 3.5), new THREE.MeshLambertMaterial({ color: 0x6a5a48 }));
@@ -437,18 +582,20 @@ class World {
   }
 
   createCrystals() {
-    const mat = new THREE.MeshLambertMaterial({ color: 0x88aaff, emissive: 0x223366 });
+    const mat = new THREE.MeshPhongMaterial({ color: 0x88aaff, emissive: 0x223366, shininess: 70, transparent: true, opacity: 0.92 });
     for (let i = 0; i < 16; i++) {
       const c = new THREE.Mesh(new THREE.ConeGeometry(0.35, 1.6, 5), mat);
       c.position.set((i % 2 ? 6 : -6) + Math.sin(i) * 3, 0.8, -6 - i * 4.5);
+      c.castShadow = true; c.receiveShadow = true;
       this.scene.add(c);
     }
+    const glow = new THREE.PointLight(0x77bbff, 1.0, 18); glow.position.set(0, 2, -38); this.scene.add(glow);
   }
 
   createStream() {
     const water = new THREE.Mesh(
       new THREE.PlaneGeometry(4, 80),
-      new THREE.MeshLambertMaterial({ color: 0x3a7ab8 })
+      new THREE.MeshPhongMaterial({ color: 0x3a7ab8, transparent: true, opacity: 0.72, shininess: 90 })
     );
     water.rotation.x = -Math.PI / 2;
     water.position.set(-14, 0.05, -25);
@@ -459,12 +606,15 @@ class World {
     const plank = new THREE.MeshLambertMaterial({ color: 0x6a4a28 });
     const deck = new THREE.Mesh(new THREE.BoxGeometry(4, 0.25, 16), plank);
     deck.position.set(0, 1.2, -30);
+    deck.castShadow = true; deck.receiveShadow = true;
     this.scene.add(deck);
     [-2, 2].forEach(x => {
       const rail = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.8, 16), plank);
-      rail.position.set(x, 1.7, -30);
+      rail.position.set(x, 1.7, -30); rail.castShadow = true;
       this.scene.add(rail);
+      for (let z=-36; z<=-24; z+=4) { const post=new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.1,1.1,6),plank); post.position.set(x,1.15,z); post.castShadow=true; this.scene.add(post); }
     });
+    [-1.5,1.5].forEach(x=>{ for(let z=-36; z<=-24; z+=4){ const support=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.16,1.2,7),plank); support.position.set(x,0.6,z); this.scene.add(support); } });
   }
 
   createFort() {
@@ -508,6 +658,23 @@ class World {
       print.position.set((i % 2 ? 3 : -3), 0.06, -20 - i * 10);
       this.scene.add(print);
     }
+  }
+
+
+  prepareShadows() {
+    this.scene.traverse(obj => {
+      if (!obj.isMesh) return;
+      if (obj.material && obj.material.transparent && obj.material.opacity < 0.8) {
+        obj.castShadow = false;
+      } else {
+        obj.castShadow = true;
+      }
+      obj.receiveShadow = true;
+    });
+  }
+
+  getNearbyInteractable(playerPos, radius = 2.6) {
+    return this.interactables.find(i => !i.used && i.group && i.group.position.distanceTo(playerPos) < radius);
   }
 
   update(dt) {
