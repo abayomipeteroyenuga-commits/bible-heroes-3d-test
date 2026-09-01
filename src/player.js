@@ -529,22 +529,60 @@ class Player {
   }
 
   setupControls() {
-    window.addEventListener('keydown', e => {
-      // Ignore key repeat so F/Q/Space are single-press
+    // Stable handlers so F works with pointer lock / any page focus
+    this._onKeyDown = (e) => {
+      const code = e.code || '';
+      const key = String(e.key || '').toLowerCase();
+
+      // Track movement keys (including repeat for continuous move)
+      if (code) this.keys[code] = true;
+
+      // Single-press actions: ignore auto-repeat
       if (e.repeat) return;
-      this.keys[e.code] = true;
-      if (e.code === 'Escape') {
-        if (window.Game && window.Game.state === 'playing') window.Game.pause();
+
+      const playing = window.Game && window.Game.state === 'playing';
+
+      if (code === 'Escape' && playing) {
+        window.Game.pause();
+        return;
       }
-      // Single-press actions only on keydown (not held every frame)
-      if (window.Game && window.Game.state === 'playing') {
-        if (e.code === 'KeyF') this.tryAttack();
-        if (e.code === 'KeyQ') this.tryFaithShield();
-        if (e.code === 'Space') this.tryJump();
-        if (e.code === 'KeyE') window.Game.tryInteract();
+
+      if (!playing) return;
+
+      // F = Fire Sling (existing tryAttack — no duplicate system)
+      const isF = code === 'KeyF' || key === 'f';
+      if (isF) {
+        e.preventDefault();
+        this.tryAttack();
+        return;
       }
-    });
-    window.addEventListener('keyup', e => { this.keys[e.code] = false; });
+
+      if (code === 'KeyQ' || key === 'q') {
+        e.preventDefault();
+        this.tryFaithShield();
+        return;
+      }
+
+      if (code === 'Space' || key === ' ') {
+        e.preventDefault();
+        this.tryJump();
+        return;
+      }
+
+      if (code === 'KeyE' || key === 'e') {
+        e.preventDefault();
+        if (window.Game) window.Game.tryInteract();
+      }
+    };
+
+    this._onKeyUp = (e) => {
+      if (e.code) this.keys[e.code] = false;
+    };
+
+    // Capture on window so F works with pointer-lock / no canvas focus.
+    // Single target avoids double-firing the same key event.
+    window.addEventListener('keydown', this._onKeyDown, true);
+    window.addEventListener('keyup', this._onKeyUp, true);
 
     document.addEventListener('mousemove', e => {
       if (!this.isMobile && this.mouse.locked) {
@@ -553,6 +591,7 @@ class Player {
       }
     });
 
+    // Left click still uses the same tryAttack (unchanged)
     document.addEventListener('mousedown', e => {
       if (e.button === 0 && window.Game && window.Game.state === 'playing') {
         this.tryAttack();
