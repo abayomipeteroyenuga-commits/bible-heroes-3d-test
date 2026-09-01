@@ -59,7 +59,7 @@ You can also open `index.html` directly in some browsers, but a local server is 
 ```bash
 git init
 git add .
-git commit -m "Bible Heroes Adventure - Level 1 David & Goliath"
+git commit -m "Pastor Abayomi Bible Stories - David and Goliath 10-World Adventure"
 git branch -M main
 git remote add origin https://github.com/YOUR_USERNAME/bible-heroes-adventure.git
 git push -u origin main
@@ -111,7 +111,7 @@ Only Level 1 is fully implemented and playable in this version.
 ## Brand
 
 **PastorAbayomiBibleStories**  
-**Bible Heroes Adventure**
+**Pastor Abayomi Bible Stories — David & Goliath**
 
 Child-friendly, low-poly, no blood/gore, faith-themed combat.
 

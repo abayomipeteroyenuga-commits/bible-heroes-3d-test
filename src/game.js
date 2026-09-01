@@ -53,6 +53,8 @@ const Game = {
     click('btn-settings', () => { this.loadSettings(); UI.show('settings'); });
     click('btn-skip-intro', () => this.startLevel(1));
     click('btn-resume', () => this.resume());
+    click('btn-pause-howto', () => UI.show('howto'));
+    click('btn-pause-restart', () => this.restartLevel());
     click('btn-pause-map', () => {
       this.populateMap();
       UI.show('map');
@@ -62,7 +64,10 @@ const Game = {
     click('btn-quit-yes', () => this.quitToMenu());
     click('btn-quit-no', () => UI.show('pause'));
     click('btn-continue', () => { this.quitToMenu(); this.populateMap(); UI.show('map'); });
-    click('btn-howto-back', () => UI.show('mainMenu'));
+    click('btn-howto-back', () => {
+      if (this.state === 'paused') UI.show('pause');
+      else UI.show('mainMenu');
+    });
     click('btn-settings-back', () => {
       this.saveSettings();
       if (this.state === 'paused') UI.show('pause');
