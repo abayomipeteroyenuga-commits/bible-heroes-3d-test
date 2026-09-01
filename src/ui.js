@@ -4,14 +4,18 @@ const UI = {
   messageTimeout: null,
 
   ACHIEVEMENTS: [
-    { key: 'davidTheBrave', icon: '🏅', title: 'David the Brave', desc: 'Defeat Goliath' },
-    { key: 'firstVictory', icon: '⭐', title: 'First Victory', desc: 'Complete your first level' },
-    { key: 'bullseye', icon: '🎯', title: 'Bullseye', desc: 'Land a critical hit on Goliath' },
-    { key: 'shieldOfFaith', icon: '⚡', title: 'Shield of Faith', desc: 'Use Faith Shield 3 times' },
-    { key: 'guardianDefeater', icon: '👻', title: 'Guardian Defeater', desc: 'Defeat 5 Shadow Guardians' },
-    { key: 'bossConqueror', icon: '👑', title: 'Boss Conqueror', desc: 'Defeat a boss enemy' },
-    { key: 'adventureExplorer', icon: '🗺️', title: 'Adventure Explorer', desc: 'Begin the Bible Heroes journey' },
-    { key: 'bibleHeroMaster', icon: '📖', title: 'Bible Hero Master', desc: 'Unlock all 10 levels' }
+    { key: 'firstVictory', icon: '⭐', title: 'First Victory', desc: 'Complete any world' },
+    { key: 'shieldOfFaith', icon: '⚡', title: 'Faithful Warrior', desc: 'Use Faith Shield 3 times' },
+    { key: 'valleyExplorer', icon: '🌿', title: "Shepherd's Beginning", desc: 'Complete World 1' },
+    { key: 'rockyWilderness', icon: '🪨', title: 'Rocky Survivor', desc: 'Complete World 2' },
+    { key: 'forestSurvivor', icon: '🌲', title: 'Forest Explorer', desc: 'Complete World 3' },
+    { key: 'caveExplorer', icon: '💎', title: 'Cave Escaper', desc: 'Complete World 4' },
+    { key: 'mountainClimber', icon: '⛰️', title: 'Mountain Climber', desc: 'Complete World 5' },
+    { key: 'outpostRaider', icon: '🏕️', title: 'Outpost Breaker', desc: 'Complete World 6' },
+    { key: 'fortressBreaker', icon: '🏰', title: 'Fortress Challenger', desc: 'Complete World 7' },
+    { key: 'battlefieldHero', icon: '⚔️', title: 'Battlefield Hero', desc: 'Complete World 8' },
+    { key: 'goliathTerritory', icon: '👣', title: "Goliath's Territory", desc: 'Complete World 9' },
+    { key: 'giantSlayer', icon: '👑', title: 'Giant Slayer', desc: 'Defeat Goliath in World 10' }
   ],
 
   init() {
@@ -123,7 +127,7 @@ const UI = {
       const cls = ['level-card', isUnlocked ? 'unlocked' : 'locked', isCurrent ? 'current' : '', starCount > 0 ? 'completed' : ''].filter(Boolean).join(' ');
       return '<button type="button" class="' + cls + '" data-level="' + lv.id + '" ' + (isUnlocked ? '' : 'disabled') + '>' +
         '<span class="level-icon">' + (lv.icon || '📖') + '</span>' +
-        '<span class="level-num">Level ' + lv.id + '</span>' +
+        '<span class="level-num">World ' + lv.id + '</span>' +
         '<span class="level-name">' + lv.name + lock + '</span>' +
         '<span class="level-stars">' + (starStr || (isUnlocked ? 'Play!' : 'Locked')) + '</span>' +
       '</button>';

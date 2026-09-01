@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>PastorAbayomi Bible Stories — Bible Heroes Adventure | David & Goliath</title>
+  <title>PastorAbayomi Bible Stories — David &amp; Goliath | 10-World Adventure</title>
   <link rel="stylesheet" href="style.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -13,10 +13,10 @@
   <!-- Loading Screen -->
   <div id="loading-screen">
     <div class="loader-content">
-      <img src="assets/ui/logo.svg" alt="PastorAbayomi Bible Stories" class="menu-logo" />
-      <h2>Bible Heroes Adventure</h2>
+      <img src="assets/ui/pastor-abayomi-bible-stories-logo.png" alt="Pastor Abayomi Bible Stories" class="brand-logo brand-logo-lg" onerror="this.onerror=null;this.src='assets/ui/logo.svg'" />
+      <h2>David &amp; Goliath</h2>
       <div class="spinner"></div>
-      <p id="loading-text">Loading Level 1: David & Goliath...</p>
+      <p id="loading-text">Loading World 1 — Shepherd's Valley...</p>
     </div>
   </div>
 
@@ -24,9 +24,9 @@
   <div id="main-menu" class="screen hidden">
     <div class="menu-container">
       <div class="logo-area">
-        <img src="assets/ui/logo.svg" alt="PastorAbayomi Bible Stories" class="menu-logo" />
-        <h2 class="title">Bible Heroes Adventure</h2>
-        <p class="subtitle">Level 1 — David & Goliath</p>
+        <img src="assets/ui/pastor-abayomi-bible-stories-logo.png" alt="Pastor Abayomi Bible Stories" class="brand-logo brand-logo-lg" onerror="this.onerror=null;this.src='assets/ui/logo.svg'" />
+        <h2 class="title">David &amp; Goliath</h2>
+        <p class="subtitle">10-World Adventure</p>
       </div>
       <div class="menu-buttons">
         <button id="btn-play" class="menu-btn primary">▶️ PLAY ADVENTURE</button>
@@ -110,6 +110,7 @@
     <!-- Pause Menu -->
     <div id="pause-menu" class="screen hidden">
       <div class="menu-container small">
+        <img src="assets/ui/pastor-abayomi-bible-stories-logo.png" alt="Pastor Abayomi Bible Stories" class="brand-logo brand-logo-sm" onerror="this.onerror=null;this.src='assets/ui/logo.svg'" />
         <h2>⏸️ PAUSED</h2>
         <button id="btn-resume" class="menu-btn primary">▶️ RESUME</button>
         <button id="btn-pause-map" class="menu-btn">🗺️ ADVENTURE MAP</button>
@@ -121,22 +122,26 @@
     <!-- Victory Screen -->
     <div id="victory-screen" class="screen hidden">
       <div class="victory-content">
-        <h1>GOLIATH DEFEATED!</h1>
-        <h2>DAVID'S FAITH HAS WON!</h2>
-        <p class="reward">⭐ +500 SCORE</p>
+        <img src="assets/ui/pastor-abayomi-bible-stories-logo.png" alt="Pastor Abayomi Bible Stories" class="brand-logo brand-logo-lg" onerror="this.onerror=null;this.src='assets/ui/logo.svg'" />
+        <p class="brand-kicker">PASTOR ABAYOMI BIBLE STORIES</p>
+        <h1 id="victory-title">WORLD COMPLETE!</h1>
+        <h2 id="victory-subtitle">DAVID'S FAITH HAS WON!</h2>
+        <p class="reward">⭐ WORLD COMPLETE</p>
         <p class="badge">🏅 DAVID THE BRAVE</p>
-        <h3>LEVEL 1 COMPLETE!</h3>
         <div class="stars" id="victory-stars">⭐⭐⭐</div>
         <p>SCORE: <span id="victory-score">0</span></p>
         <p>ITEMS FOUND: <span id="victory-items">0</span></p>
-        <p class="unlock">UNLOCKED: LEVEL 2 — THE WALLS OF JERICHO</p>
-        <button id="btn-continue" class="menu-btn primary">CONTINUE</button>
+        <p>ENEMIES DEFEATED: <span id="victory-enemies">0</span></p>
+        <p class="unlock">NEXT WORLD UNLOCKED</p>
+        <button id="btn-next-world" class="menu-btn primary">CONTINUE TO NEXT WORLD</button>
+        <button id="btn-continue" class="menu-btn">RETURN TO MAP</button>
       </div>
     </div>
 
     <!-- How to Play -->
     <div id="howto-screen" class="screen hidden">
       <div class="menu-container wide">
+        <img src="assets/ui/pastor-abayomi-bible-stories-logo.png" alt="Pastor Abayomi Bible Stories" class="brand-logo brand-logo-sm" onerror="this.onerror=null;this.src='assets/ui/logo.svg'" />
         <h2>📖 HOW TO PLAY</h2>
         <div class="howto-cards">
           <div class="info-card">
@@ -175,6 +180,7 @@
     <!-- Settings -->
     <div id="settings-screen" class="screen hidden">
       <div class="menu-container">
+        <img src="assets/ui/pastor-abayomi-bible-stories-logo.png" alt="Pastor Abayomi Bible Stories" class="brand-logo brand-logo-sm" onerror="this.onerror=null;this.src='assets/ui/logo.svg'" />
         <h2>⚙️ SETTINGS</h2>
         <div class="settings-panel">
           <label class="setting-row"><span>🔊 Sound Effects</span><input type="checkbox" id="set-sound" checked></label>
@@ -204,9 +210,9 @@
         <h2>📜 Credits</h2>
         <div class="info-card">
           <p><strong>PastorAbayomi Bible Stories</strong></p>
-          <p>Bible Heroes Adventure</p>
+          <p>David &amp; Goliath — 10-World Adventure</p>
           <p>A child-friendly 3D faith adventure.</p>
-          <p class="muted">Level 1: David &amp; Goliath</p>
+          <p class="muted">Ten worlds. One giant. One faith.</p>
         </div>
         <button id="btn-credits-back" class="menu-btn">BACK</button>
       </div>
@@ -233,8 +239,9 @@
     <!-- Adventure Map -->
     <div id="map-screen" class="screen hidden">
       <div class="menu-container wide">
+        <img src="assets/ui/pastor-abayomi-bible-stories-logo.png" alt="Pastor Abayomi Bible Stories" class="brand-logo brand-logo-sm" onerror="this.onerror=null;this.src='assets/ui/logo.svg'" />
         <h2>🗺️ ADVENTURE MAP</h2>
-        <p class="map-subtitle">Choose a Bible Heroes level</p>
+        <p class="map-subtitle">David vs Goliath — choose a world</p>
         <div class="level-grid" id="level-list"></div>
         <button id="btn-map-back" class="menu-btn">BACK</button>
       </div>
@@ -243,6 +250,7 @@
     <!-- Achievements -->
     <div id="achievements-screen" class="screen hidden">
       <div class="menu-container wide">
+        <img src="assets/ui/pastor-abayomi-bible-stories-logo.png" alt="Pastor Abayomi Bible Stories" class="brand-logo brand-logo-sm" onerror="this.onerror=null;this.src='assets/ui/logo.svg'" />
         <h2>🏅 ACHIEVEMENTS</h2>
         <div id="achievements-list" class="ach-grid"></div>
         <button id="btn-ach-back" class="menu-btn">BACK</button>

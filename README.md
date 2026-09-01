@@ -1,6 +1,6 @@
-# PastorAbayomi Bible Stories — Bible Heroes Adventure
+# PastorAbayomi Bible Stories — David & Goliath
 
-**Level 1: David & Goliath**
+**10-World Adventure**
 
 A real playable third-person 3D browser adventure game built with HTML5, CSS3, JavaScript and Three.js (WebGL).
 
@@ -16,8 +16,7 @@ A real playable third-person 3D browser adventure game built with HTML5, CSS3, J
 - Health / Armor / Faith systems
 - Checkpoints and respawn
 - localStorage save (progress, scores, unlocked levels, settings)
-- Victory screen unlocks Level 2 (Walls of Jericho)
-- Architecture ready for Levels 2–10
+- Ten playable David vs Goliath worlds with save/unlock progression
 
 ## Local Testing
 

@@ -25,7 +25,17 @@ const SaveSystem = {
         guardianDefeater: false,
         bossConqueror: false,
         adventureExplorer: false,
-        bibleHeroMaster: false
+        bibleHeroMaster: false,
+        valleyExplorer: false,
+        rockyWilderness: false,
+        forestSurvivor: false,
+        caveExplorer: false,
+        mountainClimber: false,
+        outpostRaider: false,
+        fortressBreaker: false,
+        battlefieldHero: false,
+        goliathTerritory: false,
+        giantSlayer: false
       },
       stats: {
         guardiansDefeated: 0,
@@ -66,11 +76,17 @@ const SaveSystem = {
   },
 
   unlockLevel(level) {
+    const n = parseInt(level, 10);
+    if (!n || n < 1 || n > 10) return;
     const data = this.load();
-    if (!data.unlockedLevels.includes(level)) {
-      data.unlockedLevels.push(level);
-      this.save(data);
-    }
+    const unlocked = data.unlockedLevels || [1];
+    if (unlocked.indexOf(n) !== -1) return;
+    // Sequential only: next world after the highest already unlocked
+    const maxUnlocked = unlocked.reduce((a, b) => Math.max(a, b), 1);
+    if (n !== maxUnlocked + 1) return;
+    unlocked.push(n);
+    data.unlockedLevels = unlocked;
+    this.save(data);
   },
 
   setBestScore(level, score) {

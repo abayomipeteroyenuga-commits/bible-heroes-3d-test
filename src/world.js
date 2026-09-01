@@ -1,7 +1,9 @@
 // World builder - Israelite battlefield
 class World {
-  constructor(scene) {
+  constructor(scene, worldId) {
     this.scene = scene;
+    this.worldId = worldId || 1;
+    this.theme = (window.getWorldTheme && window.getWorldTheme(this.worldId)) || {};
     this.collectibles = [];
     this.checkpoints = [];
     this.interactables = [];
@@ -9,25 +11,41 @@ class World {
     this.build();
   }
 
+  hasFeature(name) {
+    return this.theme.features && this.theme.features.indexOf(name) !== -1;
+  }
+
   build() {
     this.createLighting();
     this.createSky();
     this.createTerrain();
-    this.createCamp();
+    if (this.hasFeature('camp') || this.hasFeature('outpost') || this.hasFeature('camps')) this.createCamp();
     this.createPath();
     this.createTreesAndRocks();
+    if (this.hasFeature('forest')) this.createDenseForest();
+    if (this.hasFeature('cliffs') || this.hasFeature('mountains')) this.createCliffs();
+    if (this.hasFeature('cave')) this.createCaveShell();
+    if (this.hasFeature('crystals')) this.createCrystals();
+    if (this.hasFeature('stream')) this.createStream();
+    if (this.hasFeature('bridge')) this.createBridge();
+    if (this.hasFeature('towers') || this.hasFeature('walls') || this.hasFeature('gates')) this.createFort();
+    if (this.hasFeature('banners') || this.hasFeature('battlefield') || this.hasFeature('final')) this.createBanners();
+    if (this.hasFeature('giantMarks') || this.hasFeature('territory')) this.createGiantMarks();
     this.createEnemyArea();
     this.createBattlefield();
     this.createGoliathArena();
     this.placeCollectibles();
     this.placeCheckpoints();
+    this.createLandmark();
   }
 
   createLighting() {
-    const ambient = new THREE.AmbientLight(0xfff5e0, 0.55);
+    const ambCol = this.theme.ambient || 0xfff5e0;
+    const sunCol = this.theme.sun || 0xffe8c0;
+    const ambient = new THREE.AmbientLight(ambCol, this.theme.dark ? 0.35 : 0.55);
     this.scene.add(ambient);
 
-    const sun = new THREE.DirectionalLight(0xffe8c0, 0.95);
+    const sun = new THREE.DirectionalLight(sunCol, this.theme.dark ? 0.45 : 0.95);
     sun.position.set(30, 50, 20);
     sun.castShadow = true;
     sun.shadow.mapSize.width = 1024;
@@ -48,8 +66,10 @@ class World {
   }
 
   createSky() {
-    this.scene.background = new THREE.Color(0x87b8e0);
-    this.scene.fog = new THREE.Fog(0x87b8e0, 40, 110);
+    const sky = this.theme.sky || 0x87b8e0;
+    const fog = this.theme.fog || sky;
+    this.scene.background = new THREE.Color(sky);
+    this.scene.fog = new THREE.Fog(fog, this.theme.dark ? 18 : 40, this.theme.dark ? 70 : 110);
 
     // Simple sun disc
     const sunGeo = new THREE.SphereGeometry(4, 16, 12);
@@ -71,7 +91,7 @@ class World {
       pos.setZ(i, h);
     }
     groundGeo.computeVertexNormals();
-    const groundMat = new THREE.MeshLambertMaterial({ color: 0x5a8f4a });
+    const groundMat = new THREE.MeshLambertMaterial({ color: this.theme.ground || 0x5a8f4a });
     const ground = new THREE.Mesh(groundGeo, groundMat);
     ground.rotation.x = -Math.PI / 2;
     ground.position.y = -0.2;
@@ -80,7 +100,7 @@ class World {
 
     // Dirt path
     const pathGeo = new THREE.PlaneGeometry(6, 100);
-    const pathMat = new THREE.MeshLambertMaterial({ color: 0xb8956a });
+    const pathMat = new THREE.MeshLambertMaterial({ color: this.theme.path || 0xb8956a });
     const path = new THREE.Mesh(pathGeo, pathMat);
     path.rotation.x = -Math.PI / 2;
     path.position.set(0, 0.01, -25);
@@ -248,16 +268,18 @@ class World {
   }
 
   placeCollectibles() {
-    // Smooth stones (5)
-    const stonePositions = [
-      new THREE.Vector3(-7, 0.3, 8),
-      new THREE.Vector3(9, 0.3, 2),
-      new THREE.Vector3(-4, 0.3, -8),
-      new THREE.Vector3(6, 0.3, -18),
-      new THREE.Vector3(-10, 0.3, -30)
-    ];
+    const custom = this.theme && this.theme.collectibles;
+    const stonePositions = custom
+      ? custom.map(p => new THREE.Vector3(p[0], 0.3, p[1]))
+      : [
+          new THREE.Vector3(-7, 0.3, 8),
+          new THREE.Vector3(9, 0.3, 2),
+          new THREE.Vector3(-4, 0.3, -8),
+          new THREE.Vector3(6, 0.3, -18),
+          new THREE.Vector3(-10, 0.3, -30)
+        ];
     stonePositions.forEach((pos, i) => {
-      this.addCollectible('stone', pos, `Smooth Stone ${i + 1}`);
+      this.addCollectible(i === 0 ? 'faith' : 'stone', pos, i === 0 ? 'Faith Token' : ('Smooth Stone ' + (i + 1)));
     });
 
     // Sling
@@ -343,6 +365,149 @@ class World {
       this.scene.add(marker);
       this.checkpoints.push({ ...cp, mesh: marker, activated: false });
     });
+  }
+
+  createLandmark() {
+    const kind = this.theme && this.theme.landmark;
+    if (!kind || kind === 'arena') return;
+    if (kind === 'hut') {
+      const hut = new THREE.Mesh(new THREE.ConeGeometry(2.2, 3, 6), new THREE.MeshLambertMaterial({ color: 0x8b5a2b }));
+      hut.position.set(-14, 1.5, 10);
+      this.scene.add(hut);
+    } else if (kind === 'arch') {
+      const mat = new THREE.MeshLambertMaterial({ color: 0x7a6a58 });
+      const l = new THREE.Mesh(new THREE.BoxGeometry(1.5, 8, 1.5), mat); l.position.set(-4, 4, -18);
+      const r = new THREE.Mesh(new THREE.BoxGeometry(1.5, 8, 1.5), mat); r.position.set(4, 4, -18);
+      const t = new THREE.Mesh(new THREE.BoxGeometry(10, 1.5, 1.5), mat); t.position.set(0, 8.2, -18);
+      this.scene.add(l); this.scene.add(r); this.scene.add(t);
+    } else if (kind === 'shrine') {
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.6, 0.5, 8), new THREE.MeshLambertMaterial({ color: 0xc8c0a0 }));
+      base.position.set(-15, 0.25, -22);
+      const stone = new THREE.Mesh(new THREE.BoxGeometry(1, 2.2, 0.4), new THREE.MeshLambertMaterial({ color: 0xddd4b0 }));
+      stone.position.set(-15, 1.5, -22);
+      this.scene.add(base); this.scene.add(stone);
+    } else if (kind === 'crystal') {
+      const c = new THREE.Mesh(new THREE.OctahedronGeometry(2.2), new THREE.MeshLambertMaterial({ color: 0x88ccff, emissive: 0x224466 }));
+      c.position.set(0, 2.2, -20);
+      this.scene.add(c);
+    } else if (kind === 'tower') {
+      const tw = new THREE.Mesh(new THREE.BoxGeometry(3.5, 10, 3.5), new THREE.MeshLambertMaterial({ color: 0x6a5a48 }));
+      tw.position.set(16, 5, -8);
+      this.scene.add(tw);
+    }
+  }
+
+  createDenseForest() {
+    const trunkMat = new THREE.MeshLambertMaterial({ color: 0x4a3020 });
+    const leafMat = new THREE.MeshLambertMaterial({ color: 0x1e6b32 });
+    for (let i = 0; i < 28; i++) {
+      const g = new THREE.Group();
+      const tr = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.35, 3.2, 6), trunkMat);
+      tr.position.y = 1.6;
+      const lf = new THREE.Mesh(new THREE.SphereGeometry(1.6, 8, 6), leafMat);
+      lf.position.y = 3.4;
+      g.add(tr); g.add(lf);
+      const side = i % 2 === 0 ? -1 : 1;
+      g.position.set(side * (10 + (i % 5) * 2.2), 0, -8 - i * 2.4);
+      this.scene.add(g);
+    }
+  }
+
+  createCliffs() {
+    const mat = new THREE.MeshLambertMaterial({ color: 0x7a6a58 });
+    for (let i = 0; i < 10; i++) {
+      const h = 4 + (i % 4) * 1.8;
+      const m = new THREE.Mesh(new THREE.BoxGeometry(5, h, 4), mat);
+      const side = i % 2 === 0 ? -18 : 18;
+      m.position.set(side + (i % 3) * 2, h / 2, -10 - i * 7);
+      this.scene.add(m);
+    }
+  }
+
+  createCaveShell() {
+    const rock = new THREE.MeshLambertMaterial({ color: 0x2c2434 });
+    const roof = new THREE.Mesh(new THREE.BoxGeometry(70, 2, 120), rock);
+    roof.position.set(0, 12, -30);
+    this.scene.add(roof);
+    for (let i = 0; i < 8; i++) {
+      const p = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.7, 8, 6), rock);
+      p.position.set((i % 2 ? 8 : -8), 4, -8 - i * 8);
+      this.scene.add(p);
+    }
+  }
+
+  createCrystals() {
+    const mat = new THREE.MeshLambertMaterial({ color: 0x88aaff, emissive: 0x223366 });
+    for (let i = 0; i < 16; i++) {
+      const c = new THREE.Mesh(new THREE.ConeGeometry(0.35, 1.6, 5), mat);
+      c.position.set((i % 2 ? 6 : -6) + Math.sin(i) * 3, 0.8, -6 - i * 4.5);
+      this.scene.add(c);
+    }
+  }
+
+  createStream() {
+    const water = new THREE.Mesh(
+      new THREE.PlaneGeometry(4, 80),
+      new THREE.MeshLambertMaterial({ color: 0x3a7ab8 })
+    );
+    water.rotation.x = -Math.PI / 2;
+    water.position.set(-14, 0.05, -25);
+    this.scene.add(water);
+  }
+
+  createBridge() {
+    const plank = new THREE.MeshLambertMaterial({ color: 0x6a4a28 });
+    const deck = new THREE.Mesh(new THREE.BoxGeometry(4, 0.25, 16), plank);
+    deck.position.set(0, 1.2, -30);
+    this.scene.add(deck);
+    [-2, 2].forEach(x => {
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.8, 16), plank);
+      rail.position.set(x, 1.7, -30);
+      this.scene.add(rail);
+    });
+  }
+
+  createFort() {
+    const wall = new THREE.MeshLambertMaterial({ color: 0x8a7a68 });
+    const wood = new THREE.MeshLambertMaterial({ color: 0x5a4030 });
+    const left = new THREE.Mesh(new THREE.BoxGeometry(18, 6, 2), wall);
+    left.position.set(-16, 3, -22);
+    const right = new THREE.Mesh(new THREE.BoxGeometry(18, 6, 2), wall);
+    right.position.set(16, 3, -22);
+    this.scene.add(left); this.scene.add(right);
+    const gate = new THREE.Mesh(new THREE.BoxGeometry(6, 5, 1.2), wood);
+    gate.position.set(0, 2.5, -22);
+    this.scene.add(gate);
+    [-20, 20].forEach(x => {
+      const tw = new THREE.Mesh(new THREE.BoxGeometry(3, 9, 3), wall);
+      tw.position.set(x, 4.5, -22);
+      this.scene.add(tw);
+    });
+  }
+
+  createBanners() {
+    const cloth = new THREE.MeshLambertMaterial({ color: 0x8b1a1a, side: THREE.DoubleSide });
+    for (let i = 0; i < 8; i++) {
+      const pole = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.08, 0.08, 5, 6),
+        new THREE.MeshLambertMaterial({ color: 0x4a3020 })
+      );
+      const side = i % 2 ? 10 : -10;
+      pole.position.set(side, 2.5, -8 - i * 8);
+      const flag = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1), cloth);
+      flag.position.set(side + (i % 2 ? -0.9 : 0.9), 4.2, -8 - i * 8);
+      this.scene.add(pole); this.scene.add(flag);
+    }
+  }
+
+  createGiantMarks() {
+    const dirt = new THREE.MeshLambertMaterial({ color: 0x3a2a20 });
+    for (let i = 0; i < 5; i++) {
+      const print = new THREE.Mesh(new THREE.CircleGeometry(2.4, 10), dirt);
+      print.rotation.x = -Math.PI / 2;
+      print.position.set((i % 2 ? 3 : -3), 0.06, -20 - i * 10);
+      this.scene.add(print);
+    }
   }
 
   update(dt) {

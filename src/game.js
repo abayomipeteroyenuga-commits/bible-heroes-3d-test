@@ -1,6 +1,7 @@
 // Main Game Controller
 const Game = {
   state: 'loading', // loading, menu, intro, playing, paused, victory
+  currentWorld: 1,
   scene: null,
   camera: null,
   renderer: null,
@@ -41,7 +42,8 @@ const Game = {
         fn();
       });
     };
-    click('btn-play', () => this.startIntro());
+    click('btn-play', () => this.startWorld(1));
+    click('btn-next-world', () => this.continueNextWorld());
     click('btn-map', () => { this.populateMap(); UI.show('map'); });
     click('btn-howto', () => UI.show('howto'));
     click('btn-achievements', () => {
@@ -59,7 +61,7 @@ const Game = {
     click('btn-quit', () => UI.show('confirmQuit'));
     click('btn-quit-yes', () => this.quitToMenu());
     click('btn-quit-no', () => UI.show('pause'));
-    click('btn-continue', () => this.quitToMenu());
+    click('btn-continue', () => { this.quitToMenu(); this.populateMap(); UI.show('map'); });
     click('btn-howto-back', () => UI.show('mainMenu'));
     click('btn-settings-back', () => {
       this.saveSettings();
@@ -148,31 +150,50 @@ const Game = {
   populateMap() {
     const data = SaveSystem.load();
     UI.populateMap(data.unlockedLevels, data.stars, (levelId) => {
-      if (levelId === 1) {
-        this.startIntro();
-      } else if (data.unlockedLevels.indexOf(levelId) !== -1) {
-        UI.showMessage('Level ' + levelId + ' is unlocked. Full world coming in a future update.', 2800);
-      } else {
-        UI.showMessage('This level is locked. Complete earlier adventures first.', 2500);
+      if (data.unlockedLevels.indexOf(levelId) !== -1) {
+        this.startWorld(levelId);
       }
     });
   },
 
   startIntro() {
-    this.state = 'intro';
-    UI.show('intro');
-    // Auto proceed after narration
-    setTimeout(() => {
-      if (this.state === 'intro') this.startLevel();
-    }, 6000);
+    this.startWorld(1);
   },
 
-  startLevel() {
+  startWorld(id) {
+    const n = parseInt(id, 10) || 1;
+    if (n < 1 || n > 10) return;
+    this.currentWorld = n;
+    if (n === 1) {
+      this.state = 'intro';
+      const title = document.querySelector('#intro-screen .intro-title');
+      const lv = window.LEVELS && window.LEVELS[0];
+      if (title && lv) title.textContent = 'WORLD 1 — ' + lv.name.toUpperCase();
+      UI.show('intro');
+      setTimeout(() => {
+        if (this.state === 'intro') this.startLevel(1);
+      }, 4000);
+    } else {
+      this.startLevel(n);
+    }
+  },
+
+  startLevel(id) {
+    if (id) this.currentWorld = parseInt(id, 10) || 1;
     this.teardownLevel();
     this.state = 'playing';
+    this.worldCompleteReady = false;
+    this._victoryQueued = false;
+    this.hiddenPathFound = false;
+    this.mountainPassCrossed = false;
+    this.rockyWildernessCrossed = false;
+    this.caveEscaped = false;
+    this.outpostBroken = false;
+    this.fortressReached = false;
+    this.goliathTerritoryEntered = false;
     UI.showGame();
     this.initThree();
-    this.missions = new MissionSystem();
+    this.missions = new MissionSystem(this.currentWorld);
     UI.setMission(this.missions.getCurrent().text);
     this.exploredCamp = false;
     this.enemiesDefeated = 0;
@@ -224,9 +245,8 @@ const Game = {
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.applyGraphics();
 
-    this.world = new World(this.scene);
+    this.world = new World(this.scene, this.currentWorld || 1);
     this.player = new Player(this.scene, this.camera);
-    // Level 1: David starts with his sling ready
     this.player.enableSling();
     this.player.stones = Math.max(this.player.stones, 5);
     const data = SaveSystem.load();
@@ -235,17 +255,16 @@ const Game = {
     }
     this.combat = new CombatSystem(this.scene);
 
-    // Enemies
     this.enemies = [];
-    const enemySpawns = [
-      new THREE.Vector3(-6, 0, -8),
-      new THREE.Vector3(7, 0, -15),
-      new THREE.Vector3(-5, 0, -28),
-      new THREE.Vector3(8, 0, -32),
-      new THREE.Vector3(0, 0, -40)
-    ];
-    enemySpawns.forEach((pos, i) => {
-      this.enemies.push(new ShadowGuardian(this.scene, pos, i % 3));
+    const theme = window.getWorldTheme ? window.getWorldTheme(this.currentWorld || 1) : {};
+    this._worldTheme = theme;
+    this._waveIndex = 0;
+    this.wavesComplete = !(theme.waves && theme.waves.length > 1);
+    const spots = window.enemySpawnsFor ? window.enemySpawnsFor(this.currentWorld || 1) : [];
+    const stats = { health: theme.enemyHp || 30, damage: theme.enemyDmg || 5, speed: theme.enemySpd || 3.2 };
+    this._enemyStats = stats;
+    spots.forEach((s, i) => {
+      this.enemies.push(new ShadowGuardian(this.scene, new THREE.Vector3(s.x, s.y, s.z), i % 3, stats));
     });
 
     this.goliath = null;
@@ -295,12 +314,24 @@ const Game = {
     if (!this.exploredCamp && playerPos.z < 5 && (Math.abs(playerPos.x) > 3 || playerPos.z < 2)) {
       this.exploredCamp = true;
     }
+    if (this.currentWorld === 3 && playerPos.x < -13 && playerPos.z < -18 && playerPos.z > -28) {
+      this.hiddenPathFound = true;
+    }
+    if (this.currentWorld === 5 && Math.abs(playerPos.x) < 4 && playerPos.z < -24 && playerPos.z > -36) {
+      this.mountainPassCrossed = true;
+    }
+    if (this.currentWorld === 2 && playerPos.z < -52) this.rockyWildernessCrossed = true;
+    if (this.currentWorld === 4 && playerPos.z < -58) this.caveEscaped = true;
+    if (this.currentWorld === 6 && Math.abs(playerPos.x) < 8 && playerPos.z < -20 && playerPos.z > -26) this.outpostBroken = true;
+    if (this.currentWorld === 7 && playerPos.z < -24 && Math.abs(playerPos.x) < 10) this.fortressReached = true;
+    if (this.currentWorld === 9 && playerPos.z < -50) this.goliathTerritoryEntered = true;
 
     // Enemies
     this.enemies.forEach(e => {
       e.update(dt, playerPos);
     });
     this.enemiesDefeated = this.enemies.filter(e => !e.alive).length;
+    this.trySpawnNextWave();
 
     // Goliath
     if (this.goliath && this.goliath.alive) {
@@ -414,9 +445,34 @@ const Game = {
     this.combat.spawnShockwave(pos);
   },
 
+  trySpawnNextWave() {
+    const theme = this._worldTheme;
+    if (!theme || !theme.waves || theme.waves.length < 2) return;
+    const living = this.enemies.some(e => e.alive);
+    if (living) return;
+    if (this._waveIndex >= theme.waves.length - 1) {
+      this.wavesComplete = true;
+      return;
+    }
+    this._waveIndex++;
+    const next = theme.waves[this._waveIndex] || [];
+    const stats = this._enemyStats || {};
+    next.forEach((p, i) => {
+      this.enemies.push(new ShadowGuardian(this.scene, new THREE.Vector3(p[0], p[1], p[2]), i % 3, stats));
+    });
+    if (window.UI) UI.showMessage('WAVE ' + (this._waveIndex + 1) + '!', 1600);
+    if (window.AudioSystem) AudioSystem.battleMusic();
+  },
+
   spawnGoliath() {
     if (this.goliath) return;
-    this.goliath = new Goliath(this.scene, new THREE.Vector3(0, 0, -70));
+    const theme = window.getWorldTheme ? window.getWorldTheme(this.currentWorld || 1) : {};
+    const gp = theme.goliathPos || [0, 0, -70];
+    this.goliath = new Goliath(this.scene, new THREE.Vector3(gp[0], gp[1], gp[2]));
+    if (theme.goliathHp) {
+      this.goliath.health = theme.goliathHp;
+      this.goliath.maxHealth = theme.goliathHp;
+    }
     UI.showBoss(this.goliath.health, this.goliath.maxHealth);
     UI.showMessage('GOLIATH — THE PHILISTINE GIANT!', 3000);
     if (window.AudioSystem) {
@@ -454,29 +510,58 @@ const Game = {
   showVictory() {
     this.state = 'victory';
     cancelAnimationFrame(this.animFrame);
+    this._loopRunning = false;
     if (window.AudioSystem) {
       AudioSystem.stopMusic();
       AudioSystem.levelComplete();
       setTimeout(() => { if (window.AudioSystem) AudioSystem.victory(); }, 400);
     }
-    const score = this.player.score;
+    const worldId = this.currentWorld || 1;
+    const lv = (window.LEVELS && window.LEVELS[worldId - 1]) || { name: 'World ' + worldId };
+    const score = this.player ? this.player.score : 0;
     const stars = score > 1200 ? 3 : score > 700 ? 2 : 1;
-    document.getElementById('victory-score').textContent = score;
-    document.getElementById('victory-items').textContent = this.itemsCollected;
-    document.getElementById('victory-stars').textContent = '⭐'.repeat(stars);
+    const nextId = worldId < 10 ? worldId + 1 : null;
+    const nextLv = nextId && window.LEVELS ? window.LEVELS[nextId - 1] : null;
 
-    // Save progress
-    SaveSystem.unlockLevel(2);
-    SaveSystem.setBestScore(1, score);
-    SaveSystem.setStars(1, stars);
-    SaveSystem.setAchievement('davidTheBrave');
-    SaveSystem.setAchievement('bossConqueror');
-    SaveSystem.setAchievement('firstVictory');
-    SaveSystem.setAchievement('adventureExplorer');
+    const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    setTxt('victory-title', worldId === 10 ? 'DAVID & GOLIATH — FINAL VICTORY' : ('WORLD ' + worldId + ' COMPLETE!'));
+    setTxt('victory-subtitle', worldId === 10 ? 'GIANT SLAYER' : lv.name.toUpperCase());
+    setTxt('victory-score', score);
+    setTxt('victory-items', this.itemsCollected);
+    setTxt('victory-enemies', this.enemiesDefeated);
+    const starEl = document.getElementById('victory-stars');
+    if (starEl) starEl.textContent = '⭐'.repeat(stars);
+    const unlockEl = document.querySelector('#victory-screen .unlock');
+    if (unlockEl) {
+      unlockEl.textContent = nextLv
+        ? ('NEXT WORLD UNLOCKED: WORLD ' + nextId + ' — ' + nextLv.name.toUpperCase())
+        : 'THE ADVENTURE IS COMPLETE — GIANT SLAYER!';
+    }
+    const nextBtn = document.getElementById('btn-next-world');
+    if (nextBtn) nextBtn.classList.toggle('hidden', !nextId);
+
+    if (nextId) SaveSystem.unlockLevel(nextId);
+    SaveSystem.setBestScore(worldId, score);
+    SaveSystem.setStars(worldId, stars);
     SaveSystem.bumpStat('levelsCompleted', 1);
+    if (worldId === 1) {
+      SaveSystem.setAchievement('davidTheBrave');
+      SaveSystem.setAchievement('firstVictory');
+      SaveSystem.setAchievement('adventureExplorer');
+    }
+    if (this.goliathDefeated) SaveSystem.setAchievement('bossConqueror');
     if (this.enemiesDefeated >= 5) SaveSystem.setAchievement('guardianDefeater');
+    if (lv.achievement) SaveSystem.setAchievement(lv.achievement);
+    if (worldId === 10 && this.goliathDefeated) SaveSystem.setAchievement('giantSlayer');
+    if (worldId === 10) SaveSystem.setAchievement('bibleHeroMaster');
 
     UI.show('victory');
+  },
+
+  continueNextWorld() {
+    const next = (this.currentWorld || 1) + 1;
+    if (next <= 10) this.startWorld(next);
+    else this.quitToMenu();
   },
 
   updateHUD() {

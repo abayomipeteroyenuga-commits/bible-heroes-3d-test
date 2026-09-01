@@ -37,13 +37,14 @@ const GUARDIAN_VARIANTS = [
 ];
 
 class ShadowGuardian {
-  constructor(scene, position, variantIndex) {
+  constructor(scene, position, variantIndex, stats) {
     this.scene = scene;
     this.group = new THREE.Group();
-    this.health = 30;
-    this.maxHealth = 30;
-    this.damage = 5;
-    this.speed = 3.2;
+    stats = stats || {};
+    this.health = stats.health != null ? stats.health : 30;
+    this.maxHealth = this.health;
+    this.damage = stats.damage != null ? stats.damage : 5;
+    this.speed = stats.speed != null ? stats.speed : 3.2;
     this.state = 'IDLE';
     this.detectRange = 12;
     this.attackRange = 2.2;
@@ -832,17 +833,34 @@ class Goliath {
   }
 
   update(dt, playerPos) {
-    if (!this.alive) return;
+    if (!this.alive || this.state === 'DEFEATED') {
+      this.animate(dt);
+      return;
+    }
     this.animTime += dt;
     if (this.attackCooldown > 0) this.attackCooldown -= dt;
     this.vulnerableTimer -= dt;
 
-    const hpRatio = this.health / this.maxHealth;
+    const hpRatio = Math.max(0, this.health / this.maxHealth);
     if (hpRatio < 0.3) this.phase = 3;
     else if (hpRatio < 0.6) this.phase = 2;
     else this.phase = 1;
 
-    if (this.state === 'ENTRANCE' || this.state === 'HIT' || this.state === 'STUN' || this.state === 'DEFEATED') {
+    // Busy / reaction states — no new decisions
+    if (this.state === 'ENTRANCE' || this.state === 'HIT' || this.state === 'STUN') {
+      this.animate(dt);
+      return;
+    }
+
+    // Charge lunge moves over time toward stored direction
+    if (this.state === 'CHARGE' && this._chargeDir) {
+      const dash = (this.phase === 3 ? 16 : 12) * dt;
+      this.group.position.x += this._chargeDir.x * dash;
+      this.group.position.z += this._chargeDir.z * dash;
+      this._clampBossBounds();
+    }
+
+    if (this.state === 'ROAR' || this.state === 'STRIKE' || this.state === 'CHARGE') {
       this.animate(dt);
       return;
     }
@@ -852,8 +870,8 @@ class Goliath {
 
     if (this.vulnerableTimer <= 0) {
       const opts = ['HEAD', 'ARMOR', 'SHIELD'];
-      this.vulnerable = opts[Math.floor(Math.random() * opts.length)];
-      this.vulnerableTimer = 4;
+      this.vulnerable = opts[Math.floor(Math.random() * 3)];
+      this.vulnerableTimer = this.phase === 3 ? 3 : 4;
       Object.keys(this.vulnMarkers).forEach(k => {
         this.vulnMarkers[k].visible = (k === this.vulnerable);
       });
@@ -861,23 +879,28 @@ class Goliath {
 
     this.group.lookAt(playerPos.x, this.group.position.y, playerPos.z);
 
-    if (this.state === 'ROAR' || this.state === 'STRIKE' || this.state === 'CHARGE') {
-      this.animate(dt);
-      return;
-    }
+    const strikeRange = 8;
+    const chaseRange = 11;
 
-    if (dist > 7) {
-      const dir = new THREE.Vector3().subVectors(playerPos, this.group.position).normalize();
+    if (dist > chaseRange) {
+      const dir = new THREE.Vector3().subVectors(playerPos, this.group.position);
+      dir.y = 0;
+      if (dir.lengthSq() > 0.001) dir.normalize();
       this.group.position.x += dir.x * this.speed * speedMult * dt;
       this.group.position.z += dir.z * this.speed * speedMult * dt;
+      this._clampBossBounds();
       this.state = 'CHASE';
     } else if (this.attackCooldown <= 0) {
-      const r = Math.random();
-      this.attackProgress = 0;
-      if (r < 0.4) this.groundStrike(playerPos);
-      else if (r < 0.7) this.roar();
-      else this.charge(playerPos);
-      this.attackCooldown = this.phase === 3 ? 1.8 : 2.5;
+      this.chooseAttack(dist, playerPos);
+      this.attackCooldown = this.phase === 3 ? 1.7 : this.phase === 2 ? 2.2 : 2.6;
+    } else if (dist > strikeRange) {
+      const dir = new THREE.Vector3().subVectors(playerPos, this.group.position);
+      dir.y = 0;
+      if (dir.lengthSq() > 0.001) dir.normalize();
+      this.group.position.x += dir.x * this.speed * 0.55 * speedMult * dt;
+      this.group.position.z += dir.z * this.speed * 0.55 * speedMult * dt;
+      this._clampBossBounds();
+      this.state = 'CHASE';
     } else {
       this.state = 'IDLE';
     }
@@ -885,11 +908,37 @@ class Goliath {
     this.animate(dt);
   }
 
+  chooseAttack(dist, playerPos) {
+    this.attackProgress = 0;
+    // Prefer strike up close, charge at mid range, roar when farther or in late phase
+    let roll = Math.random();
+    if (this.phase === 3) roll -= 0.1;
+    if (dist < 7) {
+      if (roll < 0.55) this.groundStrike(playerPos);
+      else if (roll < 0.8) this.roar();
+      else this.charge(playerPos);
+    } else if (dist < 12) {
+      if (roll < 0.35) this.groundStrike(playerPos);
+      else if (roll < 0.55) this.roar();
+      else this.charge(playerPos);
+    } else {
+      if (roll < 0.45) this.roar();
+      else this.charge(playerPos);
+    }
+  }
+
+  _clampBossBounds() {
+    const b = window.Game && window.Game.world && window.Game.world.bounds;
+    if (!b) return;
+    this.group.position.x = Math.max(b.minX + 4, Math.min(b.maxX - 4, this.group.position.x));
+    this.group.position.z = Math.max(b.minZ + 4, Math.min(b.maxZ - 4, this.group.position.z));
+  }
+
   groundStrike(playerPos) {
     this.state = 'STRIKE';
     this.attackProgress = 0;
     this.attackHitDone = false;
-    this._pendingAttackDamage = this.damage;
+    this._pendingAttackDamage = this.damage * (this.phase === 3 ? 1.25 : 1);
     this._pendingAttackMsg = 'GROUND STRIKE!';
     this._pendingAttackRange = 9;
     if (window.Game) window.Game.spawnShockwave(this.group.position.clone());
@@ -901,7 +950,7 @@ class Goliath {
     if (window.UI) window.UI.showMessage('GOLIATH ROARS!', 1200);
     if (window.Game && window.Game.player) {
       window.Game.player.speed = 3;
-      setTimeout(() => { if (window.Game.player) window.Game.player.speed = 6; }, 2000);
+      setTimeout(() => { if (window.Game && window.Game.player) window.Game.player.speed = 6; }, 2000);
     }
   }
 
@@ -909,12 +958,14 @@ class Goliath {
     this.state = 'CHARGE';
     this.attackProgress = 0;
     this.attackHitDone = false;
-    this._pendingAttackDamage = this.damage * 1.2;
+    this._pendingAttackDamage = this.damage * (this.phase === 3 ? 1.4 : 1.2);
     this._pendingAttackMsg = 'CHARGE!';
-    this._pendingAttackRange = 5.5;
-    const dir = new THREE.Vector3().subVectors(playerPos, this.group.position).normalize();
-    this.group.position.x += dir.x * 3.5;
-    this.group.position.z += dir.z * 3.5;
+    this._pendingAttackRange = 6;
+    const dir = new THREE.Vector3().subVectors(playerPos, this.group.position);
+    dir.y = 0;
+    if (dir.lengthSq() > 0.001) dir.normalize();
+    else dir.set(0, 0, -1);
+    this._chargeDir = dir;
   }
 
   takeDamage(amount, hitZone) {
