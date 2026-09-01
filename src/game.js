@@ -42,7 +42,7 @@ const Game = {
         fn();
       });
     };
-    click('btn-play', () => this.startWorld(1));
+    click('btn-play', () => this.playContinue());
     click('btn-next-world', () => this.continueNextWorld());
     click('btn-map', () => { this.populateMap(); UI.show('map'); });
     click('btn-howto', () => UI.show('howto'));
@@ -154,10 +154,8 @@ const Game = {
 
   populateMap() {
     const data = SaveSystem.load();
-    UI.populateMap(data.unlockedLevels, data.stars, (levelId) => {
-      if (data.unlockedLevels.indexOf(levelId) !== -1) {
-        this.startWorld(levelId);
-      }
+    UI.populateMap(data, (levelId) => {
+      this.startWorld(levelId);
     });
   },
 
@@ -165,9 +163,25 @@ const Game = {
     this.startWorld(1);
   },
 
+  playContinue() {
+    const data = SaveSystem.load();
+    const allDone = (data.completedLevels || []).length >= 10;
+    if (allDone) {
+      this.populateMap();
+      UI.show('map');
+      return;
+    }
+    const next = SaveSystem.getContinueLevel();
+    this.startWorld(next);
+  },
+
   startWorld(id) {
     const n = parseInt(id, 10) || 1;
     if (n < 1 || n > 10) return;
+    if (!SaveSystem.isUnlocked(n)) {
+      if (window.UI) UI.showMessage('This world is locked. Complete earlier worlds first.', 2400);
+      return;
+    }
     this.currentWorld = n;
     if (n === 1) {
       this.state = 'intro';
@@ -189,6 +203,8 @@ const Game = {
     this.state = 'playing';
     this.worldCompleteReady = false;
     this._victoryQueued = false;
+    this._worldCompletionHandled = false;
+    this._victoryScreenShown = false;
     this.hiddenPathFound = false;
     this.mountainPassCrossed = false;
     this.rockyWildernessCrossed = false;
@@ -503,16 +519,40 @@ const Game = {
 
   onBossDefeated() {
     this.goliathDefeated = true;
-    this.player.state = 'VICTORY';
-    this.player.addScore(500);
-    // Faith moment text
+    if (this.player) {
+      this.player.state = 'VICTORY';
+      this.player.addScore(500);
+    }
     UI.showMessage('DAVID: "I come with faith in God!"', 3000);
-    setTimeout(() => {
-      this.showVictory();
-    }, 2500);
+    // MissionSystem detects goliathDefeated and calls finishWorld → completeCurrentWorld
+  },
+
+  completeCurrentWorld() {
+    if (this._worldCompletionHandled) return;
+    this._worldCompletionHandled = true;
+    const worldId = this.currentWorld || 1;
+    const score = this.player ? this.player.score : 0;
+    const stars = score > 1200 ? 3 : score > 700 ? 2 : 1;
+    const result = SaveSystem.completeLevel(worldId, score, stars);
+
+    const lv = (window.LEVELS && window.LEVELS[worldId - 1]) || {};
+    if (result.newlyCompleted) {
+      if (lv.achievement) SaveSystem.setAchievement(lv.achievement);
+      if (this.enemiesDefeated >= 5) SaveSystem.setAchievement('guardianDefeater');
+      if (this.goliathDefeated) SaveSystem.setAchievement('bossConqueror');
+      if (worldId === 10 && this.goliathDefeated) {
+        SaveSystem.setAchievement('giantSlayer');
+        SaveSystem.setAchievement('davidTheBrave');
+      }
+    }
+    SaveSystem.checkAchievements();
+    this._pendingVictory = { worldId, score, stars, result };
+    this.showVictory();
   },
 
   showVictory() {
+    if (this._victoryScreenShown) return;
+    this._victoryScreenShown = true;
     this.state = 'victory';
     cancelAnimationFrame(this.animFrame);
     this._loopRunning = false;
@@ -521,11 +561,13 @@ const Game = {
       AudioSystem.levelComplete();
       setTimeout(() => { if (window.AudioSystem) AudioSystem.victory(); }, 400);
     }
-    const worldId = this.currentWorld || 1;
+
+    const worldId = (this._pendingVictory && this._pendingVictory.worldId) || this.currentWorld || 1;
+    const score = (this._pendingVictory && this._pendingVictory.score) || (this.player ? this.player.score : 0);
+    const stars = (this._pendingVictory && this._pendingVictory.stars) || 1;
+    const result = (this._pendingVictory && this._pendingVictory.result) || {};
     const lv = (window.LEVELS && window.LEVELS[worldId - 1]) || { name: 'World ' + worldId };
-    const score = this.player ? this.player.score : 0;
-    const stars = score > 1200 ? 3 : score > 700 ? 2 : 1;
-    const nextId = worldId < 10 ? worldId + 1 : null;
+    const nextId = result.nextLevel || (worldId < 10 ? worldId + 1 : null);
     const nextLv = nextId && window.LEVELS ? window.LEVELS[nextId - 1] : null;
 
     const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
@@ -538,35 +580,24 @@ const Game = {
     if (starEl) starEl.textContent = '⭐'.repeat(stars);
     const unlockEl = document.querySelector('#victory-screen .unlock');
     if (unlockEl) {
-      unlockEl.textContent = nextLv
-        ? ('NEXT WORLD UNLOCKED: WORLD ' + nextId + ' — ' + nextLv.name.toUpperCase())
-        : 'THE ADVENTURE IS COMPLETE — GIANT SLAYER!';
+      unlockEl.textContent = worldId === 10
+        ? 'THE ADVENTURE IS COMPLETE! GIANT SLAYER!'
+        : (nextLv ? ('NEXT WORLD UNLOCKED: WORLD ' + nextId + ' — ' + nextLv.name.toUpperCase()) : 'WORLD COMPLETE');
     }
     const nextBtn = document.getElementById('btn-next-world');
-    if (nextBtn) nextBtn.classList.toggle('hidden', !nextId);
-
-    if (nextId) SaveSystem.unlockLevel(nextId);
-    SaveSystem.setBestScore(worldId, score);
-    SaveSystem.setStars(worldId, stars);
-    SaveSystem.bumpStat('levelsCompleted', 1);
-    if (worldId === 1) {
-      SaveSystem.setAchievement('davidTheBrave');
-      SaveSystem.setAchievement('firstVictory');
-      SaveSystem.setAchievement('adventureExplorer');
-    }
-    if (this.goliathDefeated) SaveSystem.setAchievement('bossConqueror');
-    if (this.enemiesDefeated >= 5) SaveSystem.setAchievement('guardianDefeater');
-    if (lv.achievement) SaveSystem.setAchievement(lv.achievement);
-    if (worldId === 10 && this.goliathDefeated) SaveSystem.setAchievement('giantSlayer');
-    if (worldId === 10) SaveSystem.setAchievement('bibleHeroMaster');
+    if (nextBtn) nextBtn.classList.toggle('hidden', worldId >= 10 || !nextId);
 
     UI.show('victory');
   },
 
   continueNextWorld() {
     const next = (this.currentWorld || 1) + 1;
-    if (next <= 10) this.startWorld(next);
-    else this.quitToMenu();
+    if (next <= 10 && SaveSystem.isUnlocked(next)) this.startWorld(next);
+    else {
+      this.quitToMenu();
+      this.populateMap();
+      UI.show('map');
+    }
   },
 
   updateHUD() {

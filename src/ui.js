@@ -114,17 +114,21 @@ const UI = {
     this.elements.bossText.textContent = Math.ceil(health) + ' / ' + maxHealth;
   },
 
-  populateMap(unlocked, stars, onSelect) {
+  populateMap(saveData, onSelect) {
     const list = document.getElementById('level-list');
     if (!list || !window.LEVELS) return;
-    const current = unlocked[unlocked.length - 1] || 1;
+    const unlocked = (saveData && saveData.unlockedLevels) || [1];
+    const completed = (saveData && saveData.completedLevels) || [];
+    const stars = (saveData && saveData.stars) || {};
+    const current = (saveData && saveData.currentLevel) || 1;
     list.innerHTML = window.LEVELS.map(function(lv) {
       const isUnlocked = unlocked.indexOf(lv.id) !== -1;
-      const starCount = (stars && stars[lv.id]) || 0;
+      const isDone = completed.indexOf(lv.id) !== -1;
+      const starCount = stars[lv.id] || 0;
       const isCurrent = isUnlocked && lv.id === current;
       const starStr = starCount > 0 ? '⭐'.repeat(starCount) : '';
       const lock = isUnlocked ? '' : ' 🔒';
-      const cls = ['level-card', isUnlocked ? 'unlocked' : 'locked', isCurrent ? 'current' : '', starCount > 0 ? 'completed' : ''].filter(Boolean).join(' ');
+      const cls = ['level-card', isUnlocked ? 'unlocked' : 'locked', isCurrent ? 'current' : '', isDone ? 'completed' : ''].filter(Boolean).join(' ');
       return '<button type="button" class="' + cls + '" data-level="' + lv.id + '" ' + (isUnlocked ? '' : 'disabled') + '>' +
         '<span class="level-icon">' + (lv.icon || '📖') + '</span>' +
         '<span class="level-num">World ' + lv.id + '</span>' +

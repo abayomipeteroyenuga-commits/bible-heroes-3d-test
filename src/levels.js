@@ -270,16 +270,17 @@ class MissionSystem {
     }, {
       id: 'goliath', text: 'Defeat Goliath',
       check: (g) => g.goliathDefeated,
-      onComplete: () => {}
+      onComplete: (g) => this.finishWorld(g, 'GIANT SLAYER!')
     }];
   }
 
   finishWorld(game, msg) {
-    UI.showMessage(msg, 2200);
-    if (!game._victoryQueued) {
-      game._victoryQueued = true;
-      setTimeout(() => game.showVictory(), 900);
-    }
+    if (game._victoryQueued || game._worldCompletionHandled) return;
+    game._victoryQueued = true;
+    if (window.UI && msg) UI.showMessage(msg, 2200);
+    setTimeout(() => {
+      if (game.completeCurrentWorld) game.completeCurrentWorld();
+    }, 900);
   }
 
   getCurrent() {
