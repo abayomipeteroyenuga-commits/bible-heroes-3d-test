@@ -226,6 +226,9 @@ const Game = {
 
     this.world = new World(this.scene);
     this.player = new Player(this.scene, this.camera);
+    // Level 1: David starts with his sling ready
+    this.player.enableSling();
+    this.player.stones = Math.max(this.player.stones, 5);
     const data = SaveSystem.load();
     if (this.player && data.settings && data.settings.sensitivity) {
       this.player.lookSensitivity = data.settings.sensitivity;
