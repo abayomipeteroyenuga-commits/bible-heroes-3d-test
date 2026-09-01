@@ -216,7 +216,22 @@ const Game = {
     this.goliathTerritoryEntered = false;
     UI.showGame();
     if (window.UI) UI.setWorldDisplay(this.currentWorld);
-    this.initThree();
+    if (typeof THREE === 'undefined') {
+      console.error('THREE.js is not defined');
+      if (window.UI) UI.showMessage('3D engine failed to load. Refresh the page.', 6000);
+      this.state = 'menu';
+      UI.show('mainMenu');
+      return;
+    }
+    try {
+      this.initThree();
+    } catch (err) {
+      console.error('initThree failed', err);
+      if (window.UI) UI.showMessage('Could not start the 3D world.', 6000);
+      this.state = 'menu';
+      UI.show('mainMenu');
+      return;
+    }
     this.missions = new MissionSystem(this.currentWorld);
     UI.setMission(this.missions.getCurrent().text);
     this.exploredCamp = false;
