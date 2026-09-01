@@ -1164,7 +1164,7 @@ class Player {
     }
   }
 
-  updateCamera() {
+  updateCamera(snap) {
     const target = this.group.position.clone();
     target.y += 1.4;
     const offset = new THREE.Vector3(
@@ -1173,7 +1173,8 @@ class Player {
       Math.cos(this.cameraAngle) * this.cameraDistance * Math.cos(this.cameraPitch)
     );
     const desired = target.clone().add(offset);
-    this.camera.position.lerp(desired, 0.12);
+    if (snap) this.camera.position.copy(desired);
+    else this.camera.position.lerp(desired, 0.12);
     this.camera.lookAt(target);
   }
 

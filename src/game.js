@@ -216,7 +216,22 @@ const Game = {
     this.goliathTerritoryEntered = false;
     UI.showGame();
     if (window.UI) UI.setWorldDisplay(this.currentWorld);
-    this.initThree();
+    if (typeof THREE === 'undefined') {
+      console.error('THREE.js is not defined');
+      if (window.UI) UI.showMessage('3D engine failed to load. Refresh the page.', 6000);
+      this.state = 'menu';
+      UI.show('mainMenu');
+      return;
+    }
+    try {
+      this.initThree();
+    } catch (err) {
+      console.error('initThree failed', err);
+      if (window.UI) UI.showMessage('Could not start the 3D world.', 6000);
+      this.state = 'menu';
+      UI.show('mainMenu');
+      return;
+    }
     this.missions = new MissionSystem(this.currentWorld);
     UI.setMission(this.missions.getCurrent().text);
     this.exploredCamp = false;
@@ -264,23 +279,38 @@ const Game = {
 
   initThree() {
     const canvas = document.getElementById('game-canvas');
+    const w = Math.max(window.innerWidth || 800, 320);
+    const h = Math.max(window.innerHeight || 600, 240);
 
     this.scene = new THREE.Scene();
-    this.camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 200);
-    this.camera.position.set(0, 5, 15);
+    this.camera = new THREE.PerspectiveCamera(55, w / h, 0.1, 250);
+    this.camera.position.set(0, 6, 16);
 
     if (!this.renderer) {
-      this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+      this.renderer = new THREE.WebGLRenderer({
+        canvas,
+        antialias: true,
+        alpha: false,
+        powerPreference: 'high-performance'
+      });
+      this.renderer.shadowMap.enabled = true;
       this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-      this.renderer.outputEncoding = THREE.sRGBEncoding;
-      this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      this.renderer.toneMappingExposure = 1.05;
     }
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    this.renderer.setSize(w, h, true);
+    this.renderer.setClearColor(0x87b8e0, 1);
+    if (this.renderer.domElement) {
+      this.renderer.domElement.style.display = 'block';
+      this.renderer.domElement.style.width = '100%';
+      this.renderer.domElement.style.height = '100%';
+    }
     this.applyGraphics();
 
     this.world = new World(this.scene, this.currentWorld || 1);
+    const theme = window.getWorldTheme ? window.getWorldTheme(this.currentWorld || 1) : {};
+    if (theme.sky != null) this.renderer.setClearColor(theme.sky, 1);
     this.player = new Player(this.scene, this.camera);
+    this.player.updateCamera(true);
     this.player.enableSling();
     this.player.stones = Math.max(this.player.stones, 5);
     const data = SaveSystem.load();
@@ -290,7 +320,6 @@ const Game = {
     this.combat = new CombatSystem(this.scene);
 
     this.enemies = [];
-    const theme = window.getWorldTheme ? window.getWorldTheme(this.currentWorld || 1) : {};
     this._worldTheme = theme;
     this._waveIndex = 0;
     this._spawningWave = false;

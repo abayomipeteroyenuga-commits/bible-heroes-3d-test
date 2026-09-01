@@ -39,7 +39,6 @@ class World {
     this.placeCheckpoints();
     this.createLandmark();
     this.createUniqueSetpieces();
-    this.prepareShadows();
   }
 
   createLighting() {
@@ -62,8 +61,8 @@ class World {
     this.scene.add(sun);
     this.sun = sun;
 
-    // Soft sky fill keeps cartoon characters readable while preserving depth.
-    const hemi = new THREE.HemisphereLight(this.theme.sky || 0x9ec8ea, this.theme.ground || 0x45643a, this.theme.dark ? 0.5 : 0.8);
+    // Soft sky fill keeps David readable in every world.
+    const hemi = new THREE.HemisphereLight(this.theme.sky || 0x9ec8ea, this.theme.ground || 0x45643a, this.theme.dark ? 0.5 : 0.75);
     this.scene.add(hemi);
     const fill = new THREE.DirectionalLight(0xa0c0ff, 0.22);
     fill.position.set(-20, 20, -30);
@@ -87,8 +86,15 @@ class World {
   createTerrain() {
     // Main ground
     const groundGeo = new THREE.PlaneGeometry(100, 140, 40, 50);
-    // Keep terrain visually flat because the controller uses a 0-height ground plane.
-    // This prevents props, collectibles and David from visibly floating/sinking.
+    // Simple height variation
+    const pos = groundGeo.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i);
+      const z = pos.getY(i); // plane is XY before rotation
+      const h = Math.sin(x * 0.08) * 0.6 + Math.cos(z * 0.06) * 0.5 + Math.sin(x * 0.2 + z * 0.15) * 0.3;
+      pos.setZ(i, h);
+    }
+    groundGeo.computeVertexNormals();
     const groundMat = new THREE.MeshLambertMaterial({ color: this.theme.ground || 0x5a8f4a });
     const ground = new THREE.Mesh(groundGeo, groundMat);
     ground.rotation.x = -Math.PI / 2;
@@ -300,34 +306,11 @@ class World {
   }
 
   createSign(position, text, color = 0x8b5a2b) {
-    const group = new THREE.Group();
     const post = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 1.8, 6), new THREE.MeshLambertMaterial({ color: 0x5c4033 }));
-    post.position.y = 0.9;
-    post.castShadow = true;
+    post.position.copy(position); post.position.y = 0.9;
     const board = new THREE.Mesh(new THREE.BoxGeometry(2.8, 0.9, 0.18), new THREE.MeshLambertMaterial({ color }));
-    board.position.y = 1.65;
-    board.castShadow = true;
-    group.add(post, board);
-
-    // Readable 3D label, facing the camera from either side.
-    const canvas = document.createElement('canvas');
-    canvas.width = 512; canvas.height = 160;
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#fff8e7'; ctx.fillRect(12, 12, 488, 136);
-    ctx.strokeStyle = '#5c4033'; ctx.lineWidth = 8; ctx.strokeRect(12, 12, 488, 136);
-    ctx.fillStyle = '#2b241b'; ctx.font = 'bold 34px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    const words = String(text).toUpperCase().split(' ');
-    let line = '', lines = [];
-    words.forEach(w => { const test = line ? line + ' ' + w : w; if (ctx.measureText(test).width > 450) { lines.push(line); line = w; } else line = test; });
-    if (line) lines.push(line);
-    lines.slice(0,2).forEach((ln,i)=>ctx.fillText(ln,256,72 + (i-(Math.min(lines.length,2)-1)/2)*38));
-    const tex = new THREE.CanvasTexture(canvas); tex.needsUpdate = true;
-    const label = new THREE.Mesh(new THREE.PlaneGeometry(2.55,0.8), new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide }));
-    label.position.set(0,1.65,0.11);
-    group.add(label);
-    group.position.copy(position);
-    this.scene.add(group);
-    return group;
+    board.position.copy(position); board.position.y = 1.65;
+    this.scene.add(post, board);
   }
 
   createSheep(x, z) {
@@ -336,12 +319,7 @@ class World {
     const dark = new THREE.MeshLambertMaterial({ color: 0x4b3a32 });
     const body = new THREE.Mesh(new THREE.SphereGeometry(0.8, 16, 10), wool); body.scale.set(1.25, 0.8, 0.8); body.position.y = 0.85;
     const head = new THREE.Mesh(new THREE.SphereGeometry(0.38, 12, 8), dark); head.position.set(0.8, 1.0, 0);
-    g.add(body, head);
-    [-0.45,0.45].forEach(lx=>[-0.28,0.28].forEach(lz=>{ const leg=new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.07,0.5,7),dark); leg.position.set(lx,0.35,lz); g.add(leg); }));
-    const earL=new THREE.Mesh(new THREE.ConeGeometry(0.07,0.22,6),dark); earL.position.set(0.8,1.25,-0.2); earL.rotation.z=-0.7; g.add(earL);
-    const earR=earL.clone(); earR.position.z=0.2; earR.rotation.z=-0.7; g.add(earR);
-    g.traverse(o=>{ if(o.isMesh){o.castShadow=true;o.receiveShadow=true;} });
-    g.position.set(x,0,z); this.scene.add(g); return g;
+    g.add(body, head); g.position.set(x,0,z); this.scene.add(g); return g;
   }
 
   createShepherdValleySetpiece() {
@@ -369,7 +347,7 @@ class World {
     [[-6,-18],[6,-30],[-6,-42],[6,-54]].forEach((p,i)=>{
       const pole=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.16,2.4,6),new THREE.MeshLambertMaterial({color:0x5c4033})); pole.position.set(p[0],1.2,p[1]);
       const flame=new THREE.Mesh(new THREE.ConeGeometry(0.28,0.7,8),new THREE.MeshBasicMaterial({color:0xffa020})); flame.position.set(p[0],2.6,p[1]);
-      const light=new THREE.PointLight(0xff9a3d,1.15,8); light.position.set(p[0],2.3,p[1]);
+      const light=new THREE.PointLight(0xff9a3d,1.0,8); light.position.set(p[0],2.3,p[1]);
       this.scene.add(pole,flame,light); this.addInteractable('torch',new THREE.Vector3(p[0],0,p[1]),'Light torch '+(i+1),0xffb347);
     });
   }
@@ -582,20 +560,18 @@ class World {
   }
 
   createCrystals() {
-    const mat = new THREE.MeshPhongMaterial({ color: 0x88aaff, emissive: 0x223366, shininess: 70, transparent: true, opacity: 0.92 });
+    const mat = new THREE.MeshPhongMaterial({ color: 0x88aaff, emissive: 0x223366, shininess: 70 });
     for (let i = 0; i < 16; i++) {
       const c = new THREE.Mesh(new THREE.ConeGeometry(0.35, 1.6, 5), mat);
       c.position.set((i % 2 ? 6 : -6) + Math.sin(i) * 3, 0.8, -6 - i * 4.5);
-      c.castShadow = true; c.receiveShadow = true;
       this.scene.add(c);
     }
-    const glow = new THREE.PointLight(0x77bbff, 1.0, 18); glow.position.set(0, 2, -38); this.scene.add(glow);
   }
 
   createStream() {
     const water = new THREE.Mesh(
       new THREE.PlaneGeometry(4, 80),
-      new THREE.MeshPhongMaterial({ color: 0x3a7ab8, transparent: true, opacity: 0.72, shininess: 90 })
+      new THREE.MeshPhongMaterial({ color: 0x3a7ab8, transparent: true, opacity: 0.78, shininess: 70 })
     );
     water.rotation.x = -Math.PI / 2;
     water.position.set(-14, 0.05, -25);
@@ -606,15 +582,12 @@ class World {
     const plank = new THREE.MeshLambertMaterial({ color: 0x6a4a28 });
     const deck = new THREE.Mesh(new THREE.BoxGeometry(4, 0.25, 16), plank);
     deck.position.set(0, 1.2, -30);
-    deck.castShadow = true; deck.receiveShadow = true;
     this.scene.add(deck);
     [-2, 2].forEach(x => {
       const rail = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.8, 16), plank);
-      rail.position.set(x, 1.7, -30); rail.castShadow = true;
+      rail.position.set(x, 1.7, -30);
       this.scene.add(rail);
-      for (let z=-36; z<=-24; z+=4) { const post=new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.1,1.1,6),plank); post.position.set(x,1.15,z); post.castShadow=true; this.scene.add(post); }
     });
-    [-1.5,1.5].forEach(x=>{ for(let z=-36; z<=-24; z+=4){ const support=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.16,1.2,7),plank); support.position.set(x,0.6,z); this.scene.add(support); } });
   }
 
   createFort() {
@@ -658,19 +631,6 @@ class World {
       print.position.set((i % 2 ? 3 : -3), 0.06, -20 - i * 10);
       this.scene.add(print);
     }
-  }
-
-
-  prepareShadows() {
-    this.scene.traverse(obj => {
-      if (!obj.isMesh) return;
-      if (obj.material && obj.material.transparent && obj.material.opacity < 0.8) {
-        obj.castShadow = false;
-      } else {
-        obj.castShadow = true;
-      }
-      obj.receiveShadow = true;
-    });
   }
 
   getNearbyInteractable(playerPos, radius = 2.6) {
