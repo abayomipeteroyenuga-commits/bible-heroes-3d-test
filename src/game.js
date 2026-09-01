@@ -23,6 +23,7 @@ const Game = {
     UI.init();
     if (window.AudioSystem) AudioSystem.init();
     this.setupMenuButtons();
+    this.bindSlingKeys();
     this.loadSettings();
     // Simulate short load then show menu
     setTimeout(() => {
@@ -36,6 +37,22 @@ const Game = {
         if (params.get('play') === '1') this.startLevel(SaveSystem.getContinueLevel() || 1);
       } catch (e) {}
     }, 1200);
+  },
+
+  bindSlingKeys() {
+    if (this._slingKeysBound) return;
+    this._slingKeysBound = true;
+    window.addEventListener('keydown', (e) => {
+      if (e.repeat) return;
+      const code = e.code || '';
+      const key = String(e.key || '').toLowerCase();
+      const fire =
+        code === 'KeyF' || code === 'KeyG' || code === 'KeyT' || code === 'KeyK' ||
+        key === 'f' || key === 'g' || key === 't' || key === 'k';
+      if (!fire) return;
+      e.preventDefault();
+      this.fireSling();
+    }, true);
   },
 
   setupMenuButtons() {
@@ -544,8 +561,16 @@ const Game = {
     this.updateHUD();
   },
 
+  fireSling() {
+    if (!this.player) return;
+    if (this.state === 'menu' || this.state === 'paused') return;
+    this.player.hasSling = true;
+    this.player.tryAttack();
+  },
+
   spawnProjectile() {
-    if (!this.player.hasSling) return;
+    if (!this.player) return;
+    this.player.hasSling = true;
     if (window.AudioSystem) AudioSystem.sling();
     const origin = this.player.getPosition().clone();
     const dir = new THREE.Vector3(
@@ -575,7 +600,9 @@ const Game = {
       targetDir = new THREE.Vector3().subVectors(nearest, origin).normalize();
     }
     const isFaith = this.player.shieldActive > 0 || this.player.faith > 80;
-    this.combat.spawnStone(origin, targetDir, isFaith);
+    if (this.combat && typeof this.combat.spawnStone === 'function') {
+      this.combat.spawnStone(origin, targetDir, isFaith);
+    }
   },
 
   spawnParticles(pos, color, count) {

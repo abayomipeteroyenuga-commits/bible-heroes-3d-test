@@ -9,9 +9,9 @@ class CombatSystem {
 
   spawnStone(origin, direction, isFaith = false) {
     // Visible stone projectile
-    const geo = new THREE.SphereGeometry(0.22, 10, 8);
+    const geo = new THREE.SphereGeometry(0.38, 10, 8);
     const mat = new THREE.MeshBasicMaterial({
-      color: isFaith ? 0xf1c40f : 0xc8c0b0
+      color: isFaith ? 0xffe066 : 0xf5f0e6
     });
     const mesh = new THREE.Mesh(geo, mat);
     mesh.position.copy(origin);

@@ -21,8 +21,8 @@ class Player {
     this.faith = 100;
     this.maxFaith = 100;
     this.score = 0;
-    this.hasSling = false;
-    this.stones = 0;
+    this.hasSling = true;
+    this.stones = 12;
     this.invincible = 0;
     this.shieldActive = 0;
     this.attackCooldown = 0;
@@ -402,7 +402,7 @@ class Player {
     pouchS.scale.set(1.3, 0.7, 0.9);
     this.slingMesh.add(pouchS);
     this.slingMesh.position.set(0.04, -0.52, 0.1);
-    this.slingMesh.visible = false;
+    this.slingMesh.visible = true;
     this.rightArmGroup.add(this.slingMesh);
 
     // ── Left leg ──
@@ -763,12 +763,17 @@ class Player {
   }
 
   tryAttack() {
-    if (this.attackCooldown > 0 || !this.hasSling) return;
-    if (this.state === 'HIT' || this.state === 'VICTORY' || this.state === 'ATTACK') return;
-    this.attackCooldown = 0.85;
+    this.hasSling = true;
+    if (this.slingMesh) this.slingMesh.visible = true;
+    if (this.attackCooldown > 0) return;
+    if (this.state === 'HIT' || this.state === 'VICTORY') return;
+    this.attackCooldown = 0.7;
     this.state = 'ATTACK';
     this.anim.attackProgress = 0;
-    this.pendingProjectile = true; // launch at sling-release frame
+    this.pendingProjectile = false;
+    if (window.Game && typeof window.Game.spawnProjectile === 'function') {
+      window.Game.spawnProjectile();
+    }
   }
 
   tryFaithShield() {
