@@ -3,6 +3,17 @@ const UI = {
   elements: {},
   messageTimeout: null,
 
+  ACHIEVEMENTS: [
+    { key: 'davidTheBrave', icon: '🏅', title: 'David the Brave', desc: 'Defeat Goliath' },
+    { key: 'firstVictory', icon: '⭐', title: 'First Victory', desc: 'Complete your first level' },
+    { key: 'bullseye', icon: '🎯', title: 'Bullseye', desc: 'Land a critical hit on Goliath' },
+    { key: 'shieldOfFaith', icon: '⚡', title: 'Shield of Faith', desc: 'Use Faith Shield 3 times' },
+    { key: 'guardianDefeater', icon: '👻', title: 'Guardian Defeater', desc: 'Defeat 5 Shadow Guardians' },
+    { key: 'bossConqueror', icon: '👑', title: 'Boss Conqueror', desc: 'Defeat a boss enemy' },
+    { key: 'adventureExplorer', icon: '🗺️', title: 'Adventure Explorer', desc: 'Begin the Bible Heroes journey' },
+    { key: 'bibleHeroMaster', icon: '📖', title: 'Bible Hero Master', desc: 'Unlock all 10 levels' }
+  ],
+
   init() {
     this.elements = {
       loading: document.getElementById('loading-screen'),
@@ -15,6 +26,9 @@ const UI = {
       settings: document.getElementById('settings-screen'),
       map: document.getElementById('map-screen'),
       achievements: document.getElementById('achievements-screen'),
+      credits: document.getElementById('credits-screen'),
+      confirmReset: document.getElementById('confirm-reset'),
+      confirmQuit: document.getElementById('confirm-quit'),
       lifeBar: document.getElementById('life-bar'),
       armorBar: document.getElementById('armor-bar'),
       faithBar: document.getElementById('faith-bar'),
@@ -32,10 +46,16 @@ const UI = {
   },
 
   show(screen) {
-    const all = ['loading', 'mainMenu', 'intro', 'game', 'pause', 'victory', 'howto', 'settings', 'map', 'achievements'];
+    const all = [
+      'loading', 'mainMenu', 'intro', 'game', 'pause', 'victory',
+      'howto', 'settings', 'map', 'achievements', 'credits', 'confirmReset', 'confirmQuit'
+    ];
     all.forEach(s => {
       if (this.elements[s]) this.elements[s].classList.add('hidden');
     });
+    if (screen !== 'game' && this.elements.mobileControls) {
+      this.elements.mobileControls.classList.add('hidden');
+    }
     if (this.elements[screen]) this.elements[screen].classList.remove('hidden');
   },
 
@@ -54,9 +74,9 @@ const UI = {
     this.elements.lifeBar.style.width = (life / maxLife * 100) + '%';
     this.elements.armorBar.style.width = (armor / maxArmor * 100) + '%';
     this.elements.faithBar.style.width = (faith / maxFaith * 100) + '%';
-    this.elements.lifeText.textContent = `${Math.ceil(life)} / ${maxLife}`;
-    this.elements.armorText.textContent = `${Math.ceil(armor)} / ${maxArmor}`;
-    this.elements.faithText.textContent = `${Math.ceil(faith)} / ${maxFaith}`;
+    this.elements.lifeText.textContent = Math.ceil(life) + ' / ' + maxLife;
+    this.elements.armorText.textContent = Math.ceil(armor) + ' / ' + maxArmor;
+    this.elements.faithText.textContent = Math.ceil(faith) + ' / ' + maxFaith;
     this.elements.scoreText.textContent = score;
   },
 
@@ -64,7 +84,8 @@ const UI = {
     this.elements.missionText.textContent = text;
   },
 
-  showMessage(text, duration = 2500) {
+  showMessage(text, duration) {
+    duration = duration || 2500;
     const el = this.elements.hudMessage;
     el.textContent = text;
     el.classList.remove('hidden');
@@ -77,7 +98,7 @@ const UI = {
   showBoss(health, maxHealth) {
     this.elements.bossHud.classList.remove('hidden');
     this.elements.bossBar.style.width = (health / maxHealth * 100) + '%';
-    this.elements.bossText.textContent = `${Math.ceil(health)} / ${maxHealth}`;
+    this.elements.bossText.textContent = Math.ceil(health) + ' / ' + maxHealth;
   },
 
   hideBoss() {
@@ -86,26 +107,46 @@ const UI = {
 
   updateBoss(health, maxHealth) {
     this.elements.bossBar.style.width = (health / maxHealth * 100) + '%';
-    this.elements.bossText.textContent = `${Math.ceil(health)} / ${maxHealth}`;
+    this.elements.bossText.textContent = Math.ceil(health) + ' / ' + maxHealth;
   },
 
-  populateMap(unlocked) {
+  populateMap(unlocked, stars, onSelect) {
     const list = document.getElementById('level-list');
-    const levels = [
-      '1. David & Goliath',
-      '2. Walls of Jericho',
-      '3. Joseph and His Dreams',
-      '4. Three Hebrew Boys',
-      '5. Daniel in the Lions\' Den',
-      '6. Jonah and the Great Fish',
-      '7. Noah\'s Ark',
-      '8. Moses & the Red Sea',
-      '9. Esther\'s Courage',
-      '10. Bethlehem — Birth of Jesus'
-    ];
-    list.innerHTML = levels.map((name, i) => {
-      const unlockedLevel = unlocked.includes(i + 1);
-      return `<div class="level-item ${unlockedLevel ? 'unlocked' : 'locked'}">${name}${unlockedLevel ? '' : ' 🔒'}</div>`;
+    if (!list || !window.LEVELS) return;
+    const current = unlocked[unlocked.length - 1] || 1;
+    list.innerHTML = window.LEVELS.map(function(lv) {
+      const isUnlocked = unlocked.indexOf(lv.id) !== -1;
+      const starCount = (stars && stars[lv.id]) || 0;
+      const isCurrent = isUnlocked && lv.id === current;
+      const starStr = starCount > 0 ? '⭐'.repeat(starCount) : '';
+      const lock = isUnlocked ? '' : ' 🔒';
+      const cls = ['level-card', isUnlocked ? 'unlocked' : 'locked', isCurrent ? 'current' : '', starCount > 0 ? 'completed' : ''].filter(Boolean).join(' ');
+      return '<button type="button" class="' + cls + '" data-level="' + lv.id + '" ' + (isUnlocked ? '' : 'disabled') + '>' +
+        '<span class="level-icon">' + (lv.icon || '📖') + '</span>' +
+        '<span class="level-num">Level ' + lv.id + '</span>' +
+        '<span class="level-name">' + lv.name + lock + '</span>' +
+        '<span class="level-stars">' + (starStr || (isUnlocked ? 'Play!' : 'Locked')) + '</span>' +
+      '</button>';
+    }).join('');
+
+    list.querySelectorAll('.level-card.unlocked').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        const id = parseInt(btn.getAttribute('data-level'), 10);
+        if (onSelect) onSelect(id);
+      });
+    });
+  },
+
+  populateAchievements(achievements) {
+    const list = document.getElementById('achievements-list');
+    if (!list) return;
+    list.innerHTML = this.ACHIEVEMENTS.map(function(a) {
+      const unlocked = !!(achievements && achievements[a.key]);
+      return '<div class="ach-card ' + (unlocked ? 'unlocked' : 'locked') + '">' +
+        '<span class="ach-icon">' + a.icon + '</span>' +
+        '<div class="ach-text"><strong>' + a.title + '</strong><span>' + a.desc + '</span></div>' +
+        '<span class="ach-status">' + (unlocked ? '✓' : '🔒') + '</span>' +
+      '</div>';
     }).join('');
   }
 };

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 160" width="480" height="160">
+  <defs>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#f5d76e"/>
+      <stop offset="100%" style="stop-color:#d4a017"/>
+    </linearGradient>
+    <linearGradient id="green" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#4a9c5a"/>
+      <stop offset="100%" style="stop-color:#2a6b38"/>
+    </linearGradient>
+  </defs>
+  <!-- Shield shape -->
+  <path d="M240 8 L420 40 L400 110 Q240 155 80 110 L60 40 Z" fill="url(#green)" stroke="#f0c14b" stroke-width="6"/>
+  <!-- Cross / staff hint -->
+  <rect x="230" y="35" width="20" height="85" rx="4" fill="url(#gold)"/>
+  <rect x="195" y="55" width="90" height="16" rx="4" fill="url(#gold)"/>
+  <!-- Brand text -->
+  <text x="240" y="145" text-anchor="middle" font-family="Nunito, Arial, sans-serif" font-size="22" font-weight="800" fill="#f0c14b">PastorAbayomi Bible Stories</text>
+</svg>

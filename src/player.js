@@ -26,6 +26,7 @@ class Player {
     this.invincible = 0;
     this.shieldActive = 0;
     this.attackCooldown = 0;
+    this.pendingProjectile = false;
     this.state = 'IDLE'; // IDLE | WALK | RUN | JUMP | ATTACK | HIT | VICTORY
     this.facing = 0;
     this.animTime = 0;
@@ -43,103 +44,455 @@ class Player {
   }
 
   buildModel() {
-    const bodyMat = new THREE.MeshLambertMaterial({ color: 0xd4a574 });
-    const clothMat = new THREE.MeshLambertMaterial({ color: 0x4a7c59 });
-    const hairMat = new THREE.MeshLambertMaterial({ color: 0x3d2914 });
-    const sandalMat = new THREE.MeshLambertMaterial({ color: 0x5c4033 });
-    const staffMat = new THREE.MeshLambertMaterial({ color: 0x8B5A2B });
+    // Polished cartoon shepherd — materials
+    const skinMat = new THREE.MeshLambertMaterial({ color: 0xf0c4a0 });
+    const skinShadowMat = new THREE.MeshLambertMaterial({ color: 0xe0a880 });
+    const tunicMat = new THREE.MeshLambertMaterial({ color: 0x3f9a5c });
+    const tunicMidMat = new THREE.MeshLambertMaterial({ color: 0x348a50 });
+    const tunicDarkMat = new THREE.MeshLambertMaterial({ color: 0x2a6e40 });
+    const beltMat = new THREE.MeshLambertMaterial({ color: 0x8B5A2B });
+    const beltDarkMat = new THREE.MeshLambertMaterial({ color: 0x6B4423 });
+    const hairMat = new THREE.MeshLambertMaterial({ color: 0x3d2814 });
+    const hairLightMat = new THREE.MeshLambertMaterial({ color: 0x5a3a1a });
+    const sandalMat = new THREE.MeshLambertMaterial({ color: 0x7a4e2e });
+    const staffMat = new THREE.MeshLambertMaterial({ color: 0xb8845a });
+    const clothAccentMat = new THREE.MeshLambertMaterial({ color: 0xd4b06a });
+    const eyeWhiteMat = new THREE.MeshLambertMaterial({ color: 0xfffef8 });
+    const eyeIrisMat = new THREE.MeshLambertMaterial({ color: 0x3a5a8a });
+    const eyePupilMat = new THREE.MeshBasicMaterial({ color: 0x1a1208 });
+    const cheekMat = new THREE.MeshLambertMaterial({ color: 0xf0a090 });
+    const lipMat = new THREE.MeshLambertMaterial({ color: 0xd07070 });
+    const pouchMat = new THREE.MeshLambertMaterial({ color: 0x9a7040 });
 
-    // Root — vertical bob only
+    // ── Root (vertical bob) ──
     this.root = new THREE.Group();
     this.group.add(this.root);
 
-    // Torso (pivots at hips)
+    // ── Torso (hip pivot) ──
     this.torsoGroup = new THREE.Group();
-    this.torsoGroup.position.y = 0.7;
+    this.torsoGroup.position.y = 0.72;
     this.root.add(this.torsoGroup);
 
-    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.7, 0.35), clothMat);
-    torso.position.y = 0.35;
+    // Soft rounded torso (higher segs)
+    const torso = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.30, 0.36, 0.70, 14),
+      tunicMat
+    );
+    torso.position.y = 0.36;
     this.torsoGroup.add(torso);
     this.torso = torso;
 
-    // Head
+    // Chest panel detail
+    const chest = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.28, 0.30, 0.28, 12),
+      tunicMidMat
+    );
+    chest.position.y = 0.48;
+    this.torsoGroup.add(chest);
+
+    // Hem flare (skirt of tunic)
+    const hem = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.38, 0.44, 0.16, 14),
+      tunicDarkMat
+    );
+    hem.position.y = 0.02;
+    this.torsoGroup.add(hem);
+
+    // Fold lines (simple strips)
+    for (let i = 0; i < 3; i++) {
+      const fold = new THREE.Mesh(
+        new THREE.BoxGeometry(0.02, 0.35, 0.01),
+        tunicDarkMat
+      );
+      fold.position.set(-0.12 + i * 0.12, 0.28, 0.34);
+      this.torsoGroup.add(fold);
+    }
+
+    // Belt + buckle
+    const belt = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.33, 0.33, 0.09, 12),
+      beltMat
+    );
+    belt.position.y = 0.20;
+    this.torsoGroup.add(belt);
+    const buckle = new THREE.Mesh(
+      new THREE.BoxGeometry(0.14, 0.1, 0.05),
+      clothAccentMat
+    );
+    buckle.position.set(0, 0.20, 0.34);
+    this.torsoGroup.add(buckle);
+    // Belt ends
+    const beltEnd = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.18, 0.03), beltDarkMat);
+    beltEnd.position.set(0.12, 0.08, 0.32);
+    this.torsoGroup.add(beltEnd);
+
+    // Stone pouch on hip
+    const pouch = new THREE.Mesh(
+      new THREE.SphereGeometry(0.1, 8, 6),
+      pouchMat
+    );
+    pouch.position.set(0.32, 0.14, 0.1);
+    pouch.scale.set(0.9, 1.1, 0.7);
+    this.torsoGroup.add(pouch);
+    const pouchStrap = new THREE.Mesh(
+      new THREE.BoxGeometry(0.04, 0.12, 0.02),
+      beltMat
+    );
+    pouchStrap.position.set(0.28, 0.22, 0.12);
+    this.torsoGroup.add(pouchStrap);
+
+    // Neck
+    const neck = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.09, 0.11, 0.14, 10),
+      skinMat
+    );
+    neck.position.y = 0.78;
+    this.torsoGroup.add(neck);
+
+    // ── Head ──
     this.headGroup = new THREE.Group();
-    this.headGroup.position.y = 0.85;
+    this.headGroup.position.y = 0.98;
     this.torsoGroup.add(this.headGroup);
 
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.28, 12, 10), bodyMat);
+    // Smooth head
+    const head = new THREE.Mesh(
+      new THREE.SphereGeometry(0.30, 16, 14),
+      skinMat
+    );
+    head.scale.set(1.0, 1.08, 0.96);
     this.headGroup.add(head);
     this.head = head;
 
-    const hair = new THREE.Mesh(new THREE.SphereGeometry(0.3, 10, 8), hairMat);
-    hair.position.y = 0.12;
-    hair.scale.set(1, 0.55, 1);
-    this.headGroup.add(hair);
+    // Jaw soften
+    const chin = new THREE.Mesh(
+      new THREE.SphereGeometry(0.14, 10, 8),
+      skinShadowMat
+    );
+    chin.position.set(0, -0.14, 0.08);
+    chin.scale.set(1.1, 0.7, 0.9);
+    this.headGroup.add(chin);
 
-    // Left arm (shoulder pivot)
+    // Hair volume (smooth)
+    const hairCap = new THREE.Mesh(
+      new THREE.SphereGeometry(0.32, 14, 12),
+      hairMat
+    );
+    hairCap.position.y = 0.1;
+    hairCap.scale.set(1.05, 0.72, 1.02);
+    this.headGroup.add(hairCap);
+
+    // Bangs
+    const bangs = new THREE.Mesh(
+      new THREE.SphereGeometry(0.16, 10, 8),
+      hairLightMat
+    );
+    bangs.position.set(0, 0.16, 0.24);
+    bangs.scale.set(1.7, 0.55, 0.55);
+    this.headGroup.add(bangs);
+
+    // Side curls
+    [[-0.28, 0.0, 0.06], [0.28, 0.0, 0.06], [-0.22, -0.08, -0.05], [0.22, -0.08, -0.05]].forEach((p, i) => {
+      const lock = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), i < 2 ? hairMat : hairLightMat);
+      lock.position.set(p[0], p[1], p[2]);
+      lock.scale.set(0.75, 1.3, 0.85);
+      this.headGroup.add(lock);
+    });
+
+    // Large cartoon eyes
+    const eyeWhiteGeo = new THREE.SphereGeometry(0.085, 10, 8);
+    const eyeL = new THREE.Mesh(eyeWhiteGeo, eyeWhiteMat);
+    eyeL.position.set(-0.11, 0.05, 0.25);
+    eyeL.scale.set(1.05, 1.2, 0.55);
+    this.headGroup.add(eyeL);
+    const eyeR = new THREE.Mesh(eyeWhiteGeo, eyeWhiteMat);
+    eyeR.position.set(0.11, 0.05, 0.25);
+    eyeR.scale.set(1.05, 1.2, 0.55);
+    this.headGroup.add(eyeR);
+
+    // Iris
+    const irisGeo = new THREE.SphereGeometry(0.045, 8, 6);
+    const irisL = new THREE.Mesh(irisGeo, eyeIrisMat);
+    irisL.position.set(-0.11, 0.04, 0.29);
+    this.headGroup.add(irisL);
+    const irisR = new THREE.Mesh(irisGeo, eyeIrisMat);
+    irisR.position.set(0.11, 0.04, 0.29);
+    this.headGroup.add(irisR);
+
+    // Pupils + shine
+    const pupilGeo = new THREE.SphereGeometry(0.025, 6, 5);
+    const pupilL = new THREE.Mesh(pupilGeo, eyePupilMat);
+    pupilL.position.set(-0.11, 0.04, 0.32);
+    this.headGroup.add(pupilL);
+    const pupilR = new THREE.Mesh(pupilGeo, eyePupilMat);
+    pupilR.position.set(0.11, 0.04, 0.32);
+    this.headGroup.add(pupilR);
+    const shineGeo = new THREE.SphereGeometry(0.012, 5, 4);
+    const shineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const shineL = new THREE.Mesh(shineGeo, shineMat);
+    shineL.position.set(-0.09, 0.06, 0.33);
+    this.headGroup.add(shineL);
+    const shineR = new THREE.Mesh(shineGeo, shineMat);
+    shineR.position.set(0.13, 0.06, 0.33);
+    this.headGroup.add(shineR);
+
+    // Eyebrows
+    const browGeo = new THREE.BoxGeometry(0.11, 0.022, 0.025);
+    const browL = new THREE.Mesh(browGeo, hairMat);
+    browL.position.set(-0.11, 0.15, 0.27);
+    browL.rotation.z = 0.12;
+    this.headGroup.add(browL);
+    const browR = new THREE.Mesh(browGeo, hairMat);
+    browR.position.set(0.11, 0.15, 0.27);
+    browR.rotation.z = -0.12;
+    this.headGroup.add(browR);
+
+    // Cheeks
+    const cheekGeo = new THREE.SphereGeometry(0.055, 8, 6);
+    const cheekL = new THREE.Mesh(cheekGeo, cheekMat);
+    cheekL.position.set(-0.22, -0.02, 0.18);
+    cheekL.scale.set(1, 0.7, 0.5);
+    this.headGroup.add(cheekL);
+    const cheekR = new THREE.Mesh(cheekGeo, cheekMat);
+    cheekR.position.set(0.22, -0.02, 0.18);
+    cheekR.scale.set(1, 0.7, 0.5);
+    this.headGroup.add(cheekR);
+
+    // Nose
+    const nose = new THREE.Mesh(
+      new THREE.SphereGeometry(0.04, 8, 6),
+      skinShadowMat
+    );
+    nose.position.set(0, 0.0, 0.30);
+    nose.scale.set(0.75, 1.0, 1.15);
+    this.headGroup.add(nose);
+
+    // Smile
+    const smile = new THREE.Mesh(
+      new THREE.TorusGeometry(0.07, 0.012, 6, 12, Math.PI),
+      lipMat
+    );
+    smile.position.set(0, -0.1, 0.27);
+    smile.rotation.set(Math.PI, 0, Math.PI);
+    this.headGroup.add(smile);
+
+    // Ears
+    const earGeo = new THREE.SphereGeometry(0.06, 8, 6);
+    const earL = new THREE.Mesh(earGeo, skinMat);
+    earL.position.set(-0.28, 0.02, 0);
+    earL.scale.set(0.5, 1, 0.7);
+    this.headGroup.add(earL);
+    const earR = new THREE.Mesh(earGeo, skinMat);
+    earR.position.set(0.28, 0.02, 0);
+    earR.scale.set(0.5, 1, 0.7);
+    this.headGroup.add(earR);
+
+    // ── Left arm ──
     this.leftArmGroup = new THREE.Group();
-    this.leftArmGroup.position.set(-0.38, 0.55, 0);
+    this.leftArmGroup.position.set(-0.40, 0.58, 0);
     this.torsoGroup.add(this.leftArmGroup);
-    this.leftArm = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.55, 0.16), bodyMat);
-    this.leftArm.position.y = -0.28;
-    this.leftArmGroup.add(this.leftArm);
 
-    // Right arm (shoulder pivot)
-    this.rightArmGroup = new THREE.Group();
-    this.rightArmGroup.position.set(0.38, 0.55, 0);
-    this.torsoGroup.add(this.rightArmGroup);
-    this.rightArm = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.55, 0.16), bodyMat);
-    this.rightArm.position.y = -0.28;
-    this.rightArmGroup.add(this.rightArm);
+    const sleeveL = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.11, 0.10, 0.18, 10),
+      tunicMat
+    );
+    sleeveL.position.y = -0.02;
+    this.leftArmGroup.add(sleeveL);
 
-    // Staff parented to left arm
-    this.staff = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.04, 1.55, 6), staffMat);
-    this.staff.position.set(-0.08, -0.55, 0.05);
-    this.staff.rotation.z = 0.12;
+    const upperArmL = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.085, 0.075, 0.30, 10),
+      skinMat
+    );
+    upperArmL.position.y = -0.18;
+    this.leftArmGroup.add(upperArmL);
+
+    const forearmL = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.07, 0.065, 0.28, 10),
+      skinMat
+    );
+    forearmL.position.y = -0.44;
+    this.leftArmGroup.add(forearmL);
+
+    const handL = new THREE.Mesh(
+      new THREE.SphereGeometry(0.075, 10, 8),
+      skinMat
+    );
+    handL.position.y = -0.60;
+    handL.scale.set(1.05, 0.85, 1.15);
+    this.leftArmGroup.add(handL);
+    this.leftArm = upperArmL;
+
+    // Staff (parented to left hand)
+    this.staff = new THREE.Group();
+    const pole = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.028, 0.032, 1.7, 8),
+      staffMat
+    );
+    pole.position.y = 0.35;
+    this.staff.add(pole);
+    const knob = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), staffMat);
+    knob.position.y = 1.22;
+    this.staff.add(knob);
+    const base = new THREE.Mesh(new THREE.SphereGeometry(0.035, 6, 5), beltDarkMat);
+    base.position.y = -0.5;
+    this.staff.add(base);
+    this.staff.position.set(-0.05, -0.52, 0.04);
+    this.staff.rotation.z = 0.08;
     this.leftArmGroup.add(this.staff);
 
-    // Sling parented to right arm (hidden until collected)
-    this.slingMesh = new THREE.Mesh(
-      new THREE.TorusGeometry(0.14, 0.025, 6, 12),
-      new THREE.MeshLambertMaterial({ color: 0x5c4033 })
+    // ── Right arm ──
+    this.rightArmGroup = new THREE.Group();
+    this.rightArmGroup.position.set(0.40, 0.58, 0);
+    this.torsoGroup.add(this.rightArmGroup);
+
+    const sleeveR = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.11, 0.10, 0.18, 10),
+      tunicMat
     );
-    this.slingMesh.position.set(0.05, -0.35, 0.15);
-    this.slingMesh.rotation.x = Math.PI / 2;
+    sleeveR.position.y = -0.02;
+    this.rightArmGroup.add(sleeveR);
+
+    const upperArmR = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.085, 0.075, 0.30, 10),
+      skinMat
+    );
+    upperArmR.position.y = -0.18;
+    this.rightArmGroup.add(upperArmR);
+
+    const forearmR = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.07, 0.065, 0.28, 10),
+      skinMat
+    );
+    forearmR.position.y = -0.44;
+    this.rightArmGroup.add(forearmR);
+
+    const handR = new THREE.Mesh(
+      new THREE.SphereGeometry(0.075, 10, 8),
+      skinMat
+    );
+    handR.position.y = -0.60;
+    handR.scale.set(1.05, 0.85, 1.15);
+    this.rightArmGroup.add(handR);
+    this.rightArm = upperArmR;
+
+    // Sling (parented to right hand) — visible once collected
+    this.slingMesh = new THREE.Group();
+    const loop = new THREE.Mesh(
+      new THREE.TorusGeometry(0.11, 0.018, 8, 14),
+      beltMat
+    );
+    loop.rotation.x = Math.PI / 2;
+    this.slingMesh.add(loop);
+    const cord = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.01, 0.01, 0.32, 5),
+      beltDarkMat
+    );
+    cord.position.y = -0.18;
+    this.slingMesh.add(cord);
+    const pouchS = new THREE.Mesh(
+      new THREE.SphereGeometry(0.045, 8, 6),
+      clothAccentMat
+    );
+    pouchS.position.y = -0.34;
+    pouchS.scale.set(1.3, 0.7, 0.9);
+    this.slingMesh.add(pouchS);
+    this.slingMesh.position.set(0.04, -0.52, 0.1);
     this.slingMesh.visible = false;
     this.rightArmGroup.add(this.slingMesh);
 
-    // Left leg (hip pivot)
+    // ── Left leg ──
     this.leftLegGroup = new THREE.Group();
-    this.leftLegGroup.position.set(-0.15, 0.7, 0);
+    this.leftLegGroup.position.set(-0.14, 0.72, 0);
     this.root.add(this.leftLegGroup);
-    this.leftLeg = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.55, 0.22), clothMat);
-    this.leftLeg.position.y = -0.28;
-    this.leftLegGroup.add(this.leftLeg);
-    const ls = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.07, 0.3), sandalMat);
-    ls.position.set(0, -0.58, 0.03);
-    this.leftLegGroup.add(ls);
 
-    // Right leg (hip pivot)
+    const thighL = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.11, 0.1, 0.32, 10),
+      tunicDarkMat
+    );
+    thighL.position.y = -0.14;
+    this.leftLegGroup.add(thighL);
+
+    const shinL = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.085, 0.075, 0.30, 10),
+      skinMat
+    );
+    shinL.position.y = -0.42;
+    this.leftLegGroup.add(shinL);
+    this.leftLeg = thighL;
+
+    const sandalL = new THREE.Mesh(
+      new THREE.BoxGeometry(0.15, 0.05, 0.28),
+      sandalMat
+    );
+    sandalL.position.set(0, -0.60, 0.03);
+    this.leftLegGroup.add(sandalL);
+    const strapL = new THREE.Mesh(
+      new THREE.BoxGeometry(0.13, 0.03, 0.035),
+      clothAccentMat
+    );
+    strapL.position.set(0, -0.56, 0.08);
+    this.leftLegGroup.add(strapL);
+    const ankleL = new THREE.Mesh(
+      new THREE.TorusGeometry(0.06, 0.015, 6, 10),
+      beltMat
+    );
+    ankleL.position.set(0, -0.55, 0);
+    ankleL.rotation.x = Math.PI / 2;
+    this.leftLegGroup.add(ankleL);
+
+    // ── Right leg ──
     this.rightLegGroup = new THREE.Group();
-    this.rightLegGroup.position.set(0.15, 0.7, 0);
+    this.rightLegGroup.position.set(0.14, 0.72, 0);
     this.root.add(this.rightLegGroup);
-    this.rightLeg = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.55, 0.22), clothMat);
-    this.rightLeg.position.y = -0.28;
-    this.rightLegGroup.add(this.rightLeg);
-    const rs = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.07, 0.3), sandalMat);
-    rs.position.set(0, -0.58, 0.03);
-    this.rightLegGroup.add(rs);
 
-    // Shield of Faith
+    const thighR = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.11, 0.1, 0.32, 10),
+      tunicDarkMat
+    );
+    thighR.position.y = -0.14;
+    this.rightLegGroup.add(thighR);
+
+    const shinR = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.085, 0.075, 0.30, 10),
+      skinMat
+    );
+    shinR.position.y = -0.42;
+    this.rightLegGroup.add(shinR);
+    this.rightLeg = thighR;
+
+    const sandalR = new THREE.Mesh(
+      new THREE.BoxGeometry(0.15, 0.05, 0.28),
+      sandalMat
+    );
+    sandalR.position.set(0, -0.60, 0.03);
+    this.rightLegGroup.add(sandalR);
+    const strapR = new THREE.Mesh(
+      new THREE.BoxGeometry(0.13, 0.03, 0.035),
+      clothAccentMat
+    );
+    strapR.position.set(0, -0.56, 0.08);
+    this.rightLegGroup.add(strapR);
+    const ankleR = new THREE.Mesh(
+      new THREE.TorusGeometry(0.06, 0.015, 6, 10),
+      beltMat
+    );
+    ankleR.position.set(0, -0.55, 0);
+    ankleR.rotation.x = Math.PI / 2;
+    this.rightLegGroup.add(ankleR);
+
+    // ── Faith Shield ──
     this.shieldMesh = new THREE.Mesh(
-      new THREE.SphereGeometry(1.25, 16, 12),
-      new THREE.MeshBasicMaterial({ color: 0xf1c40f, transparent: true, opacity: 0.22, side: THREE.DoubleSide })
+      new THREE.SphereGeometry(1.3, 16, 12),
+      new THREE.MeshBasicMaterial({
+        color: 0xf1c40f,
+        transparent: true,
+        opacity: 0.2,
+        side: THREE.DoubleSide
+      })
     );
     this.shieldMesh.visible = false;
     this.group.add(this.shieldMesh);
 
-    // Procedural animation state + blend targets
+    // Animation state (same API — blending unchanged)
     this.anim = {
       walkCycle: 0,
       attackProgress: 0,
@@ -147,9 +500,7 @@ class Player {
       victoryTimer: 0,
       bob: 0,
       idleBreath: 0,
-      // Current blended pose (lerped each frame)
       pose: this._emptyPose(),
-      // Blend speeds (higher = snappier)
       blendSpeed: {
         IDLE: 8,
         WALK: 12,
@@ -170,7 +521,7 @@ class Player {
       rightArm: { x: 0, y: 0, z: 0 },
       leftLeg: { x: 0, y: 0, z: 0 },
       rightLeg: { x: 0, y: 0, z: 0 },
-      torso: { x: 0, y: 0, z: 0, py: 0.7 },
+      torso: { x: 0, y: 0, z: 0, py: 0.72 },
       head: { x: 0, y: 0, z: 0 },
       rootY: 0,
       bodyZ: 0
@@ -179,9 +530,18 @@ class Player {
 
   setupControls() {
     window.addEventListener('keydown', e => {
+      // Ignore key repeat so F/Q/Space are single-press
+      if (e.repeat) return;
       this.keys[e.code] = true;
       if (e.code === 'Escape') {
         if (window.Game && window.Game.state === 'playing') window.Game.pause();
+      }
+      // Single-press actions only on keydown (not held every frame)
+      if (window.Game && window.Game.state === 'playing') {
+        if (e.code === 'KeyF') this.tryAttack();
+        if (e.code === 'KeyQ') this.tryFaithShield();
+        if (e.code === 'Space') this.tryJump();
+        if (e.code === 'KeyE') window.Game.tryInteract();
       }
     });
     window.addEventListener('keyup', e => { this.keys[e.code] = false; });
@@ -291,10 +651,11 @@ class Player {
 
   tryAttack() {
     if (this.attackCooldown > 0 || !this.hasSling) return;
-    this.attackCooldown = 0.5;
+    if (this.state === 'HIT' || this.state === 'VICTORY' || this.state === 'ATTACK') return;
+    this.attackCooldown = 0.85;
     this.state = 'ATTACK';
     this.anim.attackProgress = 0;
-    if (window.Game) window.Game.spawnProjectile();
+    this.pendingProjectile = true; // launch at sling-release frame
   }
 
   tryFaithShield() {
@@ -303,6 +664,8 @@ class Player {
     this.shieldActive = 4;
     this.shieldMesh.visible = true;
     if (window.UI) window.UI.showMessage('SHIELD OF FAITH!');
+    if (window.AudioSystem) window.AudioSystem.faithShield();
+    if (window.SaveSystem) SaveSystem.bumpStat('faithShieldUses', 1);
     if (window.Game) window.Game.updateHUD();
   }
 
@@ -320,6 +683,11 @@ class Player {
       this.state = 'HIT';
       this.anim.hitTimer = 0;
       this.invincible = 0.8;
+      this.pendingProjectile = false;
+      if (window.AudioSystem) window.AudioSystem.damage();
+      if (this.life > 0 && this.life <= this.maxLife * 0.25 && window.UI) {
+        window.UI.showMessage('LOW HEALTH!', 1500);
+      }
     }
     if (window.Game) window.Game.updateHUD();
     if (this.life <= 0) {
@@ -380,9 +748,7 @@ class Player {
       inputX += this.joystick.x;
       inputZ += this.joystick.y;
     }
-    if (this.keys['Space']) this.tryJump();
-    if (this.keys['KeyQ']) this.tryFaithShield();
-    if (this.keys['KeyE'] && window.Game) window.Game.tryInteract();
+    // Jump / attack / faith / interact handled on keydown (single-press)
 
     const isRunning = this.keys['ShiftLeft'] || this.keys['ShiftRight'];
     const moveSpeed = this.speed * (isRunning ? this.runMultiplier : 1);
@@ -395,17 +761,25 @@ class Player {
 
     const busy = this.state === 'ATTACK' || this.state === 'HIT' || this.state === 'VICTORY';
 
-    if (this.direction.lengthSq() > 0) {
+    if (busy) {
+      // No locomotion during attack / hit / victory
+      this.velocity.x *= 0.6;
+      this.velocity.z *= 0.6;
+      if (Math.abs(this.velocity.x) < 0.05) this.velocity.x = 0;
+      if (Math.abs(this.velocity.z) < 0.05) this.velocity.z = 0;
+    } else if (this.direction.lengthSq() > 0) {
       this.direction.normalize();
       this.facing = Math.atan2(this.direction.x, this.direction.z);
       this.group.rotation.y = this.facing;
       this.velocity.x = this.direction.x * moveSpeed;
       this.velocity.z = this.direction.z * moveSpeed;
-      if (!busy && this.onGround) this.state = isRunning ? 'RUN' : 'WALK';
+      if (this.onGround) this.state = isRunning ? 'RUN' : 'WALK';
     } else {
-      this.velocity.x *= 0.8;
-      this.velocity.z *= 0.8;
-      if (this.onGround && !busy) this.state = 'IDLE';
+      this.velocity.x *= 0.75;
+      this.velocity.z *= 0.75;
+      if (Math.abs(this.velocity.x) < 0.05) this.velocity.x = 0;
+      if (Math.abs(this.velocity.z) < 0.05) this.velocity.z = 0;
+      if (this.onGround) this.state = 'IDLE';
     }
 
     this.velocity.y -= this.gravity * dt;
@@ -428,6 +802,13 @@ class Player {
     }
 
     this.animate(dt);
+
+    // Launch sling stone at release frame (~45% through ATTACK)
+    if (this.state === 'ATTACK' && this.pendingProjectile && this.anim.attackProgress >= 0.45) {
+      this.pendingProjectile = false;
+      if (window.Game) window.Game.spawnProjectile();
+    }
+
     this.updateCamera();
   }
 
@@ -504,7 +885,7 @@ class Player {
     if (this.state === 'IDLE') {
       a.idleBreath += dt * 2.2;
       const breath = Math.sin(a.idleBreath) * 0.03;
-      target.torso.py = 0.7 + breath;
+      target.torso.py = 0.72 + breath;
       target.head.x = Math.sin(a.idleBreath * 0.7) * 0.04;
       target.leftArm.z = 0.1 + Math.sin(a.idleBreath * 0.9) * 0.05;
       target.rightArm.z = -0.1 + Math.sin(a.idleBreath * 0.9 + 1.2) * 0.05;

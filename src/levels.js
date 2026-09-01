@@ -1,19 +1,15 @@
 // Level / Mission system
 const LEVELS = [
-  {
-    id: 1,
-    name: 'David & Goliath',
-    unlocked: true
-  },
-  { id: 2, name: 'Walls of Jericho', unlocked: false },
-  { id: 3, name: 'Joseph and His Dreams', unlocked: false },
-  { id: 4, name: 'Three Hebrew Boys', unlocked: false },
-  { id: 5, name: "Daniel in the Lions' Den", unlocked: false },
-  { id: 6, name: 'Jonah and the Great Fish', unlocked: false },
-  { id: 7, name: "Noah's Ark", unlocked: false },
-  { id: 8, name: 'Moses & the Red Sea', unlocked: false },
-  { id: 9, name: "Esther's Courage", unlocked: false },
-  { id: 10, name: 'Bethlehem — Birth of Jesus', unlocked: false }
+  { id: 1, name: 'David & Goliath', icon: '⚔️' },
+  { id: 2, name: 'Walls of Jericho', icon: '🏰' },
+  { id: 3, name: 'Joseph & His Dreams', icon: '🌟' },
+  { id: 4, name: 'The Three Hebrew Boys', icon: '🔥' },
+  { id: 5, name: "Daniel in the Lions' Den", icon: '🦁' },
+  { id: 6, name: 'Jonah & the Great Fish', icon: '🐋' },
+  { id: 7, name: 'Moses & the Red Sea', icon: '🌊' },
+  { id: 8, name: "Samson's Great Strength", icon: '💪' },
+  { id: 9, name: 'Gideon & the 300', icon: '🕯️' },
+  { id: 10, name: "Esther's Courage", icon: '👑' }
 ];
 
 class MissionSystem {
@@ -71,9 +67,7 @@ class MissionSystem {
         id: 'goliath',
         text: 'Defeat Goliath',
         check: (game) => game.goliathDefeated,
-        onComplete: (game) => {
-          // Handled by victory flow
-        }
+        onComplete: () => {}
       }
     ];
   }
@@ -98,7 +92,7 @@ class MissionSystem {
 
   reset() {
     this.current = 0;
-    this.missions.forEach(m => m.completed = false);
+    this.missions.forEach(m => { m.completed = false; });
   }
 }
 

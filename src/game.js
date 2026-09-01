@@ -20,6 +20,7 @@ const Game = {
 
   init() {
     UI.init();
+    if (window.AudioSystem) AudioSystem.init();
     this.setupMenuButtons();
     this.loadSettings();
     // Simulate short load then show menu
@@ -32,51 +33,125 @@ const Game = {
   },
 
   setupMenuButtons() {
-    document.getElementById('btn-play').addEventListener('click', () => this.startIntro());
-    document.getElementById('btn-map').addEventListener('click', () => {
+    const click = (id, fn) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener('click', () => {
+        if (window.AudioSystem) AudioSystem.uiClick();
+        fn();
+      });
+    };
+    click('btn-play', () => this.startIntro());
+    click('btn-map', () => { this.populateMap(); UI.show('map'); });
+    click('btn-howto', () => UI.show('howto'));
+    click('btn-achievements', () => {
+      UI.populateAchievements(SaveSystem.load().achievements);
+      UI.show('achievements');
+    });
+    click('btn-settings', () => { this.loadSettings(); UI.show('settings'); });
+    click('btn-skip-intro', () => this.startLevel(1));
+    click('btn-resume', () => this.resume());
+    click('btn-pause-map', () => {
       this.populateMap();
       UI.show('map');
     });
-    document.getElementById('btn-howto').addEventListener('click', () => UI.show('howto'));
-    document.getElementById('btn-achievements').addEventListener('click', () => UI.show('achievements'));
-    document.getElementById('btn-settings').addEventListener('click', () => UI.show('settings'));
-    document.getElementById('btn-skip-intro').addEventListener('click', () => this.startLevel());
-    document.getElementById('btn-resume').addEventListener('click', () => this.resume());
-    document.getElementById('btn-restart').addEventListener('click', () => this.restartLevel());
-    document.getElementById('btn-settings-pause').addEventListener('click', () => UI.show('settings'));
-    document.getElementById('btn-quit').addEventListener('click', () => this.quitToMenu());
-    document.getElementById('btn-continue').addEventListener('click', () => this.quitToMenu());
-    document.getElementById('btn-howto-back').addEventListener('click', () => UI.show('mainMenu'));
-    document.getElementById('btn-settings-back').addEventListener('click', () => {
+    click('btn-settings-pause', () => { this.loadSettings(); UI.show('settings'); });
+    click('btn-quit', () => UI.show('confirmQuit'));
+    click('btn-quit-yes', () => this.quitToMenu());
+    click('btn-quit-no', () => UI.show('pause'));
+    click('btn-continue', () => this.quitToMenu());
+    click('btn-howto-back', () => UI.show('mainMenu'));
+    click('btn-settings-back', () => {
       this.saveSettings();
       if (this.state === 'paused') UI.show('pause');
       else UI.show('mainMenu');
     });
-    document.getElementById('btn-map-back').addEventListener('click', () => UI.show('mainMenu'));
-    document.getElementById('btn-ach-back').addEventListener('click', () => UI.show('mainMenu'));
+    click('btn-map-back', () => {
+      if (this.state === 'paused' || this.state === 'playing') UI.show('pause');
+      else UI.show('mainMenu');
+    });
+    click('btn-ach-back', () => UI.show('mainMenu'));
+    click('btn-credits', () => UI.show('credits'));
+    click('btn-credits-back', () => UI.show('settings'));
+    click('btn-reset-progress', () => UI.show('confirmReset'));
+    click('btn-reset-yes', () => {
+      SaveSystem.resetProgress();
+      this.loadSettings();
+      this.populateMap();
+      UI.show('settings');
+      if (window.UI) UI.showMessage('Progress reset', 2000);
+    });
+    click('btn-reset-no', () => UI.show('settings'));
+
+    const muteBtn = document.getElementById('btn-mute');
+    if (muteBtn) {
+      muteBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!window.AudioSystem) return;
+        const on = AudioSystem.toggleMute();
+        muteBtn.textContent = on ? '🔊' : '🔇';
+        document.getElementById('set-sound').checked = AudioSystem.enabled;
+        document.getElementById('set-music').checked = AudioSystem.musicEnabled;
+        this.saveSettings();
+      });
+    }
   },
 
   loadSettings() {
     const data = SaveSystem.load();
     const s = data.settings;
-    document.getElementById('set-sound').checked = s.sound;
-    document.getElementById('set-music').checked = s.music;
-    document.getElementById('set-graphics').value = s.graphics;
-    document.getElementById('set-sensitivity').value = s.sensitivity;
+    const el = (id) => document.getElementById(id);
+    if (el('set-sound')) el('set-sound').checked = s.sound !== false;
+    if (el('set-music')) el('set-music').checked = s.music !== false;
+    if (el('set-graphics')) el('set-graphics').value = s.graphics || 'medium';
+    if (el('set-sensitivity')) el('set-sensitivity').value = s.sensitivity != null ? s.sensitivity : 1;
+    if (el('set-music-vol')) el('set-music-vol').value = s.musicVolume != null ? s.musicVolume : 0.35;
+    if (el('set-sfx-vol')) el('set-sfx-vol').value = s.sfxVolume != null ? s.sfxVolume : 0.7;
+    if (window.AudioSystem) {
+      AudioSystem.setSoundEnabled(s.sound !== false);
+      AudioSystem.setMusicEnabled(s.music !== false);
+      if (AudioSystem.musicGain) AudioSystem.musicVolume = s.musicVolume != null ? s.musicVolume : 0.35;
+      if (AudioSystem.masterGain) AudioSystem.volume = s.sfxVolume != null ? s.sfxVolume : 0.7;
+      const muteBtn = document.getElementById('btn-mute');
+      if (muteBtn) muteBtn.textContent = (s.sound !== false) ? '🔊' : '🔇';
+    }
   },
 
   saveSettings() {
+    const el = (id) => document.getElementById(id);
+    const sound = el('set-sound') ? el('set-sound').checked : true;
+    const music = el('set-music') ? el('set-music').checked : true;
+    const musicVolume = el('set-music-vol') ? parseFloat(el('set-music-vol').value) : 0.35;
+    const sfxVolume = el('set-sfx-vol') ? parseFloat(el('set-sfx-vol').value) : 0.7;
     SaveSystem.updateSettings({
-      sound: document.getElementById('set-sound').checked,
-      music: document.getElementById('set-music').checked,
-      graphics: document.getElementById('set-graphics').value,
-      sensitivity: parseFloat(document.getElementById('set-sensitivity').value)
+      sound,
+      music,
+      musicVolume,
+      sfxVolume,
+      graphics: el('set-graphics') ? el('set-graphics').value : 'medium',
+      sensitivity: el('set-sensitivity') ? parseFloat(el('set-sensitivity').value) : 1
     });
+    if (window.AudioSystem) {
+      AudioSystem.setSoundEnabled(sound);
+      AudioSystem.setMusicEnabled(music);
+      AudioSystem.musicVolume = musicVolume;
+      AudioSystem.volume = sfxVolume;
+      if (AudioSystem.musicGain) AudioSystem.musicGain.gain.value = musicVolume;
+      if (AudioSystem.masterGain) AudioSystem.masterGain.gain.value = sfxVolume;
+      const muteBtn = document.getElementById('btn-mute');
+      if (muteBtn) muteBtn.textContent = sound ? '🔊' : '🔇';
+    }
   },
 
   populateMap() {
     const data = SaveSystem.load();
-    UI.populateMap(data.unlockedLevels);
+    UI.populateMap(data.unlockedLevels, data.stars, (levelId) => {
+      if (levelId === 1) {
+        this.startIntro();
+      } else {
+        UI.showMessage('Coming soon! Complete earlier levels.', 2500);
+      }
+    });
   },
 
   startIntro() {
@@ -98,6 +173,10 @@ const Game = {
     this.enemiesDefeated = 0;
     this.goliathDefeated = false;
     this.itemsCollected = 0;
+    if (window.AudioSystem) {
+      AudioSystem.unlock();
+      AudioSystem.exploreMusic();
+    }
     this.clock = new THREE.Clock();
     this.loop();
   },
@@ -129,8 +208,8 @@ const Game = {
       new THREE.Vector3(8, 0, -32),
       new THREE.Vector3(0, 0, -40)
     ];
-    enemySpawns.forEach(pos => {
-      this.enemies.push(new ShadowGuardian(this.scene, pos));
+    enemySpawns.forEach((pos, i) => {
+      this.enemies.push(new ShadowGuardian(this.scene, pos, i % 3));
     });
 
     this.goliath = null;
@@ -151,6 +230,18 @@ const Game = {
     if (this.state === 'paused') return;
 
     const dt = Math.min(this.clock.getDelta(), 0.05);
+
+    // Restore camera after Goliath entrance emphasis
+    if (this._bossCamTimer != null && this._bossCamTimer > 0) {
+      this._bossCamTimer -= dt;
+      if (this._bossCamTimer <= 0 && this._bossCamOrigin && this.player) {
+        this.player.cameraDistance = this._bossCamOrigin.dist;
+        this.player.cameraPitch = this._bossCamOrigin.pitch;
+        // Keep current angle (player may have moved)
+        this._bossCamTimer = null;
+        this._bossCamOrigin = null;
+      }
+    }
 
     this.player.update(dt, this.world.bounds);
     this.world.update(dt);
@@ -216,6 +307,7 @@ const Game = {
     this.scene.remove(item.group);
     this.itemsCollected++;
     this.combat.spawnParticles(item.group.position, 0xf0c14b, 12);
+    if (window.AudioSystem) AudioSystem.collect();
 
     if (item.type === 'stone') {
       this.player.stones++;
@@ -239,6 +331,7 @@ const Game = {
 
   spawnProjectile() {
     if (!this.player.hasSling) return;
+    if (window.AudioSystem) AudioSystem.sling();
     const origin = this.player.getPosition().clone();
     const dir = new THREE.Vector3(
       -Math.sin(this.player.facing),
@@ -282,8 +375,26 @@ const Game = {
     if (this.goliath) return;
     this.goliath = new Goliath(this.scene, new THREE.Vector3(0, 0, -70));
     UI.showBoss(this.goliath.health, this.goliath.maxHealth);
-    UI.showMessage('GOLIATH APPEARS!');
-    // Faith moment setup
+    UI.showMessage('GOLIATH — THE PHILISTINE GIANT!', 3000);
+    if (window.AudioSystem) {
+      AudioSystem.goliathAppear();
+      AudioSystem.battleMusic();
+    }
+    // Brief camera emphasis on boss entrance
+    if (this.player) {
+      this._bossCamTimer = 2.4;
+      this._bossCamOrigin = {
+        angle: this.player.cameraAngle,
+        pitch: this.player.cameraPitch,
+        dist: this.player.cameraDistance
+      };
+      this.player.cameraDistance = 18;
+      this.player.cameraPitch = 0.55;
+      // Look toward Goliath
+      const gp = this.goliath.group.position;
+      const pp = this.player.getPosition();
+      this.player.cameraAngle = Math.atan2(-(gp.x - pp.x), -(gp.z - pp.z));
+    }
   },
 
   onBossDefeated() {
@@ -300,6 +411,11 @@ const Game = {
   showVictory() {
     this.state = 'victory';
     cancelAnimationFrame(this.animFrame);
+    if (window.AudioSystem) {
+      AudioSystem.stopMusic();
+      AudioSystem.levelComplete();
+      setTimeout(() => { if (window.AudioSystem) AudioSystem.victory(); }, 400);
+    }
     const score = this.player.score;
     const stars = score > 1200 ? 3 : score > 700 ? 2 : 1;
     document.getElementById('victory-score').textContent = score;
@@ -311,7 +427,11 @@ const Game = {
     SaveSystem.setBestScore(1, score);
     SaveSystem.setStars(1, stars);
     SaveSystem.setAchievement('davidTheBrave');
-    if (this.player.stones >= 5) SaveSystem.setAchievement('stoneCollector');
+    SaveSystem.setAchievement('bossConqueror');
+    SaveSystem.setAchievement('firstVictory');
+    SaveSystem.setAchievement('adventureExplorer');
+    SaveSystem.bumpStat('levelsCompleted', 1);
+    if (this.enemiesDefeated >= 5) SaveSystem.setAchievement('guardianDefeater');
 
     UI.show('victory');
   },
@@ -354,6 +474,7 @@ const Game = {
   quitToMenu() {
     cancelAnimationFrame(this.animFrame);
     this.state = 'menu';
+    if (window.AudioSystem) AudioSystem.stopMusic();
     if (this.scene) {
       while (this.scene.children.length) this.scene.remove(this.scene.children[0]);
     }

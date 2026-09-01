@@ -13,7 +13,7 @@
   <!-- Loading Screen -->
   <div id="loading-screen">
     <div class="loader-content">
-      <h1>PastorAbayomi Bible Stories</h1>
+      <img src="assets/ui/logo.svg" alt="PastorAbayomi Bible Stories" class="menu-logo" />
       <h2>Bible Heroes Adventure</h2>
       <div class="spinner"></div>
       <p id="loading-text">Loading Level 1: David & Goliath...</p>
@@ -24,16 +24,16 @@
   <div id="main-menu" class="screen hidden">
     <div class="menu-container">
       <div class="logo-area">
-        <h1 class="brand">PastorAbayomi Bible Stories</h1>
+        <img src="assets/ui/logo.svg" alt="PastorAbayomi Bible Stories" class="menu-logo" />
         <h2 class="title">Bible Heroes Adventure</h2>
         <p class="subtitle">Level 1 — David & Goliath</p>
       </div>
       <div class="menu-buttons">
-        <button id="btn-play" class="menu-btn primary">PLAY</button>
-        <button id="btn-map" class="menu-btn">ADVENTURE MAP</button>
-        <button id="btn-howto" class="menu-btn">HOW TO PLAY</button>
-        <button id="btn-achievements" class="menu-btn">ACHIEVEMENTS</button>
-        <button id="btn-settings" class="menu-btn">SETTINGS</button>
+        <button id="btn-play" class="menu-btn primary">▶️ PLAY ADVENTURE</button>
+        <button id="btn-map" class="menu-btn">🗺️ ADVENTURE MAP</button>
+        <button id="btn-howto" class="menu-btn">📖 HOW TO PLAY</button>
+        <button id="btn-achievements" class="menu-btn">🏅 ACHIEVEMENTS</button>
+        <button id="btn-settings" class="menu-btn">⚙️ SETTINGS</button>
       </div>
     </div>
   </div>
@@ -77,6 +77,7 @@
       </div>
       <div id="hud-right">
         <div class="score-box">⭐ <span id="score-text">0</span></div>
+        <button id="btn-mute" class="mute-btn" type="button" title="Mute / Unmute">🔊</button>
       </div>
       <div id="hud-mission">
         <div class="mission-label">CURRENT MISSION</div>
@@ -85,6 +86,7 @@
       <div id="hud-message" class="hidden"></div>
       <div id="boss-hud" class="hidden">
         <div class="boss-name">GOLIATH</div>
+        <div class="boss-subtitle">THE PHILISTINE GIANT</div>
         <div class="bar-bg boss"><div id="boss-bar" class="bar boss"></div></div>
         <div id="boss-text">1000 / 1000</div>
       </div>
@@ -108,11 +110,11 @@
     <!-- Pause Menu -->
     <div id="pause-menu" class="screen hidden">
       <div class="menu-container small">
-        <h2>PAUSED</h2>
-        <button id="btn-resume" class="menu-btn primary">RESUME</button>
-        <button id="btn-restart" class="menu-btn">RESTART LEVEL</button>
-        <button id="btn-settings-pause" class="menu-btn">SETTINGS</button>
-        <button id="btn-quit" class="menu-btn">QUIT TO MENU</button>
+        <h2>⏸️ PAUSED</h2>
+        <button id="btn-resume" class="menu-btn primary">▶️ RESUME</button>
+        <button id="btn-pause-map" class="menu-btn">🗺️ ADVENTURE MAP</button>
+        <button id="btn-settings-pause" class="menu-btn">⚙️ SETTINGS</button>
+        <button id="btn-quit" class="menu-btn danger">🚪 QUIT LEVEL</button>
       </div>
     </div>
 
@@ -134,56 +136,114 @@
 
     <!-- How to Play -->
     <div id="howto-screen" class="screen hidden">
-      <div class="menu-container">
-        <h2>HOW TO PLAY</h2>
-        <div class="howto-grid">
-          <div><strong>Desktop</strong><br>WASD Move · SHIFT Run · SPACE Jump<br>Mouse look · LMB Attack · Q Faith · E Interact · ESC Pause</div>
-          <div><strong>Mobile</strong><br>Left joystick to move<br>Large buttons: Jump, Attack, Faith, Interact</div>
+      <div class="menu-container wide">
+        <h2>📖 HOW TO PLAY</h2>
+        <div class="howto-cards">
+          <div class="info-card">
+            <h3>⌨️ Desktop Controls</h3>
+            <ul class="ctrl-list">
+              <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Move</li>
+              <li><kbd>SHIFT</kbd> Run</li>
+              <li><kbd>SPACE</kbd> Jump</li>
+              <li><kbd>F</kbd> or Left Click — Fire Sling</li>
+              <li><kbd>Q</kbd> Faith Shield</li>
+              <li><kbd>E</kbd> Interact / Collect</li>
+              <li>Mouse — Look around</li>
+              <li><kbd>ESC</kbd> Pause</li>
+            </ul>
+          </div>
+          <div class="info-card">
+            <h3>📱 Mobile</h3>
+            <p>Left joystick to move. Large buttons: Jump, Attack, Faith, Interact.</p>
+          </div>
+          <div class="info-card">
+            <h3>❤️ Stats</h3>
+            <p><strong>Life</strong> — stay alive!<br>
+            <strong>Armor</strong> — absorbs hits first<br>
+            <strong>Faith</strong> — power for Faith Shield</p>
+          </div>
+          <div class="info-card">
+            <h3>🎯 Adventure Tips</h3>
+            <p>Collect stones & the sling. Defeat Shadow Guardians. Reach the battlefield and defeat the boss with courage and faith!</p>
+          </div>
         </div>
-        <p>Collect 5 Smooth Stones and the Sling. Defeat Shadow Guardians. Reach the battlefield and defeat Goliath with faith!</p>
         <button id="btn-howto-back" class="menu-btn">BACK</button>
       </div>
     </div>
 
     <!-- Settings -->
     <div id="settings-screen" class="screen hidden">
+      <div class="menu-container">
+        <h2>⚙️ SETTINGS</h2>
+        <div class="settings-panel">
+          <label class="setting-row"><span>🔊 Sound Effects</span><input type="checkbox" id="set-sound" checked></label>
+          <label class="setting-row"><span>🎵 Music</span><input type="checkbox" id="set-music" checked></label>
+          <label class="setting-row"><span>Music Volume</span><input type="range" id="set-music-vol" min="0" max="1" step="0.05" value="0.35"></label>
+          <label class="setting-row"><span>Effects Volume</span><input type="range" id="set-sfx-vol" min="0" max="1" step="0.05" value="0.7"></label>
+          <label class="setting-row"><span>Graphics</span>
+            <select id="set-graphics">
+              <option value="low">LOW</option>
+              <option value="medium" selected>MEDIUM</option>
+              <option value="high">HIGH</option>
+            </select>
+          </label>
+          <label class="setting-row"><span>Mobile Sensitivity</span>
+            <input type="range" id="set-sensitivity" min="0.5" max="2" step="0.1" value="1">
+          </label>
+          <p class="settings-hint">Controls: WASD · F Sling · Q Faith · E Interact · ESC Pause</p>
+          <button id="btn-reset-progress" class="menu-btn danger">🗑️ Reset Game Progress</button>
+          <button id="btn-credits" class="menu-btn">📜 Credits</button>
+        </div>
+        <button id="btn-settings-back" class="menu-btn primary">BACK</button>
+      </div>
+    </div>
+
+    <div id="credits-screen" class="screen hidden">
+      <div class="menu-container">
+        <h2>📜 Credits</h2>
+        <div class="info-card">
+          <p><strong>PastorAbayomi Bible Stories</strong></p>
+          <p>Bible Heroes Adventure</p>
+          <p>A child-friendly 3D faith adventure.</p>
+          <p class="muted">Level 1: David &amp; Goliath</p>
+        </div>
+        <button id="btn-credits-back" class="menu-btn">BACK</button>
+      </div>
+    </div>
+
+    <div id="confirm-reset" class="screen hidden">
       <div class="menu-container small">
-        <h2>SETTINGS</h2>
-        <label class="setting-row"><span>Sound</span><input type="checkbox" id="set-sound" checked></label>
-        <label class="setting-row"><span>Music</span><input type="checkbox" id="set-music" checked></label>
-        <label class="setting-row"><span>Graphics</span>
-          <select id="set-graphics">
-            <option value="low">LOW</option>
-            <option value="medium" selected>MEDIUM</option>
-            <option value="high">HIGH</option>
-          </select>
-        </label>
-        <label class="setting-row"><span>Mobile Sensitivity</span>
-          <input type="range" id="set-sensitivity" min="0.5" max="2" step="0.1" value="1">
-        </label>
-        <button id="btn-settings-back" class="menu-btn">BACK</button>
+        <h2>⚠️ Reset Progress?</h2>
+        <p>This will erase levels, stars, scores and achievements. Settings are kept.</p>
+        <button id="btn-reset-yes" class="menu-btn danger">YES, RESET</button>
+        <button id="btn-reset-no" class="menu-btn">CANCEL</button>
+      </div>
+    </div>
+
+    <div id="confirm-quit" class="screen hidden">
+      <div class="menu-container small">
+        <h2>🚪 Quit Level?</h2>
+        <p>Current run progress will be lost. Saved unlocks and achievements stay.</p>
+        <button id="btn-quit-yes" class="menu-btn danger">QUIT LEVEL</button>
+        <button id="btn-quit-no" class="menu-btn primary">KEEP PLAYING</button>
       </div>
     </div>
 
     <!-- Adventure Map -->
     <div id="map-screen" class="screen hidden">
-      <div class="menu-container">
-        <h2>ADVENTURE MAP</h2>
-        <div class="level-list" id="level-list"></div>
+      <div class="menu-container wide">
+        <h2>🗺️ ADVENTURE MAP</h2>
+        <p class="map-subtitle">Choose a Bible Heroes level</p>
+        <div class="level-grid" id="level-list"></div>
         <button id="btn-map-back" class="menu-btn">BACK</button>
       </div>
     </div>
 
     <!-- Achievements -->
     <div id="achievements-screen" class="screen hidden">
-      <div class="menu-container">
-        <h2>ACHIEVEMENTS</h2>
-        <ul id="achievements-list">
-          <li>🏅 David the Brave — Defeat Goliath</li>
-          <li>⭐ Stone Collector — Find all 5 smooth stones</li>
-          <li>🛡️ Protector — Max armor during level</li>
-          <li>⚡ Faithful — Use Faith Shield 5 times</li>
-        </ul>
+      <div class="menu-container wide">
+        <h2>🏅 ACHIEVEMENTS</h2>
+        <div id="achievements-list" class="ach-grid"></div>
         <button id="btn-ach-back" class="menu-btn">BACK</button>
       </div>
     </div>
@@ -192,6 +252,7 @@
   <!-- Three.js CDN -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="src/save.js"></script>
+  <script src="src/audio.js"></script>
   <script src="src/ui.js"></script>
   <script src="src/player.js"></script>
   <script src="src/enemies.js"></script>

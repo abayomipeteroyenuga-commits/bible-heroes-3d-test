@@ -8,20 +8,24 @@ class CombatSystem {
   }
 
   spawnStone(origin, direction, isFaith = false) {
-    const geo = new THREE.SphereGeometry(0.12, 6, 4);
+    // Visible stone projectile
+    const geo = new THREE.SphereGeometry(0.22, 10, 8);
     const mat = new THREE.MeshBasicMaterial({
-      color: isFaith ? 0xf1c40f : 0xa0a8b0
+      color: isFaith ? 0xf1c40f : 0xc8c0b0
     });
     const mesh = new THREE.Mesh(geo, mat);
     mesh.position.copy(origin);
-    mesh.position.y += 1.2;
+    mesh.position.y += 1.35;
+    // Start slightly in front of David so it is clearly visible
+    const dirN = direction.clone().normalize();
+    mesh.position.addScaledVector(dirN, 0.6);
     this.scene.add(mesh);
-    const vel = direction.clone().normalize().multiplyScalar(28);
+    const vel = dirN.multiplyScalar(32);
     this.projectiles.push({
       mesh,
       velocity: vel,
-      life: 2.0,
-      damage: isFaith ? 80 : 25,
+      life: 2.5,
+      damage: isFaith ? 80 : 30,
       isFaith,
       hitZone: null
     });
@@ -74,23 +78,33 @@ class CombatSystem {
       let hit = false;
       enemies.forEach(e => {
         if (!e.alive) return;
-        if (p.mesh.position.distanceTo(e.group.position.clone().add(new THREE.Vector3(0, 1, 0))) < 1.5) {
+        if (p.mesh.position.distanceTo(e.group.position.clone().add(new THREE.Vector3(0, 1, 0))) < 2.0) {
           e.takeDamage(p.damage);
           hit = true;
+          if (window.AudioSystem) {
+            AudioSystem.impact();
+            AudioSystem.enemyHit();
+          }
         }
       });
 
-      // Hit Goliath
+      // Hit Goliath — zone from actual projectile position vs scaled body
       if (goliath && goliath.alive) {
-        const gPos = goliath.group.position.clone();
-        const dist = p.mesh.position.distanceTo(gPos.clone().add(new THREE.Vector3(0, 3, 0)));
-        if (dist < 4) {
-          // Determine hit zone roughly by height
+        const gPos = goliath.group.position;
+        const scale = goliath.group.scale.y || 3.4;
+        // Local height relative to Goliath feet
+        const localY = (p.mesh.position.y - gPos.y) / scale;
+        const localX = (p.mesh.position.x - gPos.x) / scale;
+        const localZ = (p.mesh.position.z - gPos.z) / scale;
+        // Approximate body radius in local space (~1.2 torso width)
+        const horiz = Math.sqrt(localX * localX + localZ * localZ);
+        if (horiz < 1.6 && localY > 0 && localY < 3.2) {
           let zone = 'ARMOR';
-          if (p.mesh.position.y > gPos.y + 7) zone = 'HEAD';
-          else if (p.mesh.position.x < gPos.x - 1.5) zone = 'SHIELD';
+          if (localY > 2.0) zone = 'HEAD';
+          else if (localX < -0.45) zone = 'SHIELD';
           goliath.takeDamage(p.damage, zone);
           hit = true;
+          if (window.AudioSystem) AudioSystem.impact();
         }
       }
 
