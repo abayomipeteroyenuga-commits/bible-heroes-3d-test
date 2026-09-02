@@ -284,6 +284,10 @@ const UI = {
     set('shop-shield-lvl', bag.shieldBonus || 0);
     set('shop-bow-status', bag.hasBow ? 'OWNED' : 'LOCKED');
     set('shop-arrows', bag.arrows || 0);
+    const owned = Array.isArray(bag.ownedWeapons) ? bag.ownedWeapons : ['sling'];
+    const equipped = bag.equippedWeapon || 'sling';
+    document.querySelectorAll('[data-equip-weapon]').forEach(btn => { const id = btn.getAttribute('data-equip-weapon'); btn.textContent = owned.indexOf(id) !== -1 ? (equipped === id ? 'EQUIPPED' : 'EQUIP') : 'LOCKED'; btn.disabled = owned.indexOf(id) === -1; });
+    document.querySelectorAll('[data-weapon-status]').forEach(el => { const id = el.getAttribute('data-weapon-status'); el.textContent = owned.indexOf(id) !== -1 ? 'OWNED' : 'LOCKED'; });
     set('craft-sticks', bag.sticks || 0);
     set('craft-feathers', bag.feathers || 0);
     set('craft-flint', bag.flint || 0);

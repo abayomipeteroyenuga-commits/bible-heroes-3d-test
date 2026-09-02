@@ -7,12 +7,15 @@ class CombatSystem {
     this.shockwaves = [];
   }
 
-  spawnStone(origin, direction, isFaith = false, extraDmg = 0) {
-    // Visible stone projectile
-    const geo = new THREE.SphereGeometry(0.38, 10, 8);
-    const mat = new THREE.MeshBasicMaterial({
-      color: isFaith ? 0xffe066 : 0xf5f0e6
-    });
+  spawnStone(origin, direction, isFaith = false, extraDmg = 0, projectileType = 'stone') {
+    // Shared projectile path; weapon type only changes the visual and damage bonus.
+    const type = projectileType || 'stone';
+    const colors = { stone: 0xf5f0e6, arrow: 0x8b5a2b, blade: 0xd8e0e8, flame: 0xff6a00, faith: 0xffe066 };
+    const color = colors[type] || (isFaith ? 0xffe066 : 0xf5f0e6);
+    const geo = type === 'arrow' ? new THREE.CylinderGeometry(0.035, 0.035, 0.7, 6) :
+      type === 'blade' ? new THREE.BoxGeometry(0.08, 0.08, 0.65) :
+      new THREE.SphereGeometry(type === 'stone' ? 0.38 : 0.22, 10, 8);
+    const mat = new THREE.MeshBasicMaterial({ color: color });
     const mesh = new THREE.Mesh(geo, mat);
     mesh.position.copy(origin);
     mesh.position.y += 1.35;
@@ -20,14 +23,19 @@ class CombatSystem {
     const dirN = direction.clone().normalize();
     mesh.position.addScaledVector(dirN, 0.6);
     this.scene.add(mesh);
-    const vel = dirN.multiplyScalar(32);
+    if (type === 'arrow' || type === 'blade') mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dirN);
+    if (type === 'flame' || type === 'faith') {
+      this.spawnParticles(mesh.position, color, type === 'faith' ? 5 : 4);
+    }
+    const vel = dirN.multiplyScalar(type === 'arrow' ? 38 : type === 'blade' ? 34 : 32);
     this.projectiles.push({
       mesh,
       velocity: vel,
       life: 2.5,
       damage: (isFaith ? 80 : 30) + (extraDmg || 0),
       isFaith,
-      hitZone: null
+      hitZone: null,
+      projectileType: type
     });
   }
 

@@ -460,8 +460,9 @@ class Goliath {
     this.headGroup.add(brow2);
 
     // Helmet
-    const helm = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.46, 0.4, 10), armorDarkMat);
-    helm.position.y = 0.22;
+    const helm = new THREE.Mesh(new THREE.SphereGeometry(0.46, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.52), armorDarkMat);
+    helm.scale.set(1.02, 0.9, 0.98);
+    helm.position.set(0, 0.23, -0.02);
     this.headGroup.add(helm);
     // Crest
     const crest = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.35, 0.2), bronzeMat);

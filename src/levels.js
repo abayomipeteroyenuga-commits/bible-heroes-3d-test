@@ -38,7 +38,7 @@ const BIBLE_WORLD_DATA = {
   },
   6: {
     event: 'Five Smooth Stones', passage: '1 Samuel 17:40',
-    story: 'David took his staff, sling, and five smooth stones from the brook. He prepared carefully before stepping toward the giant.',
+    story: 'David took his sling and five smooth stones from the brook. He prepared carefully before stepping toward the giant.',
     verse: '“And he took his staff in his hand, and chose him five smooth stones.” — 1 Samuel 17:40',
     lesson: 'Faith does not cancel preparation. Trust God and do your part carefully.',
     prayer: 'Father, teach me to prepare well while trusting You with the result. Amen.'
@@ -317,7 +317,7 @@ const WORLD_BOSSES = {
   17: { name: 'Banner Warlord', title: 'BANNER BOSS', color: 0xa02820, accent: 0xff6050, hp: 480, dmg: 16, scale: 2.45 },
   18: { name: 'Ravine Horror', title: 'RAVINE BOSS', color: 0x201828, accent: 0x8866aa, hp: 500, dmg: 16, scale: 2.5 },
   19: { name: "Giant's Herald", title: 'HERALD BOSS', color: 0x5a3028, accent: 0xe06030, hp: 560, dmg: 17, scale: 2.7 },
-  20: { name: 'Goliath', title: 'THE PHILISTINE GIANT', color: 0x5a6a7a, accent: 0xb8956a, hp: 520, dmg: 18, scale: 3.2, speed: 3.0 },
+  20: { name: 'River Titan', title: 'WATER BOSS', color: 0x5a6a7a, accent: 0xb8956a, hp: 520, dmg: 18, scale: 3.2, speed: 3.0 },
   21: { name: 'Olive Sentinel', title: 'GROVE BOSS', color: 0x6a8a30, accent: 0xd0e060, hp: 540, dmg: 18, scale: 2.5, speed: 3.0 },
   22: { name: 'Cedar Titan', title: 'CEDAR BOSS', color: 0x2a5a38, accent: 0x70b060, hp: 560, dmg: 19, scale: 2.55, speed: 3.05 },
   23: { name: 'Marsh Warden', title: 'MARSH BOSS', color: 0x3a6a58, accent: 0x80c0a0, hp: 580, dmg: 19, scale: 2.55, speed: 3.05 },

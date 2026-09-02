@@ -72,6 +72,9 @@ const SaveSystem = {
         shieldBonus: 0,
         hasBow: false,
         arrows: 0,
+        equippedWeapon: 'sling',
+        ownedWeapons: ['sling'],
+        weaponLevels: {},
         sticks: 0,
         feathers: 0,
         flint: 0
@@ -103,8 +106,18 @@ const SaveSystem = {
       claimedRewards: { ...((raw && raw.claimedRewards) || {}) },
       badges: { ...((raw && raw.badges) || {}) }
     };
-    data.gems = parseInt(data.gems, 10) || 0;
-    data.totalXP = parseInt(data.totalXP, 10) || 0;
+    data.gems = Math.max(0, parseInt(data.gems, 10) || 0);
+    data.totalXP = Math.max(0, parseInt(data.totalXP, 10) || 0);
+
+    // Harden inventory data from older/corrupt saves.
+    const inv = data.inventory || def.inventory;
+    inv.ownedWeapons = Array.from(new Set(Array.isArray(inv.ownedWeapons) ? inv.ownedWeapons.filter(Boolean) : ['sling']));
+    if (inv.ownedWeapons.indexOf('sling') === -1) inv.ownedWeapons.unshift('sling');
+    inv.weaponLevels = (inv.weaponLevels && typeof inv.weaponLevels === 'object' && !Array.isArray(inv.weaponLevels)) ? inv.weaponLevels : {};
+    inv.equippedWeapon = inv.ownedWeapons.indexOf(inv.equippedWeapon) !== -1 ? inv.equippedWeapon : 'sling';
+    inv.coins = Math.max(0, parseInt(inv.coins, 10) || 0);
+    inv.arrows = Math.max(0, parseInt(inv.arrows, 10) || 0);
+    data.inventory = inv;
 
     data.unlockedLevels = this._cleanList(data.unlockedLevels);
     if (data.unlockedLevels.indexOf(1) === -1) data.unlockedLevels.unshift(1);
@@ -191,10 +204,13 @@ const SaveSystem = {
     const data = this.load();
     const inv = data.inventory || this.defaultData().inventory;
     data.inventory = inv;
-    const prices = { armor: 40, shield: 35, bow: 80, arrows: 20 };
+    const prices = { armor: 40, shield: 35, bow: 80, arrows: 20, bronzeSword: 120, hunterBow: 180, flameSling: 220, faithBlade: 350 };
+    const weaponNames = { bronzeSword: 'Bronze Sword', hunterBow: 'Hunter Bow', flameSling: 'Flame Sling', faithBlade: 'Faith Blade' };
     const price = prices[item];
     if (!price) return { ok: false, message: 'Unknown item' };
     if (item === 'bow' && inv.hasBow) return { ok: false, message: 'You already own the bow' };
+    if (weaponNames[item] && (inv.ownedWeapons || ['sling']).indexOf(item) !== -1) return { ok: false, message: 'You already own the ' + weaponNames[item] };
+    if (weaponNames[item] && item !== 'bronzeSword' && item !== 'hunterBow' && item !== 'flameSling' && item !== 'faithBlade') return { ok: false, message: 'Unknown weapon' };
     if ((inv.coins || 0) < price) return { ok: false, message: 'Not enough coins' };
     inv.coins -= price;
     if (item === 'armor') inv.armorUpgrades = (inv.armorUpgrades || 0) + 1;
@@ -204,14 +220,35 @@ const SaveSystem = {
       inv.arrows = (inv.arrows || 0) + 8;
     }
     if (item === 'arrows') inv.arrows = (inv.arrows || 0) + 10;
+    if (weaponNames[item]) {
+      inv.ownedWeapons = Array.isArray(inv.ownedWeapons) ? inv.ownedWeapons : ['sling'];
+      inv.ownedWeapons.push(item);
+      inv.equippedWeapon = item;
+      inv.weaponLevels[item] = Math.max(1, inv.weaponLevels[item] || 0);
+    }
     this.save(data);
     const labels = {
       armor: 'Armor upgraded!',
       shield: 'Faith shield strengthened!',
       bow: 'Bow unlocked!',
-      arrows: '+10 arrows'
+      arrows: '+10 arrows',
+      bronzeSword: 'Bronze Sword purchased!',
+      hunterBow: 'Hunter Bow purchased!',
+      flameSling: 'Flame Sling purchased!',
+      faithBlade: 'Faith Blade purchased!'
     };
     return { ok: true, message: labels[item] || 'Purchased', inventory: inv };
+  },
+
+  equipWeapon(item) {
+    const data = this.load();
+    const inv = data.inventory || this.defaultData().inventory;
+    const owned = Array.isArray(inv.ownedWeapons) ? inv.ownedWeapons : ['sling'];
+    if (owned.indexOf(item) === -1) return { ok: false, message: 'Weapon not owned' };
+    inv.equippedWeapon = item;
+    data.inventory = inv;
+    this.save(data);
+    return { ok: true, inventory: inv, message: 'Equipped ' + item };
   },
 
   addMaterial(kind, amount) {

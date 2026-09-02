@@ -29,6 +29,8 @@ class Player {
     this.coins = 0;
     this.hasBow = false;
     this.arrows = 0;
+    this.equippedWeapon = 'sling';
+    this.weaponPower = 0;
     this.shieldBonus = 0;
     this.invincible = 0;
     this.shieldActive = 0;
@@ -66,10 +68,42 @@ class Player {
   }
 
   buildModel() {
+    // David gets a distinct wardrobe for every world.  The look changes while his
+    // identity, face, sling and animation rig remain consistent.
+    const world = Math.max(1, Math.min(40, Number(window.Game && window.Game.currentWorld) || 1));
+    const wardrobes = [
+      [0x527a55,0x403225,0x70452a,0xc9a45a],[0x356b82,0x493526,0x6b4028,0xd3ad63],
+      [0x875044,0x3d3028,0x70442a,0xe0b76a],[0x62518f,0x44372c,0x62402a,0xd7b56d],
+      [0x7d7138,0x45362a,0x754b2b,0xcfa35b],[0x3e786a,0x49392c,0x5f3925,0xe0bb73],
+      [0x7d4b61,0x392f2a,0x70452c,0xd8a45d],[0x4c774b,0x51412e,0x7b522d,0xe7bd6e],
+      [0x41678b,0x4b392b,0x704127,0xd6a15c],[0x925b3b,0x3b3029,0x76462b,0xe0b56b],
+      [0x4c6d8b,0x3b3027,0x62412c,0xd3aa62],[0x76506e,0x44372d,0x70482d,0xe2bd72],
+      [0x3f7961,0x4b392c,0x674027,0xd8a65e],[0x8b4b42,0x413229,0x74472b,0xe4b86c],
+      [0x566c3e,0x403229,0x6d482a,0xd4ad63],[0x49607f,0x4a372a,0x75472b,0xe1b66a],
+      [0x78465f,0x3c302a,0x70462a,0xd8a861],[0x3e746f,0x47372c,0x694329,0xe3b56b],
+      [0x806039,0x3f3228,0x76492b,0xd8ad62],[0x5a527f,0x40342a,0x6e4529,0xe5bd76],
+      [0x8a4a38,0x423228,0x75462a,0xd9a05a],[0x3f7055,0x49372a,0x69432a,0xe4ba6e],
+      [0x6b4b78,0x3c312b,0x72452b,0xd9ad68],[0x426b82,0x46352a,0x6e4328,0xe5b970],
+      [0x7e553c,0x403329,0x774a2d,0xe2b36a],[0x3d765f,0x49382b,0x6a4329,0xd9a85e],
+      [0x714969,0x3d3029,0x74482b,0xe6bc73],[0x4b6385,0x44352a,0x70442a,0xd7a15a],
+      [0x8a513f,0x3e3028,0x76482b,0xe4b86b],[0x3e6e61,0x48372b,0x6c4329,0xdcae63],
+      [0x62507d,0x403229,0x73472c,0xe4ba70],[0x79633c,0x433329,0x784b2e,0xd9aa5f],
+      [0x4b785e,0x45362a,0x6c4329,0xe5bd72],[0x82475a,0x3c3029,0x76482b,0xdca45c],
+      [0x456b88,0x45352a,0x6e4329,0xe8bf76],[0x7b533e,0x3f3128,0x794a2d,0xe3b267],
+      [0x4b7869,0x45362a,0x6e442a,0xe9c17b],[0x694c82,0x3c3129,0x77492c,0xe2b96f],
+      [0x8c5337,0x3e3028,0x7a4b2d,0xe8ba68],[0x3e7464,0x45352a,0x70452a,0xe7bd73],
+      [0x5b5687,0x3d3029,0x75482c,0xe6bd77],[0x87613c,0x423329,0x7a4d2e,0xe8bc6c]
+    ];
+    const w = wardrobes[(world - 1) % wardrobes.length];
+    const accent = w[3];
+    const cloak = world >= 4 ? [0x2d4a3d,0x473a5b,0x5a3b32,0x374e68,0x66512d][(world - 4) % 5] : null;
+    const sash = [0x9b3d32,0x315c72,0x8a6a2e,0x6c3c62,0x6b5130][(world - 1) % 5];
     this.humanoid = new Humanoid(this.group, {
-      skin: 0xf3c7a6, shirt: 0x4a7c59, pants: 0x4a3a2c, boot: 0x5c3a22,
-      hair: 0x2c1a0e, leather: 0x8a5a32, accent: 0xc9a15b, pads: true,
-      sling: true, staff: true, eye: 0x2e5a7a
+      skin: 0xf0bd98, skinDark: 0xd49a79, shirt: w[0], pants: w[1], boot: w[2],
+      hair: [0x24160e,0x321b12,0x3a2115,0x1f1510,0x4a2b18][(world-1)%5],
+      hairStyle: world, isDavid: true, leather: 0x754522, accent: accent, pads: false,
+      tunic: true, belt: true, sash: sash, sashSide: world % 2 ? 'left' : 'right', cloak: cloak,
+      shoeStyle: world, sling: true, slingStyle: world, staff: false, helmet: false, eye: world % 3 === 0 ? 0x4b7d72 : 0x31577d
     });
     this.root = this.humanoid.root;
     this.torsoGroup = this.humanoid.torsoGroup;
@@ -630,21 +664,34 @@ class Player {
       if (this.state !== 'EMOTE') this.state = 'IDLE';
     }
 
-    this.group.position.x += this.velocity.x * dt;
-    this.group.position.z += this.velocity.z * dt;
+    // Move in short collision-safe steps so David cannot tunnel through thin walls/stones at high speed.
+    const moveX = this.velocity.x * dt;
+    const moveZ = this.velocity.z * dt;
+    const moveLen = Math.sqrt(moveX * moveX + moveZ * moveZ);
+    const steps = Math.max(1, Math.ceil(moveLen / 0.12));
+    const stepX = moveX / steps;
+    const stepZ = moveZ / steps;
+    for (let i = 0; i < steps; i++) {
+      this.group.position.x += stepX;
+      if (window.Game && Game.world && Game.world.resolveCircle) {
+        const fixedX = Game.world.resolveCircle(this.group.position.x, this.group.position.z, 0.45);
+        this.group.position.x = fixedX.x;
+        this.group.position.z = fixedX.z;
+      }
+      this.group.position.z += stepZ;
+      if (window.Game && Game.world && Game.world.resolveCircle) {
+        const fixedZ = Game.world.resolveCircle(this.group.position.x, this.group.position.z, 0.45);
+        this.group.position.x = fixedZ.x;
+        this.group.position.z = fixedZ.z;
+      }
+      if (worldBounds) {
+        this.group.position.x = Math.max(worldBounds.minX, Math.min(worldBounds.maxX, this.group.position.x));
+        this.group.position.z = Math.max(worldBounds.minZ, Math.min(worldBounds.maxZ, this.group.position.z));
+      }
+    }
     this.group.position.y = 0;
     this.velocity.y = 0;
     this.onGround = true;
-
-    if (worldBounds) {
-      this.group.position.x = Math.max(worldBounds.minX, Math.min(worldBounds.maxX, this.group.position.x));
-      this.group.position.z = Math.max(worldBounds.minZ, Math.min(worldBounds.maxZ, this.group.position.z));
-    }
-    if (window.Game && Game.world && Game.world.resolveCircle) {
-      const fixed = Game.world.resolveCircle(this.group.position.x, this.group.position.z, 0.45);
-      this.group.position.x = fixed.x;
-      this.group.position.z = fixed.z;
-    }
 
     this.animate(dt);
 

@@ -14,23 +14,56 @@ class World {
   }
 
   addCollider(x, z, r) {
-    this.colliders.push({ x: x, z: z, r: r });
+    this.colliders.push({ type: 'circle', x: x, z: z, r: r });
+  }
+
+  addBoxCollider(x, z, halfX, halfZ) {
+    this.colliders.push({ type: 'box', x: x, z: z, halfX: halfX, halfZ: halfZ });
   }
 
   resolveCircle(x, z, radius) {
     const list = this.colliders || [];
-    for (let i = 0; i < list.length; i++) {
-      const c = list[i];
-      const dx = x - c.x;
-      const dz = z - c.z;
-      const min = (c.r || 0.8) + radius;
-      const d2 = dx * dx + dz * dz;
-      if (d2 > 0.0001 && d2 < min * min) {
-        const d = Math.sqrt(d2);
-        const push = (min - d) / d;
-        x += dx * push;
-        z += dz * push;
+    // Multiple passes handle corners and overlapping obstacles cleanly.
+    for (let pass = 0; pass < 3; pass++) {
+      let changed = false;
+      for (let i = 0; i < list.length; i++) {
+        const c = list[i];
+        if (c.type === 'box') {
+          const minX = c.x - c.halfX - radius;
+          const maxX = c.x + c.halfX + radius;
+          const minZ = c.z - c.halfZ - radius;
+          const maxZ = c.z + c.halfZ + radius;
+          if (x >= minX && x <= maxX && z >= minZ && z <= maxZ) {
+            const pushL = x - minX;
+            const pushR = maxX - x;
+            const pushT = z - minZ;
+            const pushB = maxZ - z;
+            const m = Math.min(pushL, pushR, pushT, pushB);
+            if (m === pushL) x = minX;
+            else if (m === pushR) x = maxX;
+            else if (m === pushT) z = minZ;
+            else z = maxZ;
+            changed = true;
+          }
+          continue;
+        }
+        const dx = x - c.x;
+        const dz = z - c.z;
+        const min = (c.r || 0.8) + radius;
+        const d2 = dx * dx + dz * dz;
+        if (d2 < min * min) {
+          if (d2 > 0.000001) {
+            const d = Math.sqrt(d2);
+            const push = (min - d) / d;
+            x += dx * push;
+            z += dz * push;
+          } else {
+            x += min;
+          }
+          changed = true;
+        }
       }
+      if (!changed) break;
     }
     return { x: x, z: z };
   }
@@ -43,6 +76,7 @@ class World {
     this.createLighting();
     this.createSky();
     this.createTerrain();
+    this.createWorldDressing();
     if (this.hasFeature('camp') || this.hasFeature('outpost') || this.hasFeature('camps')) this.createCamp();
     this.createPath();
     if (![4, 6, 7, 8, 14, 16, 17, 18, 20].includes(this.worldId)) this.createTreesAndRocks();
@@ -62,6 +96,7 @@ class World {
     this.placeCheckpoints();
     this.createLandmark();
     this.createUniqueSetpieces();
+    this.createIndividualWorldDressing();
   }
 
   createLighting() {
@@ -132,6 +167,155 @@ class World {
     path.rotation.x = -Math.PI / 2;
     path.position.set(0, 0.01, -25);
     this.scene.add(path);
+  }
+
+
+  // Extra visual dressing makes every world feel populated and intentionally designed.
+  // It is deterministic per world so layouts stay stable between reloads.
+  createWorldDressing() {
+    const id = this.worldId;
+    let seed = 7919 * id + 104729;
+    const rand = () => {
+      seed = (seed * 1664525 + 1013904223) >>> 0;
+      return seed / 4294967296;
+    };
+    const ground = this.theme.ground || 0x5a8f4a;
+    const accent = this.theme.sun || 0xffd080;
+    const foliage = this.theme.dark ? 0x24352a : 0x356b32;
+    const stone = this.theme.dark ? 0x3c3a46 : 0x77736a;
+    const wood = 0x60452f;
+
+    // Dense micro-detail along the playable corridor.
+    for (let i = 0; i < 34; i++) {
+      const side = i % 2 ? 1 : -1;
+      const x = side * (7 + rand() * 28);
+      const z = 18 - rand() * 105;
+      const type = (i + id) % 4;
+      let mesh;
+      if (type === 0) {
+        mesh = new THREE.Mesh(new THREE.ConeGeometry(0.16 + rand() * 0.12, 0.45 + rand() * 0.4, 5), new THREE.MeshLambertMaterial({ color: foliage }));
+        mesh.position.set(x, 0.2, z);
+      } else if (type === 1) {
+        mesh = new THREE.Mesh(new THREE.DodecahedronGeometry(0.18 + rand() * 0.25, 0), new THREE.MeshLambertMaterial({ color: stone }));
+        mesh.position.set(x, 0.18, z);
+      } else if (type === 2) {
+        mesh = new THREE.Mesh(new THREE.SphereGeometry(0.22 + rand() * 0.15, 8, 6), new THREE.MeshLambertMaterial({ color: ground }));
+        mesh.scale.y = 0.45;
+        mesh.position.set(x, 0.12, z);
+      } else {
+        const g = new THREE.Group();
+        const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.035, 0.45, 5), new THREE.MeshLambertMaterial({ color: foliage }));
+        const bloom = new THREE.Mesh(new THREE.SphereGeometry(0.09, 6, 5), new THREE.MeshBasicMaterial({ color: accent }));
+        stem.position.y = 0.23; bloom.position.y = 0.48; g.add(stem, bloom); mesh = g;
+        mesh.position.set(x, 0, z);
+      }
+      mesh.rotation.y = rand() * Math.PI * 2;
+      mesh.castShadow = true;
+      this.scene.add(mesh);
+    }
+
+    // A distinct signature structure/prop set for each world family.
+    const family = (id - 1) % 10;
+    if (family === 0) this.createWorldFences(rand, wood, accent);
+    else if (family === 1) this.createWorldStonePillars(rand, stone, accent);
+    else if (family === 2) this.createWorldGrove(rand, foliage, accent);
+    else if (family === 3) this.createWorldCaveDetails(rand, stone, accent);
+    else if (family === 4) this.createWorldMountainDetails(rand, stone, accent);
+    else if (family === 5) this.createWorldOutpostDetails(rand, wood, accent);
+    else if (family === 6) this.createWorldFortDetails(rand, stone, accent);
+    else if (family === 7) this.createWorldBattleDetails(rand, wood, accent);
+    else if (family === 8) this.createWorldRiverDetails(rand, stone, accent);
+    else this.createWorldRoyalDetails(rand, stone, accent);
+
+    // A subtle horizon silhouette gives the worlds more depth without adding a heavy asset cost.
+    const farMat = new THREE.MeshLambertMaterial({ color: stone });
+    for (let i = 0; i < 7; i++) {
+      const h = 8 + rand() * 10;
+      const m = new THREE.Mesh(new THREE.ConeGeometry(7 + rand() * 5, h, 7), farMat);
+      m.position.set(-42 + i * 14, h / 2 - 0.2, -102 - rand() * 8);
+      this.scene.add(m);
+    }
+  }
+
+  createWorldFences(rand, wood, accent) {
+    const mat = new THREE.MeshLambertMaterial({ color: wood });
+    for (let i = 0; i < 8; i++) {
+      const x = i % 2 ? 18 : -18, z = 12 - i * 5;
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.12, 1.8, 6), mat);
+      post.position.set(x, 0.9, z);
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.12, 0.12), mat);
+      rail.position.set(x + (x > 0 ? -1.2 : 1.2), 1.05, z);
+      this.scene.add(post, rail);
+    }
+  }
+  createWorldStonePillars(rand, stone, accent) {
+    const mat = new THREE.MeshLambertMaterial({ color: stone });
+    for (let i = 0; i < 6; i++) {
+      const h = 1.8 + rand() * 2.4;
+      const p = new THREE.Mesh(new THREE.CylinderGeometry(0.45 + rand() * 0.2, 0.6, h, 7), mat);
+      p.position.set((i % 2 ? 22 : -22) + (rand() - 0.5) * 2, h / 2, -8 - i * 12);
+      this.scene.add(p); this.addCollider(p.position.x, p.position.z, 0.65);
+    }
+  }
+  createWorldGrove(rand, foliage, accent) {
+    const trunk = new THREE.MeshLambertMaterial({ color: 0x4a3020 });
+    const leaves = new THREE.MeshLambertMaterial({ color: foliage });
+    for (let i = 0; i < 10; i++) {
+      const g = new THREE.Group();
+      const t = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.3, 2.6, 7), trunk); t.position.y = 1.3;
+      const c = new THREE.Mesh(new THREE.SphereGeometry(1.15 + rand() * 0.5, 10, 7), leaves); c.position.y = 2.8;
+      g.add(t, c); const x = (i % 2 ? 1 : -1) * (13 + rand() * 17); const z = 8 - rand() * 90;
+      g.position.set(x,0,z); this.scene.add(g); this.addCollider(x,z,0.75);
+    }
+  }
+  createWorldCaveDetails(rand, stone, accent) {
+    const mat = new THREE.MeshPhongMaterial({ color: stone, shininess: 25 });
+    for (let i = 0; i < 12; i++) {
+      const h = 1.5 + rand() * 4;
+      const x = (i % 2 ? 1 : -1) * (8 + rand() * 8), z = 8 - i * 8;
+      const stal = new THREE.Mesh(new THREE.ConeGeometry(0.45 + rand() * 0.35, h, 6), mat);
+      stal.position.set(x, h / 2, z); this.scene.add(stal);
+    }
+  }
+  createWorldMountainDetails(rand, stone, accent) {
+    const rock = new THREE.MeshLambertMaterial({ color: stone });
+    for (let i = 0; i < 9; i++) {
+      const s = 0.8 + rand() * 1.5;
+      const m = new THREE.Mesh(new THREE.DodecahedronGeometry(s, 1), rock);
+      m.position.set((rand() - 0.5) * 70, s * 0.45, -15 - rand() * 70); m.rotation.y = rand()*Math.PI;
+      this.scene.add(m);
+    }
+  }
+  createWorldOutpostDetails(rand, wood, accent) {
+    const crateMat = new THREE.MeshLambertMaterial({ color: wood });
+    for (let i = 0; i < 8; i++) {
+      const c = new THREE.Mesh(new THREE.BoxGeometry(0.9,0.9,0.9), crateMat);
+      c.position.set((i%2?1:-1)*(9+rand()*4),0.45,-10-rand()*65); c.rotation.y=rand(); this.scene.add(c);
+      this.addCollider(c.position.x,c.position.z,0.62);
+    }
+  }
+  createWorldFortDetails(rand, stone, accent) {
+    const mat = new THREE.MeshLambertMaterial({ color: stone });
+    for (let i=0;i<6;i++) {
+      const x = (i%2?1:-1)*27, z = 8-i*12;
+      const b = new THREE.Mesh(new THREE.BoxGeometry(2.5,3.5,2.5),mat); b.position.set(x,1.75,z); this.scene.add(b); this.addCollider(x,z,1.7);
+    }
+  }
+  createWorldBattleDetails(rand, wood, accent) {
+    const poleMat = new THREE.MeshLambertMaterial({color:wood});
+    for(let i=0;i<8;i++){
+      const x=(i%2?1:-1)*(12+rand()*5), z=5-i*9;
+      const p=new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.08,4,6),poleMat); p.position.set(x,2,z);
+      const f=new THREE.Mesh(new THREE.PlaneGeometry(1.2,0.8),new THREE.MeshLambertMaterial({color:accent,side:THREE.DoubleSide})); f.position.set(x+(x>0?-0.6:0.6),3.5,z); this.scene.add(p,f);
+    }
+  }
+  createWorldRiverDetails(rand, stone, accent) {
+    const mat=new THREE.MeshLambertMaterial({color:stone});
+    for(let i=0;i<12;i++){ const s=.25+rand()*.55; const r=new THREE.Mesh(new THREE.DodecahedronGeometry(s,0),mat); r.position.set(-14+(rand()-.5)*4,s*.4,-8-rand()*75); this.scene.add(r); this.addCollider(r.position.x,r.position.z,s*.9); }
+  }
+  createWorldRoyalDetails(rand, stone, accent) {
+    const mat=new THREE.MeshLambertMaterial({color:stone});
+    for(let i=0;i<5;i++){ const h=2.5+rand()*2; const b=new THREE.Mesh(new THREE.CylinderGeometry(.55,.75,h,8),mat); b.position.set((i%2?1:-1)*(15+rand()*8),h/2,-15-i*12); this.scene.add(b); this.addCollider(b.position.x,b.position.z,.85); }
   }
 
   createCamp() {
@@ -231,6 +415,7 @@ class World {
       rock.rotation.set(Math.random(), Math.random(), Math.random());
       rock.castShadow = true;
       this.scene.add(rock);
+      this.addCollider(rock.position.x, rock.position.z, s * 0.9);
     }
   }
 
@@ -299,6 +484,7 @@ class World {
       const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(1.2, 0), rockMat);
       rock.position.set(Math.cos(angle) * 15, 0.6, -70 + Math.sin(angle) * 15);
       this.scene.add(rock);
+      this.addCollider(rock.position.x, rock.position.z, 1.35);
     }
   }
 
@@ -363,7 +549,7 @@ class World {
   createRockMazeSetpiece() {
     const mat = new THREE.MeshLambertMaterial({ color: 0x706050 });
     const walls = [[-8,-18,10,2],[8,-30,10,2],[-8,-42,10,2],[8,-50,10,2]];
-    walls.forEach(w => { const m=new THREE.Mesh(new THREE.BoxGeometry(w[2],3,w[3]),mat); m.position.set(w[0],1.5,w[1]); this.scene.add(m); });
+    walls.forEach(w => { const m=new THREE.Mesh(new THREE.BoxGeometry(w[2],3,w[3]),mat); m.position.set(w[0],1.5,w[1]); this.scene.add(m); this.addBoxCollider(w[0], w[1], w[2] / 2, w[3] / 2); });
     [[-14,-18],[14,-30],[-14,-42]].forEach((p,i)=>this.addInteractable('marker',new THREE.Vector3(p[0],0,p[1]),'Mark rock '+(i+1),0xd6a85b));
     this.createSign(new THREE.Vector3(0,0,-4),'ROCKY PASS');
   }
@@ -605,6 +791,7 @@ class World {
       const side = i % 2 === 0 ? -18 : 18;
       m.position.set(side + (i % 3) * 2, h / 2, -10 - i * 7);
       this.scene.add(m);
+      this.addBoxCollider(m.position.x, m.position.z, 2.5, 2);
     }
   }
 
@@ -617,6 +804,7 @@ class World {
       const p = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.7, 8, 6), rock);
       p.position.set((i % 2 ? 8 : -8), 4, -8 - i * 8);
       this.scene.add(p);
+      this.addCollider(p.position.x, p.position.z, 0.8);
     }
   }
 
@@ -659,13 +847,17 @@ class World {
     const right = new THREE.Mesh(new THREE.BoxGeometry(18, 6, 2), wall);
     right.position.set(16, 3, -22);
     this.scene.add(left); this.scene.add(right);
+    this.addBoxCollider(left.position.x, left.position.z, 9, 1);
+    this.addBoxCollider(right.position.x, right.position.z, 9, 1);
     const gate = new THREE.Mesh(new THREE.BoxGeometry(6, 5, 1.2), wood);
     gate.position.set(0, 2.5, -22);
     this.scene.add(gate);
+    this.addBoxCollider(gate.position.x, gate.position.z, 3, 0.6);
     [-20, 20].forEach(x => {
       const tw = new THREE.Mesh(new THREE.BoxGeometry(3, 9, 3), wall);
       tw.position.set(x, 4.5, -22);
       this.scene.add(tw);
+      this.addBoxCollider(tw.position.x, tw.position.z, 1.5, 1.5);
     });
   }
 
@@ -691,6 +883,107 @@ class World {
       print.rotation.x = -Math.PI / 2;
       print.position.set((i % 2 ? 3 : -3), 0.06, -20 - i * 10);
       this.scene.add(print);
+    }
+  }
+
+  // Each world gets its own visual identity and a fuller, hand-dressed environment.
+  // Lightweight geometry keeps the game mobile-friendly while avoiding repetitive layouts.
+  createIndividualWorldDressing() {
+    const id = this.worldId;
+    const C = THREE.Color;
+    const mat = (color, rough=0.9) => new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: 0 });
+    const add = (mesh, x, y, z, ry=0, collider=0) => {
+      mesh.position.set(x,y,z); mesh.rotation.y = ry; mesh.castShadow = true; mesh.receiveShadow = true; this.scene.add(mesh);
+      if (collider) this.addCollider(x,z,collider);
+      return mesh;
+    };
+    const stone = this.theme.dark ? 0x46404e : 0x777064;
+    const wood = 0x62452f;
+    const gold = this.theme.sun || 0xe0a060;
+    const cloth = this.theme.dark ? 0x5b496f : 0x9d3d36;
+    const green = this.theme.dark ? 0x29402f : 0x3f7435;
+    const water = 0x4e9fc0;
+    const addRock = (x,z,s=0.6) => add(new THREE.Mesh(new THREE.DodecahedronGeometry(s,1),mat(stone)),x,s*.45,z,Math.random()*6.28,s*.75);
+    const addTree = (x,z,scale=1) => {
+      const g=new THREE.Group();
+      const t=new THREE.Mesh(new THREE.CylinderGeometry(.16*scale,.28*scale,2.2*scale,7),mat(wood)); t.position.y=1.1*scale;
+      const l=new THREE.Mesh(new THREE.SphereGeometry(1.05*scale,10,7),mat(green)); l.position.y=2.45*scale;
+      g.add(t,l); add(g,x,0,z,0,.7*scale);
+    };
+    const addTorch = (x,z) => {
+      const g=new THREE.Group();
+      const pole=new THREE.Mesh(new THREE.CylinderGeometry(.055,.075,1.8,6),mat(wood)); pole.position.y=.9;
+      const flame=new THREE.Mesh(new THREE.ConeGeometry(.18,.5,6),new THREE.MeshBasicMaterial({color:0xff7138})); flame.position.y=1.95;
+      const light=new THREE.PointLight(0xff7b45,.45,7); light.position.y=1.8; g.add(pole,flame,light); add(g,x,0,z);
+    };
+    const addArch = (x,z,color=stone) => {
+      const g=new THREE.Group(), m=mat(color);
+      const a=new THREE.Mesh(new THREE.BoxGeometry(.9,3.6,.9),m); const b=a.clone(); a.position.set(-1.7,1.8,0); b.position.set(1.7,1.8,0);
+      const top=new THREE.Mesh(new THREE.BoxGeometry(4.3,.7,1),m); top.position.y=3.5; g.add(a,b,top); add(g,x,0,z,0,1.0);
+    };
+    const addCrate = (x,z,rot=0) => add(new THREE.Mesh(new THREE.BoxGeometry(1,1,1),mat(wood)),x,.5,z,rot,.7);
+    const addBanner = (x,z,color=cloth) => {
+      const g=new THREE.Group(); const pole=new THREE.Mesh(new THREE.CylinderGeometry(.055,.07,3.8,6),mat(wood)); pole.position.y=1.9;
+      const flag=new THREE.Mesh(new THREE.PlaneGeometry(1.15,.72),new THREE.MeshStandardMaterial({color,roughness:.8,side:THREE.DoubleSide})); flag.position.set(.58,3.15,0); g.add(pole,flag); add(g,x,0,z);
+    };
+    const addBoulderRow=(count,spread,z)=>{ for(let i=0;i<count;i++) addRock((i-(count-1)/2)*spread,z+(i%2)*1.4,.45+(i%3)*.18); };
+
+    // 40 intentionally different scene treatments.
+    switch(id) {
+      case 1: addTree(-16,-18); addTree(16,-34); addArch(0,-55); addBanner(-11,-12); addBanner(11,-38); break;
+      case 2: addBoulderRow(7,3.2,-28); addArch(0,-72,0x70685e); addRock(-19,-52,1.4); addRock(20,-60,1.2); break;
+      case 3: for(let i=0;i<8;i++) addTree((i%2?-1:1)*(11+i%3*4),8-i*11,.9+(i%3)*.12); addTorch(-6,-46); addTorch(6,-62); break;
+      case 4: for(let i=0;i<7;i++) addRock((i%2?-1:1)*(8+i%3*3),-10-i*9,.7+(i%3)*.25); addTorch(-5,-35); addTorch(5,-55); break;
+      case 5: addArch(0,-42,0x7c8077); addBoulderRow(6,4,-60); addTree(-24,-22,.8); addTree(24,-70,.8); break;
+      case 6: for(let i=0;i<5;i++){addCrate(-11+i*1.4,4); addCrate(10-i*1.3,-9,.2*i);} addBanner(-13,-28); addBanner(13,-48); addTorch(-7,-34); addTorch(7,-34); break;
+      case 7: addArch(0,-24,0x707477); addBanner(-12,-18); addBanner(12,-18); addBanner(-12,-56); addBanner(12,-56); break;
+      case 8: for(let i=0;i<5;i++){addRock(-18+i*3,-38-i*5,.6);addRock(18-i*3,-44-i*5,.55);} addBanner(-10,-30); addBanner(10,-42); addCrate(-5,-50); addCrate(5,-50,.4); break;
+      case 9: for(let i=0;i<8;i++) addRock(-9+i*2.5,-16-i*8,.35+(i%2)*.2); addTree(-22,-30,.85); addTree(22,-52,.85); addArch(0,-76,0x718080); break;
+      case 10: addTree(-20,-18); addTree(20,-25); addTree(-18,-55); addTree(18,-68); addBanner(0,-10); addCrate(-7,14); addCrate(7,14); break;
+      case 11: addTree(-21,-18,.9); addTree(21,-40,.9); addArch(0,-62,0x8d7b58); addBanner(-10,-48,0xc7a33a); addBanner(10,-48,0xc7a33a); break;
+      case 12: addBoulderRow(8,2.7,-35); addArch(0,-68,0x7a5548); addBanner(-15,-25,0x8e342b); break;
+      case 13: for(let i=0;i<12;i++) addTree((i%2?-1:1)*(10+(i%4)*4),5-i*8,1+(i%3)*.12); addTorch(-6,-42); addTorch(6,-58); break;
+      case 14: for(let i=0;i<9;i++) addRock((i%2?-1:1)*(10+i%3*4),-8-i*9,.5+(i%3)*.2); addArch(0,-52,0xa77d4b); addBanner(0,-18,0xd49a45); break;
+      case 15: addBoulderRow(7,3.4,-30); addArch(0,-74,0x6d7778); addTree(-25,-18,.7); addTree(25,-60,.7); break;
+      case 16: addArch(0,-24,0x5c5f68); addBanner(-14,-34,0x4b5260); addBanner(14,-34,0x4b5260); addTorch(-8,-48); addTorch(8,-48); break;
+      case 17: for(let i=0;i<7;i++) addBanner(i%2?-12:12,-10-i*10,i%3?0xa33d32:0x3f568f); addCrate(-6,-52); addCrate(6,-52); break;
+      case 18: for(let i=0;i<9;i++){addRock((i%2?-1:1)*(8+i%3*3),-12-i*8,.65+(i%3)*.2); addTorch((i%2?-1:1)*5,-16-i*9);} break;
+      case 19: addBoulderRow(9,3.3,-32); addRock(-20,-58,2.0); addRock(20,-66,2.2); addArch(0,-78,0x654d46); break;
+      case 20: for(let i=0;i<8;i++) addBanner(i%2?-13:13,-12-i*8,i%2?0x7d2030:0xc4a43a); addArch(0,-48,0x66535c); addBoulderRow(10,3,-74); break;
+      case 21: for(let i=0;i<12;i++) addTree((i%2?-1:1)*(11+(i%4)*3),6-i*8,.85+(i%3)*.12); addArch(0,-70,0x7c7758); break;
+      case 22: for(let i=0;i<10;i++) addTree((i%2?-1:1)*(12+(i%3)*5),10-i*10,1.15); addBoulderRow(6,4,-64); break;
+      case 23: for(let i=0;i<10;i++) addRock(-10+i*2.3,-15-i*7,.35+(i%3)*.15); addTree(-22,-38,.75); addTree(22,-58,.75); addArch(0,-78,0x62766d); break;
+      case 24: for(let i=0;i<6;i++){addRock(-10+i*4,-22-i*9,.8); addTorch((i%2?-1:1)*6,-18-i*10);} addArch(0,-68,0x76513e); break;
+      case 25: addArch(0,-22,0x707982); addArch(0,-68,0x707982); addBanner(-14,-42,0x45618a); addBanner(14,-42,0x45618a); break;
+      case 26: addBoulderRow(8,3.5,-25); addArch(0,-60,0xa27449); addRock(-22,-48,1.7); addRock(22,-72,1.6); break;
+      case 27: addTorch(-9,8); addTorch(9,2); addTorch(-9,-35); addTorch(9,-48); addBanner(0,-20,0x536fa8); addCrate(-6,-5); addCrate(6,-5); break;
+      case 28: addArch(0,-24,0x74736f); addBoulderRow(7,3,-48); addBanner(-13,-62,0x7a4d45); addBanner(13,-62,0x7a4d45); break;
+      case 29: addTree(-20,-20,.8); addTree(20,-42,.8); addBoulderRow(7,3.2,-60); addArch(0,-78,0x8a7045); break;
+      case 30: for(let i=0;i<9;i++) addRock(-10+i*2.4,-12-i*8,.3+(i%2)*.18); addTree(-22,-30,.85); addTree(22,-56,.85); addArch(0,-76,0x668f98); break;
+      case 31: addCrate(-7,10); addCrate(7,10); addCrate(-7,-2); addCrate(7,-2); addTree(-20,-34,.8); addTree(20,-50,.8); addBanner(0,-24,0xc0a047); break;
+      case 32: for(let i=0;i<8;i++) addRock(-9+i*2.5,-18-i*8,.32+(i%3)*.14); addTree(-22,-46,.9); addTree(22,-64,.9); addArch(0,-80,0x6f8580); break;
+      case 33: for(let i=0;i<8;i++) addRock((i%2?-1:1)*(10+i%3*3),-15-i*8,.6+(i%3)*.2); addBanner(-10,-32,0x9d2e20); addBanner(10,-48,0xe08a2c); addTorch(-5,-58); addTorch(5,-58); break;
+      case 34: addArch(0,-24,0x8a6a42); addBanner(-14,-42,0xb36a2c); addBanner(14,-42,0xb36a2c); addTorch(-7,-58); addTorch(7,-58); break;
+      case 35: addBoulderRow(7,3.5,-34); addArch(0,-76,0x78858a); addTree(-24,-20,.75); addTree(24,-64,.75); break;
+      case 36: addTorch(-8,4); addTorch(8,-4); addTorch(-8,-34); addTorch(8,-48); for(let i=0;i<5;i++) addRock((i%2?-1:1)*(8+i*2),-18-i*10,.6); break;
+      case 37: addCrate(-7,8); addCrate(7,8); addBanner(-12,-16,0xa23c32); addBanner(12,-28,0x4f5d8f); addBanner(-12,-48,0xa23c32); addBanner(12,-60,0x4f5d8f); break;
+      case 38: addArch(0,-26,0x7d6858); addCrate(-8,-12); addCrate(8,-20); addTree(-22,-46,.8); addTree(22,-66,.8); addBanner(0,-54,0x865343); break;
+      case 39: addArch(0,-24,0x624854); addBanner(-13,-38,0x8c3040); addBanner(13,-38,0xd0a040); addBanner(-13,-62,0x8c3040); addBanner(13,-62,0xd0a040); addBoulderRow(8,3,-76); break;
+      case 40: addArch(0,-26,0x68506a); addArch(0,-70,0x68506a); for(let i=0;i<8;i++) addBanner(i%2?-14:14,-10-i*9,i%2?0x7b3040:0xd0a040); addBoulderRow(10,3.2,-84); addRock(-22,-62,2.1); addRock(22,-62,2.1); break;
+    }
+
+    // Give every world a subtle foreground scatter so the playable space feels alive.
+    const seed = id * 137 + 41; let r = seed;
+    const random = () => { r = (r * 1664525 + 1013904223) >>> 0; return r / 4294967296; };
+    for(let i=0;i<10;i++) {
+      const side = random() > .5 ? 1 : -1;
+      const x = side * (6.5 + random()*30);
+      const z = 20 - random()*108;
+      if(Math.abs(x)<7) continue;
+      const type = i%3;
+      if(type===0) addRock(x,z,.18+random()*.3);
+      else if(type===1) addTree(x,z,.45+random()*.35);
+      else addTorch(x,z);
     }
   }
 

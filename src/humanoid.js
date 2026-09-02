@@ -52,9 +52,38 @@ Humanoid.prototype.build = function (opt) {
   this.chest.name = 'Chest';
   this.chest.position.y = 0.22;
   this.spine.add(this.chest);
-  const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 0.42, 10), shirt);
+  const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 0.42, 14), shirt);
   torso.position.y = 0.08;
   this.chest.add(torso);
+
+  // Layered biblical clothing: tunic hem, belt and optional sash/cloak make David
+  // read as a dressed human character rather than a primitive mannequin.
+  if (opt.tunic !== false) {
+    const hem = new THREE.Mesh(new THREE.CylinderGeometry(0.225, 0.24, 0.11, 14), shirt);
+    hem.position.y = -0.12;
+    this.chest.add(hem);
+  }
+  if (opt.belt !== false) {
+    const belt = new THREE.Mesh(new THREE.CylinderGeometry(0.215, 0.215, 0.055, 14), leather);
+    belt.position.y = -0.10;
+    this.chest.add(belt);
+    const buckle = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.055, 0.025), accent);
+    buckle.position.set(0, -0.10, 0.215);
+    this.chest.add(buckle);
+  }
+  if (opt.sash) {
+    const sash = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.44, 0.025), std(opt.sash, 0.8, 0));
+    sash.position.set(opt.sashSide === 'left' ? -0.13 : 0.13, 0.02, 0.19);
+    sash.rotation.z = opt.sashSide === 'left' ? -0.10 : 0.10;
+    this.chest.add(sash);
+  }
+  if (opt.cloak) {
+    const cloak = new THREE.Mesh(new THREE.CylinderGeometry(0.235, 0.30, 0.52, 12, 1, true), std(opt.cloak, 0.9, 0));
+    cloak.position.set(0, 0.02, -0.045);
+    cloak.rotation.y = Math.PI;
+    this.chest.add(cloak);
+    this.cloak = cloak;
+  }
   if (opt.armorChest) {
     const plate = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.18, 0.22), armor);
     plate.position.set(0, 0.12, 0.04);
@@ -73,15 +102,22 @@ Humanoid.prototype.build = function (opt) {
   const skull = new THREE.Mesh(new THREE.SphereGeometry(0.16, 24, 16), faceMat);
   skull.scale.set(0.92, 1.02, 0.88);
   this.head.add(skull);
-  const hairMat = new THREE.MeshLambertMaterial({ color: opt.hair || 0x2c1a0e });
+  const hairMat = std(opt.hair || 0x2c1a0e, 0.86, 0);
   const hair = new THREE.Mesh(
-    new THREE.SphereGeometry(0.168, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.46),
+    new THREE.SphereGeometry(0.168, 24, 14, 0, Math.PI * 2, 0, Math.PI * 0.46),
     hairMat
   );
-  hair.position.set(0, 0.02, -0.01);
+  hair.position.set(0, 0.022, -0.012);
   this.head.add(hair);
-  this.head.add(mesh(new THREE.SphereGeometry(0.04, 8, 6), faceMat, -0.148, 0.0, 0.01));
-  this.head.add(mesh(new THREE.SphereGeometry(0.04, 8, 6), faceMat, 0.148, 0.0, 0.01));
+  // David has natural, polished human hair — never a helmet. Each world can
+  // use a different silhouette while keeping the same recognizable face.
+  if (opt.isDavid) this.addDavidHair(opt.hairStyle || 1, hairMat, faceMat);
+  this.earL = mesh(new THREE.SphereGeometry(0.035, 10, 8), faceMat, -0.148, 0.0, 0.0);
+  this.earL.scale.set(0.55, 1.15, 0.75);
+  this.head.add(this.earL);
+  this.earR = this.earL.clone();
+  this.earR.position.x = 0.148;
+  this.head.add(this.earR);
   const eyeW = new THREE.MeshLambertMaterial({ color: 0xfffdf6 });
   const iris = new THREE.MeshLambertMaterial({ color: opt.eye || 0x2e5a7a });
   this.eyeL = mesh(new THREE.SphereGeometry(0.024, 10, 8), eyeW, -0.046, 0.018, 0.132);
@@ -138,7 +174,8 @@ Humanoid.prototype.build = function (opt) {
   this.footL = new THREE.Group();
   this.footL.position.set(0, -0.34, 0.04);
   this.shinL.add(this.footL);
-  this.footL.add(mesh(new THREE.BoxGeometry(0.1, 0.05, 0.18), boot, 0, 0, 0.04));
+  this.footL.add(mesh(new THREE.BoxGeometry(0.11, 0.055, 0.20), boot, 0, 0, 0.045));
+  if (opt.isDavid) this.addDavidFootwear(this.footL, opt.shoeStyle || 1, boot, leather, accent);
 
   this.thighR = new THREE.Group();
   this.thighR.position.set(0.09, 0, 0);
@@ -151,16 +188,12 @@ Humanoid.prototype.build = function (opt) {
   this.footR = new THREE.Group();
   this.footR.position.set(0, -0.34, 0.04);
   this.shinR.add(this.footR);
-  this.footR.add(mesh(new THREE.BoxGeometry(0.1, 0.05, 0.18), boot, 0, 0, 0.04));
+  this.footR.add(mesh(new THREE.BoxGeometry(0.11, 0.055, 0.20), boot, 0, 0, 0.045));
+  if (opt.isDavid) this.addDavidFootwear(this.footR, opt.shoeStyle || 1, boot, leather, accent);
 
   if (opt.sling) {
-    this.sling = new THREE.Group();
-    const loop = new THREE.Mesh(new THREE.TorusGeometry(0.08, 0.014, 6, 12), leather);
-    loop.rotation.x = Math.PI / 2;
-    this.sling.add(loop);
-    this.sling.add(mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.22, 5), leather, 0, -0.12, 0));
-    this.sling.add(mesh(new THREE.SphereGeometry(0.03, 6, 5), accent, 0, -0.24, 0));
-    this.sling.position.set(0.02, -0.02, 0.04);
+    this.sling = Humanoid.createSling(opt.slingStyle || 1, leather, accent);
+    this.sling.position.set(0.015, -0.015, 0.045);
     this.armR.hand.add(this.sling);
   }
   if (opt.staff) {
@@ -204,6 +237,113 @@ Humanoid.prototype.build = function (opt) {
   this.rightLegGroup = this.thighR;
   this.slingMesh = this.sling;
   this.initMixer();
+};
+
+Humanoid.createSling = function (style, leather, accent) {
+  // 40 handcrafted sling silhouettes: each world gets a distinct shape, wrap,
+  // accent and glowing/fire treatment while staying small enough to read as a
+  // real hand-held shepherd sling.
+  const i = Math.max(1, Math.min(40, Number(style) || 1));
+  const palettes = [
+    [0x7a4a28,0xc89b52],[0x315f7a,0x72c7e8],[0x6b3b2f,0xe09a58],[0x4b3f72,0xb7a3f5],
+    [0x5d5528,0xe1c45b],[0x285d52,0x73d8b7],[0x713c58,0xe9a5c5],[0x405a35,0xa9d56f],
+    [0x334e76,0x79aef2],[0x75452f,0xf0b45d],[0x5a3a72,0xc99aef],[0x2d625d,0x7ce0d0],
+    [0x7a3b3b,0xf27d6d],[0x3d557a,0x8fc4ff],[0x6b522c,0xf0c66c],[0x4b6540,0xb6df86],
+    [0x633d55,0xd98bb8],[0x345f6b,0x7fd4e3],[0x72502c,0xe7a75b],[0x4c4775,0xa99ef0],
+    [0x6b332f,0xff9d4d],[0x315f4f,0x75e0a7],[0x69434d,0xe49aa5],[0x354f72,0x7db8ef],
+    [0x76562c,0xf1cb69],[0x3b5f48,0x88d59a],[0x583c72,0xbfa0f0],[0x70402e,0xf09c61],
+    [0x2f5c67,0x6ed9df],[0x68403d,0xe7a06d],[0x42556f,0x93baf0],[0x5f6231,0xd3e27a],
+    [0x71344f,0xef8fa8],[0x335e54,0x78d7c0],[0x6b4828,0xf0bd62],[0x4b4770,0xb6a4f2],
+    [0x713a32,0xffad58],[0x2f6657,0x77e2b1],[0x63436c,0xd9a0ef],[0x7a392f,0xff7b42]
+  ];
+  const pal = palettes[i - 1];
+  const wrapMat = new THREE.MeshStandardMaterial({ color: pal[0], roughness: 0.72, metalness: 0.05 });
+  const trimMat = new THREE.MeshStandardMaterial({ color: pal[1], roughness: 0.4, metalness: 0.35 });
+  const g = new THREE.Group();
+  g.name = 'DavidSling_World_' + i;
+  const left = new THREE.Mesh(new THREE.CylinderGeometry(0.012,0.016,0.19,7), wrapMat);
+  left.position.set(-0.045,0.005,0.015); left.rotation.z=-0.30; g.add(left);
+  const right = left.clone(); right.position.x=0.045; right.rotation.z=0.30; g.add(right);
+  const pouch = new THREE.Mesh(new THREE.SphereGeometry(0.045,10,6), wrapMat);
+  pouch.scale.set(1.15,0.7,0.55); pouch.position.set(0,-0.075,0.02); g.add(pouch);
+  const bead = new THREE.Mesh(new THREE.SphereGeometry(0.016,8,6), trimMat);
+  bead.position.set(0,0.035,0.02); g.add(bead);
+  // Distinct architectural accents by world group.
+  if (i % 4 === 0) {
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.052,0.009,6,12), trimMat);
+    ring.rotation.x=Math.PI/2; ring.position.set(0,-0.075,0.02); g.add(ring);
+  } else if (i % 4 === 1) {
+    const diamond = new THREE.Mesh(new THREE.OctahedronGeometry(0.022,0), trimMat);
+    diamond.position.set(0,-0.075,0.045); g.add(diamond);
+  } else if (i % 4 === 2) {
+    const guard = new THREE.Mesh(new THREE.BoxGeometry(0.11,0.018,0.018), trimMat);
+    guard.position.set(0,-0.02,0.02); guard.rotation.z=0.12; g.add(guard);
+  } else {
+    const crest = new THREE.Mesh(new THREE.ConeGeometry(0.025,0.06,5), trimMat);
+    crest.position.set(0,-0.075,0.045); crest.rotation.x=Math.PI/2; g.add(crest);
+  }
+  // Every 5th world gains a subtle ember core; this is decorative only.
+  if (i % 5 === 0 || i === 40) {
+    const ember = new THREE.Mesh(new THREE.SphereGeometry(0.013,8,6), new THREE.MeshBasicMaterial({color:0xff6a00}));
+    ember.position.set(0,-0.075,0.055); g.add(ember);
+    g.userData.fireSling = true;
+  }
+  g.userData.world = i;
+  g.userData.palette = pal;
+  return g;
+};
+
+
+Humanoid.prototype.addDavidHair = function (style, hairMat, faceMat) {
+  const g = new THREE.Group();
+  g.name = 'DavidHairStyle_' + style;
+  this.head.add(g);
+  const s = ((Number(style) - 1) % 10 + 10) % 10 + 1;
+  const lock = (x,y,z,scale,rot) => {
+    const m = new THREE.Mesh(new THREE.SphereGeometry(0.048, 12, 9), hairMat);
+    m.position.set(x,y,z); m.scale.set(scale[0],scale[1],scale[2]);
+    if (rot) m.rotation.z = rot; g.add(m); return m;
+  };
+  // Side/back volume makes the hair read as actual strands instead of a cap.
+  if (s <= 3) {
+    for (let i=0;i<5;i++) lock(-0.105 + i*0.052, 0.025-(i%2)*0.018, -0.105,  [0.75,1.35,0.72], (i-2)*0.10);
+    for (let i=0;i<4;i++) lock(-0.14, 0.0-i*0.035, -0.015, [0.70,1.0,0.72], -0.16);
+    for (let i=0;i<4;i++) lock(0.14, 0.0-i*0.035, -0.015, [0.70,1.0,0.72], 0.16);
+  } else if (s <= 6) {
+    for (let side of [-1,1]) for (let i=0;i<4;i++) lock(side*(0.115+i*0.006), 0.045-i*0.032, -0.015, [0.65,1.05,0.68], side*0.18);
+    for (let i=0;i<3;i++) lock(-0.055+i*0.055, 0.045, 0.115, [0.65,0.72,0.55], (i-1)*0.10);
+  } else {
+    // Longer curls/locks for later worlds; restrained so they never cover the eyes.
+    for (let side of [-1,1]) {
+      for (let i=0;i<5;i++) lock(side*(0.11+0.008*Math.sin(i)), 0.02-i*0.037, -0.005, [0.72,1.15,0.70], side*0.14);
+      lock(side*0.105, 0.07, 0.09, [0.70,0.90,0.60], side*0.12);
+    }
+  }
+  // World-specific finishing detail: tied hair, short braid, or clean side locks.
+  if (s===2 || s===5 || s===8) {
+    const tie = new THREE.Mesh(new THREE.TorusGeometry(0.026,0.008,6,10), new THREE.MeshStandardMaterial({color:0x8b5a2b,roughness:0.8}));
+    tie.rotation.x=Math.PI/2; tie.position.set(0,-0.105,-0.105); g.add(tie);
+  }
+  if (s===4 || s===7 || s===10) {
+    const curl = new THREE.Mesh(new THREE.SphereGeometry(0.035,10,8), hairMat);
+    curl.position.set(0.0,0.115,0.045); curl.scale.set(1.0,0.65,0.75); g.add(curl);
+  }
+};
+
+Humanoid.prototype.addDavidFootwear = function (foot, style, boot, leather, accent) {
+  const s = ((Number(style)-1)%8+8)%8+1;
+  const sole = new THREE.Mesh(new THREE.BoxGeometry(0.115,0.018,0.205), new THREE.MeshStandardMaterial({color:0x2a211b,roughness:0.92}));
+  sole.position.set(0,-0.032,0.045); foot.add(sole);
+  if (s <= 4) {
+    const strap1 = new THREE.Mesh(new THREE.BoxGeometry(0.105,0.018,0.025), leather);
+    strap1.position.set(0,-0.002,0.015); strap1.rotation.y=(s%2?0.12:-0.12); foot.add(strap1);
+    const strap2 = strap1.clone(); strap2.position.z=0.075; strap2.rotation.y=-strap1.rotation.y; foot.add(strap2);
+  } else {
+    const toe = new THREE.Mesh(new THREE.SphereGeometry(0.057,12,8), boot);
+    toe.scale.set(1,0.48,1.35); toe.position.set(0,0.005,0.09); foot.add(toe);
+    const trim = new THREE.Mesh(new THREE.BoxGeometry(0.085,0.014,0.018), accent);
+    trim.position.set(0,0.035,0.055); foot.add(trim);
+  }
 };
 
 Humanoid.prototype.addHelmet = function (style, armor, accent, leather) {

@@ -96,6 +96,9 @@ const Game = {
     document.querySelectorAll('[data-shop-item]').forEach(btn => {
       btn.addEventListener('click', () => this.buyShopItem(btn.getAttribute('data-shop-item')));
     });
+    document.querySelectorAll('[data-equip-weapon]').forEach(btn => {
+      btn.addEventListener('click', () => this.equipShopWeapon(btn.getAttribute('data-equip-weapon')));
+    });
     click('btn-craft-arrows', () => this.craftArrows());
     click('btn-settings', () => { this.loadSettings(); UI.show('settings'); });
     click('btn-skip-intro', () => this.startLevel(this.currentWorld));
@@ -727,15 +730,19 @@ const Game = {
     if (nearest) {
       targetDir = new THREE.Vector3().subVectors(nearest, origin).normalize();
     }
-    const isFaith = this.player.shieldActive > 0 || this.player.faith > 80;
+    const weapon = this.player.equippedWeapon || 'sling';
+    const isFaith = weapon === 'faithBlade';
     let extraDmg = 0;
-    if (this.player.hasBow && (this.player.arrows || 0) > 0) {
-      this.player.arrows -= 1;
-      extraDmg = 18;
+    let projectileType = 'stone';
+    if (weapon === 'bronzeSword') { extraDmg = 28; projectileType = 'blade'; }
+    else if (weapon === 'hunterBow') {
+      if ((this.player.arrows || 0) <= 0) { UI.showMessage('NO ARROWS — BUY OR CRAFT MORE', 1400); return; }
+      this.player.arrows -= 1; extraDmg = 22; projectileType = 'arrow';
       if (window.SaveSystem) SaveSystem.setInventoryField('arrows', this.player.arrows);
-    }
+    } else if (weapon === 'flameSling') { extraDmg = 35; projectileType = 'flame'; }
+    else if (weapon === 'faithBlade') { extraDmg = 55; projectileType = 'faith'; }
     if (this.combat && typeof this.combat.spawnStone === 'function') {
-      this.combat.spawnStone(origin, targetDir, isFaith, extraDmg);
+      this.combat.spawnStone(origin, targetDir, isFaith, extraDmg, projectileType);
     }
     this.updateHUD();
   },
@@ -966,6 +973,8 @@ const Game = {
     this.player.coins = inv.coins || 0;
     this.player.hasBow = !!inv.hasBow;
     this.player.arrows = inv.arrows || 0;
+    this.player.equippedWeapon = inv.equippedWeapon || 'sling';
+    this.player.ownedWeapons = Array.isArray(inv.ownedWeapons) ? inv.ownedWeapons.slice() : ['sling'];
     this.player.sticks = inv.sticks || 0;
     this.player.feathers = inv.feathers || 0;
     this.player.flint = inv.flint || 0;
@@ -986,6 +995,14 @@ const Game = {
       UI.renderShop(SaveSystem.getInventory());
     }
     if (this.player && result.ok) this.applyInventoryToPlayer();
+    this.updateHUD();
+  },
+
+  equipShopWeapon(item) {
+    if (!window.SaveSystem) return;
+    const result = SaveSystem.equipWeapon(item);
+    if (window.UI) { UI.showMessage(result.message, 1600); UI.renderShop(SaveSystem.getInventory()); }
+    if (result.ok) this.applyInventoryToPlayer();
     this.updateHUD();
   },
 
