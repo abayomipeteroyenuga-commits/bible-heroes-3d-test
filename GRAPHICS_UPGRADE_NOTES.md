@@ -1,0 +1,1 @@
+Graphics upgrade: smoother humanoid heads, redesigned helmets with no face-crossing bar, improved renderer antialiasing/sRGB output, higher-quality terrain materials, and slightly stronger fill lighting. Existing gameplay systems preserved.

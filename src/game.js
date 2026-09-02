@@ -376,7 +376,7 @@ const Game = {
     if (!this.renderer) {
       this.renderer = new THREE.WebGLRenderer({
         canvas: canvas,
-        antialias: false,
+        antialias: true,
         alpha: false,
         failIfMajorPerformanceCaveat: false
       });
@@ -388,6 +388,7 @@ const Game = {
       }
     }
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    if ('outputEncoding' in this.renderer && THREE.sRGBEncoding) this.renderer.outputEncoding = THREE.sRGBEncoding;
     this.renderer.setSize(w, h, true);
     this.renderer.setClearColor(0x7ec8e8, 1);
     this.renderer.autoClear = true;

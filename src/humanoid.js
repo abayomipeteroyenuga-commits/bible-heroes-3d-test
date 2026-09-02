@@ -70,7 +70,7 @@ Humanoid.prototype.build = function (opt) {
   this.head.position.y = 0.16;
   this.neck.add(this.head);
   const faceMat = new THREE.MeshLambertMaterial({ color: opt.skin || 0xf0c4a0 });
-  const skull = new THREE.Mesh(new THREE.IcosahedronGeometry(0.16, 2), faceMat);
+  const skull = new THREE.Mesh(new THREE.SphereGeometry(0.16, 24, 16), faceMat);
   skull.scale.set(0.92, 1.02, 0.88);
   this.head.add(skull);
   const hairMat = new THREE.MeshLambertMaterial({ color: opt.hair || 0x2c1a0e });
@@ -207,6 +207,8 @@ Humanoid.prototype.build = function (opt) {
 };
 
 Humanoid.prototype.addHelmet = function (style, armor, accent, leather) {
+  // Professional Biblical warrior helmet: dome + forehead crown + cheek guards.
+  // IMPORTANT: no torus/cylinder crosses the face, so there is no horizontal "bar".
   const helm = new THREE.Group();
   this.head.add(helm);
   this.helmet = helm;
@@ -214,16 +216,54 @@ Humanoid.prototype.addHelmet = function (style, armor, accent, leather) {
   const trim = accent || new THREE.MeshLambertMaterial({ color: 0xc9a15b });
   const dark = leather || new THREE.MeshLambertMaterial({ color: 0x3a2a1c });
   const kind = style === true ? 'basic' : String(style);
-  const domeR = kind === 'heavy' || kind === 'boss' ? 0.2 : 0.19;
+
+  const heavy = kind === 'heavy' || kind === 'boss' || kind === 'commander';
+  const r = heavy ? 0.205 : 0.195;
+
+  // Rounded shell, positioned high enough to clear the eyes and brows.
   const dome = new THREE.Mesh(
-    new THREE.SphereGeometry(domeR, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.58),
+    new THREE.SphereGeometry(r, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.56),
     metal
   );
-  dome.position.set(0, 0.02, -0.016);
+  dome.scale.set(1.02, 0.92, 0.98);
+  dome.position.set(0, 0.055, -0.012);
   helm.add(dome);
+
+  // Forehead crown sits ABOVE the eyebrows; it is not a horizontal face bar.
+  const crown = new THREE.Mesh(
+    new THREE.BoxGeometry(0.24, heavy ? 0.055 : 0.045, 0.055),
+    metal
+  );
+  crown.position.set(0, 0.108, 0.085);
+  crown.rotation.x = -0.10;
+  helm.add(crown);
+
+  // Small side/cheek guards, kept away from the eyes.
+  const guardH = heavy ? 0.115 : 0.09;
+  const cheekL = new THREE.Mesh(new THREE.BoxGeometry(0.035, guardH, 0.055), metal);
+  cheekL.position.set(-0.145, -0.015, 0.035);
+  cheekL.rotation.z = -0.12;
+  helm.add(cheekL);
+  const cheekR = cheekL.clone();
+  cheekR.position.x = 0.145;
+  cheekR.rotation.z = 0.12;
+  helm.add(cheekR);
+
+  // Leather chin straps for higher tiers.
+  if (heavy || kind === 'elite') {
+    const strapL = new THREE.Mesh(new THREE.BoxGeometry(0.022, 0.075, 0.018), dark);
+    strapL.position.set(-0.12, -0.09, 0.08);
+    strapL.rotation.z = -0.18;
+    helm.add(strapL);
+    const strapR = strapL.clone();
+    strapR.position.x = 0.12;
+    strapR.rotation.z = 0.18;
+    helm.add(strapR);
+  }
+
   if (kind === 'elite' || kind === 'commander' || kind === 'boss') {
-    const crest = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 6), trim);
-    crest.position.set(0, 0.18, -0.02);
+    const crest = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.12, 0.045), trim);
+    crest.position.set(0, 0.175, -0.015);
     helm.add(crest);
   }
 };

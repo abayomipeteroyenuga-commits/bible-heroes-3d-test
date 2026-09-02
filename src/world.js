@@ -87,7 +87,7 @@ class World {
     // Soft sky fill keeps David readable in every world.
     const hemi = new THREE.HemisphereLight(this.theme.sky || 0x9ec8ea, this.theme.ground || 0x45643a, this.theme.dark ? 0.5 : 0.75);
     this.scene.add(hemi);
-    const fill = new THREE.DirectionalLight(0xa0c0ff, 0.22);
+    const fill = new THREE.DirectionalLight(0xa0c0ff, 0.28);
     fill.position.set(-20, 20, -30);
     this.scene.add(fill);
   }
@@ -118,7 +118,7 @@ class World {
       pos.setZ(i, h);
     }
     groundGeo.computeVertexNormals();
-    const groundMat = new THREE.MeshLambertMaterial({ color: this.theme.ground || 0x5a8f4a });
+    const groundMat = new THREE.MeshStandardMaterial({ color: this.theme.ground || 0x5a8f4a, roughness: 0.92, metalness: 0.0 });
     const ground = new THREE.Mesh(groundGeo, groundMat);
     ground.rotation.x = -Math.PI / 2;
     ground.position.y = -0.2;
@@ -127,7 +127,7 @@ class World {
 
     // Dirt path
     const pathGeo = new THREE.PlaneGeometry(6, 100);
-    const pathMat = new THREE.MeshLambertMaterial({ color: this.theme.path || 0xb8956a });
+    const pathMat = new THREE.MeshStandardMaterial({ color: this.theme.path || 0xb8956a, roughness: 0.88, metalness: 0.0 });
     const path = new THREE.Mesh(pathGeo, pathMat);
     path.rotation.x = -Math.PI / 2;
     path.position.set(0, 0.01, -25);
