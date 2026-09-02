@@ -18,7 +18,8 @@ const SaveSystem = {
         musicVolume: 0.35,
         sfxVolume: 0.7,
         graphics: 'medium',
-        sensitivity: 1
+        sensitivity: 1,
+        fov: 55
       },
       achievements: {
         davidTheBrave: false,

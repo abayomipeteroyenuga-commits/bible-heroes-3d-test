@@ -33,9 +33,16 @@ class Player {
     this.keys = {};
     this.mouse = { x: 0, y: 0, locked: false };
     this.cameraAngle = 0;
-    this.cameraPitch = 0.35;
-    this.cameraDistance = 7;
+    this.cameraPitch = 1.15;
+    this.cameraDistance = 16;
+    this.cameraMinDist = 10;
+    this.cameraMaxDist = 26;
+    this.cameraHeight = 16;
+    this.cameraBack = 5.5;
     this.lookSensitivity = 1;
+    this._orbiting = false;
+    this._lastOrbitX = 0;
+    this._lastOrbitY = 0;
     this.joystick = { active: false, x: 0, y: 0 };
     this.isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth < 800;
     this.checkpoint = new THREE.Vector3(0, 1, 8);
@@ -519,6 +526,7 @@ class Player {
     };
 
     this.group.position.set(0, 0, 8);
+    this.group.scale.set(1, 1, 1);
   }
 
   _emptyPose() {
@@ -588,22 +596,56 @@ class Player {
       if (e.code) this.keys[e.code] = false;
     };
 
+    this._orbitByDelta = (dx, dy) => {
+      // Overhead camera: drag zooms height, does not flip to a side view
+      this.cameraHeight = Math.max(10, Math.min(26, (this.cameraHeight || 16) + dy * 0.04));
+      this.cameraDistance = this.cameraHeight;
+    };
+
     this._onMouseMove = (e) => {
+      if (!window.Game || window.Game.state !== 'playing') return;
       if (!this.isMobile && this.mouse.locked) {
-        const s = this.lookSensitivity || 1;
-        this.cameraAngle -= e.movementX * 0.003 * s;
-        this.cameraPitch = Math.max(0.1, Math.min(1.2, this.cameraPitch + e.movementY * 0.002 * s));
+        this._orbitByDelta(e.movementX, e.movementY);
+        return;
+      }
+      if (this._orbiting) {
+        this._orbitByDelta(e.clientX - this._lastOrbitX, e.clientY - this._lastOrbitY);
+        this._lastOrbitX = e.clientX;
+        this._lastOrbitY = e.clientY;
       }
     };
 
     this._onMouseDown = (e) => {
-      if (e.button !== 0) return;
       if (!window.Game || window.Game.state !== 'playing') return;
       const t = e.target;
       if (t && t.closest && t.closest('button, a, input, select, label, .screen, .menu-btn, .mute-btn, .action-btn')) {
         return;
       }
-      this.tryAttack();
+      if (e.button === 2 || e.button === 1) {
+        this._orbiting = true;
+        this._lastOrbitX = e.clientX;
+        this._lastOrbitY = e.clientY;
+        return;
+      }
+      if (e.button === 0) this.tryAttack();
+    };
+
+    this._onMouseUp = () => {
+      this._orbiting = false;
+    };
+
+    this._onWheel = (e) => {
+      if (!window.Game || window.Game.state !== 'playing') return;
+      e.preventDefault();
+      this.cameraHeight = Math.max(
+        this.cameraMinDist || 10,
+        Math.min(this.cameraMaxDist || 26, (this.cameraHeight || 16) + (e.deltaY > 0 ? 1.1 : -1.1))
+      );
+      this.cameraDistance = this.cameraHeight;
+    };
+
+    this._onContextMenu = (e) => {
+      if (window.Game && window.Game.state === 'playing') e.preventDefault();
     };
 
     this._onCanvasClick = () => {
@@ -621,8 +663,13 @@ class Player {
     window.addEventListener('keyup', this._onKeyUp, true);
     document.addEventListener('mousemove', this._onMouseMove);
     document.addEventListener('mousedown', this._onMouseDown);
+    document.addEventListener('mouseup', this._onMouseUp);
+    document.addEventListener('contextmenu', this._onContextMenu);
     const canvas = document.getElementById('game-canvas');
-    if (canvas) canvas.addEventListener('click', this._onCanvasClick);
+    if (canvas) {
+      canvas.addEventListener('click', this._onCanvasClick);
+      canvas.addEventListener('wheel', this._onWheel, { passive: false });
+    }
     document.addEventListener('pointerlockchange', this._onPointerLock);
 
     this.setupJoystick();
@@ -708,9 +755,12 @@ class Player {
     window.removeEventListener('keyup', this._onKeyUp, true);
     document.removeEventListener('mousemove', this._onMouseMove);
     document.removeEventListener('mousedown', this._onMouseDown);
+    document.removeEventListener('mouseup', this._onMouseUp);
+    document.removeEventListener('contextmenu', this._onContextMenu);
     document.removeEventListener('pointerlockchange', this._onPointerLock);
     const canvas = document.getElementById('game-canvas');
     if (canvas && this._onCanvasClick) canvas.removeEventListener('click', this._onCanvasClick);
+    if (canvas && this._onWheel) canvas.removeEventListener('wheel', this._onWheel);
 
     if (this._joyBase) {
       this._joyBase.removeEventListener('touchstart', this._onJoyStart);
@@ -892,6 +942,7 @@ class Player {
       this.velocity.x = this.direction.x * moveSpeed;
       this.velocity.z = this.direction.z * moveSpeed;
       if (this.onGround) this.state = isRunning ? 'RUN' : 'WALK';
+      this.cameraAngle = 0;
     } else {
       this.velocity.x *= 0.75;
       this.velocity.z *= 0.75;
@@ -1160,18 +1211,14 @@ class Player {
     }
   }
 
-  updateCamera(snap) {
-    const target = this.group.position.clone();
-    target.y += 1.4;
-    const offset = new THREE.Vector3(
-      Math.sin(this.cameraAngle) * this.cameraDistance * Math.cos(this.cameraPitch),
-      Math.sin(this.cameraPitch) * this.cameraDistance + 1.5,
-      Math.cos(this.cameraAngle) * this.cameraDistance * Math.cos(this.cameraPitch)
-    );
-    const desired = target.clone().add(offset);
-    if (snap) this.camera.position.copy(desired);
-    else this.camera.position.lerp(desired, 0.12);
-    this.camera.lookAt(target);
+  updateCamera() {
+    if (!this.camera || !this.group) return;
+    const pos = this.group.position;
+    const height = Math.max(10, Math.min(26, this.cameraHeight || 16));
+    const back = this.cameraBack != null ? this.cameraBack : 5.5;
+    this.camera.position.set(pos.x, pos.y + height, pos.z + back);
+    this.camera.up.set(0, 1, 0);
+    this.camera.lookAt(pos.x, pos.y + 0.3, pos.z);
   }
 
   getPosition() {

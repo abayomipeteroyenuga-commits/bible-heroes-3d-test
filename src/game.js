@@ -126,6 +126,13 @@ const Game = {
         this.saveSettings();
       });
     }
+    const fovEl = document.getElementById('set-fov');
+    if (fovEl) {
+      fovEl.addEventListener('input', () => {
+        this.applyFov();
+      });
+      fovEl.addEventListener('change', () => this.saveSettings());
+    }
   },
 
   loadSettings() {
@@ -136,6 +143,9 @@ const Game = {
     if (el('set-music')) el('set-music').checked = s.music !== false;
     if (el('set-graphics')) el('set-graphics').value = s.graphics || 'medium';
     if (el('set-sensitivity')) el('set-sensitivity').value = s.sensitivity != null ? s.sensitivity : 1;
+    if (el('set-fov')) el('set-fov').value = s.fov != null ? s.fov : 55;
+    if (el('fov-label')) el('fov-label').textContent = (s.fov != null ? s.fov : 55) + '°';
+    this.applyFov();
     if (el('set-music-vol')) el('set-music-vol').value = s.musicVolume != null ? s.musicVolume : 0.35;
     if (el('set-sfx-vol')) el('set-sfx-vol').value = s.sfxVolume != null ? s.sfxVolume : 0.7;
     if (window.AudioSystem) {
@@ -162,7 +172,8 @@ const Game = {
       musicVolume,
       sfxVolume,
       graphics: el('set-graphics') ? el('set-graphics').value : 'medium',
-      sensitivity: el('set-sensitivity') ? parseFloat(el('set-sensitivity').value) : 1
+      sensitivity: el('set-sensitivity') ? parseFloat(el('set-sensitivity').value) : 1,
+      fov: el('set-fov') ? parseFloat(el('set-fov').value) : 55
     });
     if (window.AudioSystem) {
       AudioSystem.setSoundEnabled(sound);
@@ -175,7 +186,25 @@ const Game = {
       if (muteBtn) muteBtn.textContent = (sound && music) ? '🔊' : '🔇';
     }
     this.applyGraphics();
+    this.applyFov();
     if (this.player) this.player.lookSensitivity = el('set-sensitivity') ? parseFloat(el('set-sensitivity').value) : 1;
+  },
+
+  getFov() {
+    const el = document.getElementById('set-fov');
+    if (el && el.value) return Math.max(35, Math.min(70, parseFloat(el.value) || 48));
+    const data = SaveSystem.load();
+    const fov = data && data.settings && data.settings.fov;
+    return Math.max(40, Math.min(75, fov != null ? Number(fov) : 55));
+  },
+
+  applyFov() {
+    const fov = this.getFov();
+    const label = document.getElementById('fov-label');
+    if (label) label.textContent = Math.round(fov) + '°';
+    if (!this.camera) return;
+    this.camera.fov = fov;
+    this.camera.updateProjectionMatrix();
   },
 
   populateMap() {
@@ -299,8 +328,8 @@ const Game = {
     const h = Math.max(window.innerHeight || 600, 240);
 
     this.scene = new THREE.Scene();
-    this.camera = new THREE.PerspectiveCamera(55, w / h, 0.1, 250);
-    this.camera.position.set(0, 6, 16);
+    this.camera = new THREE.PerspectiveCamera(this.getFov(), w / h, 0.1, 250);
+    this.camera.position.set(0, 2.4, 11);
 
     if (!this.renderer) {
       this.renderer = new THREE.WebGLRenderer({
@@ -311,8 +340,8 @@ const Game = {
       });
       this.renderer.shadowMap.enabled = false;
     }
-    this.renderer.setPixelRatio(1);
-    this.renderer.setSize(w, h, false);
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    this.renderer.setSize(w, h, true);
     this.renderer.setClearColor(0x7ec8e8, 1);
     this.renderer.autoClear = true;
     canvas.style.display = 'block';
@@ -386,11 +415,26 @@ const Game = {
     this.renderer.render(this.scene, this.camera);
   },
 
+  followCamera() {
+    if (!this.player || !this.camera) return;
+    const pos = this.player.group ? this.player.group.position : this.player.getPosition();
+    if (!pos) return;
+    const height = Math.max(10, Math.min(26, this.player.cameraHeight || 16));
+    const back = this.player.cameraBack != null ? this.player.cameraBack : 5.5;
+    this.camera.position.set(pos.x, pos.y + height, pos.z + back);
+    this.camera.up.set(0, 1, 0);
+    this.camera.lookAt(pos.x, pos.y + 0.3, pos.z);
+  },
+
   onResize() {
     if (!this.camera || !this.renderer) return;
-    this.camera.aspect = window.innerWidth / window.innerHeight;
+    const box = document.getElementById('game-container');
+    const w = Math.max((box && box.clientWidth) || window.innerWidth || 800, 320);
+    const h = Math.max((box && box.clientHeight) || window.innerHeight || 600, 240);
+    this.camera.aspect = w / h;
+    this.camera.fov = this.getFov();
     this.camera.updateProjectionMatrix();
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.renderer.setSize(w, h, true);
   },
 
   loop() {
@@ -410,6 +454,8 @@ const Game = {
       if (this._bossCamTimer <= 0 && this._bossCamOrigin && this.player) {
         this.player.cameraDistance = this._bossCamOrigin.dist;
         this.player.cameraPitch = this._bossCamOrigin.pitch;
+        if (this._bossCamOrigin.height) this.player.cameraHeight = this._bossCamOrigin.height;
+        this.player.cameraAngle = 0;
         // Keep current angle (player may have moved)
         this._bossCamTimer = null;
         this._bossCamOrigin = null;
@@ -422,6 +468,7 @@ const Game = {
     } catch (err) {
       console.error('update error', err);
     }
+    this.followCamera();
 
     const playerPos = this.player.getPosition();
 
@@ -657,14 +704,12 @@ const Game = {
       this._bossCamOrigin = {
         angle: this.player.cameraAngle,
         pitch: this.player.cameraPitch,
-        dist: this.player.cameraDistance
+        dist: this.player.cameraDistance,
+        height: this.player.cameraHeight
       };
-      this.player.cameraDistance = 18;
-      this.player.cameraPitch = 0.55;
-      // Look toward Goliath
-      const gp = this.goliath.group.position;
-      const pp = this.player.getPosition();
-      this.player.cameraAngle = Math.atan2(-(gp.x - pp.x), -(gp.z - pp.z));
+      this.player.cameraHeight = 22;
+      this.player.cameraDistance = 22;
+      this.player.cameraAngle = 0;
     }
   },
 

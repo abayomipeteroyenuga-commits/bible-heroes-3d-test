@@ -73,7 +73,7 @@ class World {
     const sky = this.theme.sky || 0x87b8e0;
     const fog = this.theme.fog || sky;
     this.scene.background = new THREE.Color(sky);
-    this.scene.fog = new THREE.Fog(fog, this.theme.dark ? 18 : 40, this.theme.dark ? 70 : 110);
+    this.scene.fog = new THREE.Fog(fog, this.theme.dark ? 30 : 60, this.theme.dark ? 120 : 200);
 
     // Simple sun disc
     const sunGeo = new THREE.SphereGeometry(4, 16, 12);
