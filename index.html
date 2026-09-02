@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>PastorAbayomi Bible Stories — David &amp; Goliath | 10-World Adventure</title>
+  <title>PastorAbayomi Bible Stories — David &amp; Goliath | 20-World Adventure</title>
   <link rel="stylesheet" href="style.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -26,13 +26,14 @@
       <div class="logo-area">
         <img src="assets/ui/pastor-abayomi-bible-stories-logo.png" alt="Pastor Abayomi Bible Stories" class="brand-logo brand-logo-lg" onerror="this.onerror=null;this.src='assets/ui/logo.svg'" />
         <h2 class="title">David &amp; Goliath</h2>
-        <p class="subtitle">10-World Adventure</p>
+        <p class="subtitle">20-World Adventure</p>
       </div>
       <div class="menu-buttons">
         <button id="btn-play" class="menu-btn primary">▶️ PLAY WORLD 1</button>
         <button id="btn-map" class="menu-btn">🗺️ ADVENTURE MAP</button>
         <button id="btn-howto" class="menu-btn">📖 HOW TO PLAY</button>
         <button id="btn-achievements" class="menu-btn">🏅 ACHIEVEMENTS</button>
+        <button id="btn-shop" class="menu-btn">🛒 SHOP</button>
         <button id="btn-settings" class="menu-btn">⚙️ SETTINGS</button>
       </div>
     </div>
@@ -89,6 +90,8 @@
         <div id="hud-world">WORLD 1</div>
         <div id="hud-world-name">SHEPHERD'S VALLEY</div>
         <div class="score-box">⭐ <span id="score-text">0</span></div>
+        <div class="score-box">🪙 <span id="hud-coins">0</span></div>
+        <div class="score-box" id="hud-ammo">SLING 12</div>
         <div class="hud-quick-actions">
           <button id="btn-bible" class="hud-bible-btn" type="button" title="Bible Moment">📖 BIBLE</button>
           <button id="btn-mute" class="mute-btn" type="button" title="Mute / Unmute">🔊</button>
@@ -144,6 +147,7 @@
         <h2 id="pause-title">⏸️ PAUSED</h2>
         <button id="btn-resume" class="menu-btn primary">▶️ RESUME</button>
         <button id="btn-pause-howto" class="menu-btn">📖 HOW TO PLAY</button>
+        <button id="btn-pause-shop" class="menu-btn">🛒 SHOP</button>
         <button id="btn-settings-pause" class="menu-btn">⚙️ SETTINGS</button>
         <button id="btn-pause-restart" class="menu-btn">🔄 RESTART</button>
         <button id="btn-pause-map" class="menu-btn">🗺️ ADVENTURE MAP</button>
@@ -193,6 +197,7 @@
               <li>F / G / T / K — FIRE SLING</li>
               <li>LEFT CLICK — FIRE SLING</li>
               <li>Q — FAITH SHIELD</li>
+              <li>C — CRAFT ARROWS</li>
               <li>E — INTERACT</li>
               <li>RIGHT MOUSE DRAG — LOOK AROUND</li>
               <li>MOUSE WHEEL — ZOOM IN / OUT</li>
@@ -254,11 +259,53 @@
         <h2>📜 Credits</h2>
         <div class="info-card">
           <p><strong>PastorAbayomi Bible Stories</strong></p>
-          <p>David &amp; Goliath — 10-World Adventure</p>
+          <p>David &amp; Goliath — 20-World Adventure</p>
           <p>A child-friendly 3D faith adventure.</p>
-          <p class="muted">Ten worlds. One giant. One faith.</p>
+          <p class="muted">Twenty worlds. One giant. One faith.</p>
         </div>
         <button id="btn-credits-back" class="menu-btn">BACK</button>
+      </div>
+    </div>
+
+    <div id="shop-screen" class="screen hidden">
+      <div class="menu-container wide">
+        <img src="assets/ui/pastor-abayomi-bible-stories-logo.png" alt="Pastor Abayomi Bible Stories" class="brand-logo brand-logo-sm" onerror="this.onerror=null;this.src='assets/ui/logo.svg'" />
+        <h2>🛒 MARKET STALL</h2>
+        <p class="map-subtitle">Spend coins from battle. Coins: <strong id="shop-coins">0</strong></p>
+        <div class="shop-grid">
+          <div class="shop-card">
+            <div class="shop-icon">🛡️</div>
+            <h3>Armor</h3>
+            <p>Stronger armor for David. Level <span id="shop-armor-lvl">0</span></p>
+            <button class="menu-btn primary" data-shop-item="armor">BUY 40 🪙</button>
+          </div>
+          <div class="shop-card">
+            <div class="shop-icon">✨</div>
+            <h3>Faith Shield</h3>
+            <p>Longer Faith Shield. Level <span id="shop-shield-lvl">0</span></p>
+            <button class="menu-btn primary" data-shop-item="shield">BUY 35 🪙</button>
+          </div>
+          <div class="shop-card">
+            <div class="shop-icon">🏹</div>
+            <h3>Bow</h3>
+            <p>Unlock a stronger bow. <span id="shop-bow-status">LOCKED</span></p>
+            <button class="menu-btn primary" data-shop-item="bow">BUY 80 🪙</button>
+          </div>
+          <div class="shop-card">
+            <div class="shop-icon">➤</div>
+            <h3>Arrows</h3>
+            <p>+10 arrows. You have <span id="shop-arrows">0</span></p>
+            <button class="menu-btn primary" data-shop-item="arrows">BUY 20 🪙</button>
+          </div>
+        </div>
+        <div class="shop-card craft-card">
+          <div class="shop-icon">🛠️</div>
+          <h3>Craft Arrows</h3>
+          <p>1 Stick + 1 Feather + 1 Flint = 3 Arrows</p>
+          <p>🪵 <span id="craft-sticks">0</span> &nbsp; 🪶 <span id="craft-feathers">0</span> &nbsp; 🪨 <span id="craft-flint">0</span></p>
+          <button id="btn-craft-arrows" class="menu-btn primary">CRAFT ARROWS</button>
+        </div>
+        <button id="btn-shop-back" class="menu-btn">⬅ BACK</button>
       </div>
     </div>
 

@@ -78,153 +78,76 @@ function getBibleWorldData(id) {
   return BIBLE_WORLD_DATA[n] || BIBLE_WORLD_DATA[1];
 }
 
-// 10 David vs Goliath adventure worlds
-const LEVELS = [
-  { id: 1, name: "Shepherd's Valley", icon: '🌿', achievement: 'valleyExplorer' },
-  { id: 2, name: 'Rocky Wilderness', icon: '🪨', achievement: 'rockyWilderness' },
-  { id: 3, name: 'Forest Valley', icon: '🌲', achievement: 'forestSurvivor' },
-  { id: 4, name: 'Cave of Shadows', icon: '💎', achievement: 'caveExplorer' },
-  { id: 5, name: 'Mountain Pass', icon: '⛰️', achievement: 'mountainClimber' },
-  { id: 6, name: 'Philistine Outpost', icon: '🏕️', achievement: 'outpostRaider' },
-  { id: 7, name: 'Fortified Valley', icon: '🏰', achievement: 'fortressBreaker' },
-  { id: 8, name: 'Great Battlefield', icon: '⚔️', achievement: 'battlefieldHero' },
-  { id: 9, name: "Goliath's Territory", icon: '👣', achievement: 'goliathTerritory' },
-  { id: 10, name: 'The Final Battle', icon: '👑', achievement: 'giantSlayer' }
+// 20 unique David vs Goliath adventure worlds
+const WORLD_META = [
+  { id: 1,  name: "Shepherd's Valley", icon: '🌿', achievement: 'valleyExplorer', sky: 0x87b8e0, fog: 0x87b8e0, ground: 0x5a8f4a, path: 0xb8956a, ambient: 0xfff5e0, sun: 0xffe8c0, dark: false, features: ['camp','trees','rocks','path'], landmark: 'hut' },
+  { id: 2,  name: 'Rocky Wilderness', icon: '🪨', achievement: 'rockyWilderness', sky: 0xb8a090, fog: 0xb8a090, ground: 0x8a7a68, path: 0x6e5b48, ambient: 0xffe0c0, sun: 0xffcc88, dark: false, features: ['rocks','cliffs','path'], landmark: 'arch' },
+  { id: 3,  name: 'Forest Valley', icon: '🌲', achievement: 'forestSurvivor', sky: 0x6ea06e, fog: 0x7aa87a, ground: 0x2f6b38, path: 0x6b4f32, ambient: 0xc8e0b8, sun: 0xdde8a0, dark: false, features: ['forest','stream','rocks','path'], landmark: 'shrine' },
+  { id: 4,  name: 'Cave of Shadows', icon: '💎', achievement: 'caveExplorer', sky: 0x1a1428, fog: 0x2a2038, ground: 0x3a3344, path: 0x2a2430, ambient: 0x8866aa, sun: 0xaa88ff, dark: true, features: ['cave','crystals','torches','rocks'], landmark: 'crystal' },
+  { id: 5,  name: 'Mountain Pass', icon: '⛰️', achievement: 'mountainClimber', sky: 0x9ec8e8, fog: 0xb0c8d8, ground: 0x7a8a78, path: 0x9a8a70, ambient: 0xe8f0ff, sun: 0xfff2d0, dark: false, features: ['mountains','bridge','cliffs','path'], landmark: 'bridge' },
+  { id: 6,  name: 'Philistine Outpost', icon: '🏕️', achievement: 'outpostRaider', sky: 0xd4b48a, fog: 0xc8b090, ground: 0x8a7a50, path: 0x6a5a40, ambient: 0xffe8c8, sun: 0xffd080, dark: false, features: ['outpost','tents','towers','path'], landmark: 'tower' },
+  { id: 7,  name: 'Fortified Valley', icon: '🏰', achievement: 'fortressBreaker', sky: 0x8aa0b8, fog: 0x90a0b0, ground: 0x6a7058, path: 0x8a7a60, ambient: 0xd8dce8, sun: 0xffe0b0, dark: false, features: ['walls','gates','towers','path'], landmark: 'gate' },
+  { id: 8,  name: 'Great Battlefield', icon: '⚔️', achievement: 'battlefieldHero', sky: 0xc07050, fog: 0xb07050, ground: 0x6a6040, path: 0x8a7048, ambient: 0xffc8a0, sun: 0xffa060, dark: false, features: ['battlefield','banners','camps','path'], landmark: 'camp' },
+  { id: 9,  name: 'Brook of Stones', icon: '💧', achievement: 'brookWalker', sky: 0x6eb8c8, fog: 0x7ab8c0, ground: 0x4a7a58, path: 0xc2b48a, ambient: 0xd0f0ff, sun: 0xfff0c8, dark: false, features: ['stream','bridge','rocks','path'], landmark: 'bridge' },
+  { id: 10, name: "Israel's Camp", icon: '⛺', achievement: 'campScout', sky: 0xe8d2a8, fog: 0xd8c498, ground: 0x7a8a4a, path: 0xb89a68, ambient: 0xfff0d0, sun: 0xffd090, dark: false, features: ['camp','tents','path','rocks'], landmark: 'hut' },
+  { id: 11, name: 'Valley of Elah', icon: '🌾', achievement: 'elahWalker', sky: 0xd8c060, fog: 0xc8b058, ground: 0x8a9a40, path: 0xc8b070, ambient: 0xfff4c8, sun: 0xffe080, dark: false, features: ['path','rocks','camp'], landmark: 'arch' },
+  { id: 12, name: 'Philistine Ridge', icon: '🔺', achievement: 'ridgeRunner', sky: 0xc07048, fog: 0xb06040, ground: 0x8a5040, path: 0x6a4030, ambient: 0xffc8a0, sun: 0xff9040, dark: false, features: ['cliffs','rocks','path'], landmark: 'tower' },
+  { id: 13, name: 'Whispering Pines', icon: '🌲', achievement: 'pineWalker', sky: 0x3a5a48, fog: 0x4a6a58, ground: 0x1a3a28, path: 0x4a3a28, ambient: 0x88aa88, sun: 0xaac080, dark: false, features: ['forest','trees','path','rocks'], landmark: 'shrine' },
+  { id: 14, name: 'Sunbaked Dunes', icon: '🏜️', achievement: 'duneRunner', sky: 0xe8c070, fog: 0xd8b060, ground: 0xc8a050, path: 0xb89040, ambient: 0xffe8b0, sun: 0xffd060, dark: false, features: ['rocks','path','cliffs'], landmark: 'arch' },
+  { id: 15, name: 'Storm Heights', icon: '🌩️', achievement: 'stormClimber', sky: 0x4a6080, fog: 0x5a7088, ground: 0x4a5a58, path: 0x6a6a68, ambient: 0xa0b8d0, sun: 0xc0d0e8, dark: false, features: ['mountains','cliffs','path'], landmark: 'bridge' },
+  { id: 16, name: 'Iron Gate', icon: '🚪', achievement: 'ironBreaker', sky: 0x4a4a58, fog: 0x3a3a48, ground: 0x4a4a40, path: 0x3a3a38, ambient: 0x8890a0, sun: 0xb0b8c8, dark: false, features: ['walls','gates','towers','path'], landmark: 'gate' },
+  { id: 17, name: 'Banner Plains', icon: '🚩', achievement: 'bannerKeeper', sky: 0xc05040, fog: 0xb04838, ground: 0x6a5040, path: 0x8a6048, ambient: 0xffb090, sun: 0xff8060, dark: false, features: ['battlefield','banners','path','camps'], landmark: 'camp' },
+  { id: 18, name: 'Shadow Ravine', icon: '🌑', achievement: 'ravineWalker', sky: 0x201828, fog: 0x2a2030, ground: 0x2a2430, path: 0x1a1820, ambient: 0x665577, sun: 0x8866aa, dark: true, features: ['cave','cliffs','crystals','rocks'], landmark: 'crystal' },
+  { id: 19, name: "Giant's Approach", icon: '👣', achievement: 'goliathTerritory', sky: 0x6a4038, fog: 0x5a3830, ground: 0x5a4030, path: 0x4a3028, ambient: 0xc09070, sun: 0xe07040, dark: false, features: ['territory','giantMarks','rocks','path','arena'], landmark: 'footprint' },
+  { id: 20, name: 'Valley of the Giant', icon: '👑', achievement: 'giantSlayer', sky: 0x4a3060, fog: 0x503848, ground: 0x4a4030, path: 0x6a5040, ambient: 0xc8a0d0, sun: 0xff8060, dark: false, features: ['final','battlefield','banners','arena','mountains'], landmark: 'arena' }
 ];
 
-const WORLD_THEMES = {
-  1: {
-    sky: 0x87b8e0, fog: 0x87b8e0, ground: 0x5a8f4a, path: 0xb8956a,
-    ambient: 0xfff5e0, sun: 0xffe8c0, dark: false,
-    features: ['camp', 'trees', 'rocks', 'path', 'arena'],
-    objective: 'Learn and survive — prepare for Goliath',
-    landmark: 'hut',
-    spawns: [[-6,0,-8],[7,0,-15],[-5,0,-28],[8,0,-32],[0,0,-40]],
-    collectibles: [[-7,8],[9,2],[-12,6],[6,-18],[-10,-30]],
-    enemyCount: 5, enemyHp: 30, enemyDmg: 5, enemySpd: 3.2,
-    needEnemies: 5, spawnGoliath: false, goliathHp: 0,
-    goliathPos: [0, 0, -70]
-  },
-  2: {
-    sky: 0xb8a090, fog: 0xb8a090, ground: 0x8a7a68, path: 0x6e5b48,
-    ambient: 0xffe0c0, sun: 0xffcc88, dark: false,
-    features: ['rocks', 'cliffs', 'caves', 'path'],
-    objective: 'Cross the Rocky Wilderness',
-    landmark: 'arch',
-    spawns: [[-12,0,-6],[12,0,-14],[-8,0,-26],[10,0,-34],[0,0,-46],[14,0,-50]],
-    collectibles: [[-14,-10],[14,-22],[-16,-40],[8,-54]],
-    enemyCount: 6, enemyHp: 36, enemyDmg: 6, enemySpd: 3.3,
-    needEnemies: 6, spawnGoliath: false, goliathHp: 0,
-    goliathPos: [0, 0, -70]
-  },
-  3: {
-    sky: 0x6ea06e, fog: 0x7aa87a, ground: 0x2f6b38, path: 0x6b4f32,
-    ambient: 0xc8e0b8, sun: 0xdde8a0, dark: false,
-    features: ['forest', 'stream', 'rocks', 'path'],
-    objective: 'Find the Hidden Path',
-    landmark: 'shrine',
-    spawns: [[-14,0,-12],[14,0,-18],[-10,0,-30],[12,0,-38],[-6,0,-48],[8,0,-56],[0,0,-24]],
-    collectibles: [[-16,-16],[16,-28],[-18,-44],[4,-60]],
-    enemyCount: 7, enemyHp: 40, enemyDmg: 6, enemySpd: 3.4,
-    needEnemies: 6, spawnGoliath: false, goliathHp: 0,
-    goliathPos: [0, 0, -70]
-  },
-  4: {
-    sky: 0x1a1428, fog: 0x2a2038, ground: 0x3a3344, path: 0x2a2430,
-    ambient: 0x8866aa, sun: 0xaa88ff, dark: true,
-    features: ['cave', 'crystals', 'torches', 'rocks'],
-    objective: 'Escape the Cave of Shadows',
-    landmark: 'crystal',
-    spawns: [[-8,0,-10],[8,0,-16],[-12,0,-28],[10,0,-36],[0,0,-44],[-6,0,-52],[6,0,-60]],
-    collectibles: [[-10,-14],[12,-32],[-14,-50],[0,-62]],
-    enemyCount: 7, enemyHp: 44, enemyDmg: 7, enemySpd: 3.3,
-    needEnemies: 6, spawnGoliath: false, goliathHp: 0,
-    goliathPos: [0, 0, -70]
-  },
-  5: {
-    sky: 0x9ec8e8, fog: 0xb0c8d8, ground: 0x7a8a78, path: 0x9a8a70,
-    ambient: 0xe8f0ff, sun: 0xfff2d0, dark: false,
-    features: ['mountains', 'bridge', 'cliffs', 'path'],
-    objective: 'Cross the Mountain Pass',
-    landmark: 'bridge',
-    spawns: [[-10,0,-8],[10,0,-16],[0,0,-28],[-12,0,-36],[12,0,-44],[-6,0,-52],[6,0,-58],[0,0,-64]],
-    collectibles: [[-12,-12],[12,-30],[-8,-48],[8,-62]],
-    enemyCount: 8, enemyHp: 48, enemyDmg: 7, enemySpd: 3.5,
-    needEnemies: 7, spawnGoliath: false, goliathHp: 0,
-    goliathPos: [0, 0, -70]
-  },
-  6: {
-    sky: 0xd4b48a, fog: 0xc8b090, ground: 0x8a7a50, path: 0x6a5a40,
-    ambient: 0xffe8c8, sun: 0xffd080, dark: false,
-    features: ['outpost', 'tents', 'towers', 'path'],
-    objective: 'Break Through the Outpost',
-    landmark: 'tower',
-    spawns: [[-14,0,-10],[14,0,-10],[-10,0,-24],[10,0,-24],[0,0,-34],[-8,0,-46],[8,0,-46],[0,0,-58]],
-    collectibles: [[-16,-6],[16,-20],[-12,-40],[10,-56]],
-    enemyCount: 8, enemyHp: 52, enemyDmg: 8, enemySpd: 3.5,
-    needEnemies: 7, spawnGoliath: false, goliathHp: 0,
-    goliathPos: [0, 0, -70]
-  },
-  7: {
-    sky: 0x8aa0b8, fog: 0x90a0b0, ground: 0x6a7058, path: 0x8a7a60,
-    ambient: 0xd8dce8, sun: 0xffe0b0, dark: false,
-    features: ['walls', 'gates', 'towers', 'path', 'arena'],
-    objective: 'Reach the Fortress',
-    landmark: 'gate',
-    spawns: [[-16,0,-8],[16,0,-8],[-12,0,-20],[12,0,-20],[0,0,-28],[-10,0,-40],[10,0,-40],[0,0,-50],[6,0,-58]],
-    collectibles: [[-18,-12],[18,-26],[-8,-44],[8,-60]],
-    enemyCount: 9, enemyHp: 56, enemyDmg: 8, enemySpd: 3.6,
-    needEnemies: 7, spawnGoliath: false, goliathHp: 0,
-    goliathPos: [0, 0, -68]
-  },
-  8: {
-    sky: 0xc07050, fog: 0xb07050, ground: 0x6a6040, path: 0x8a7048,
-    ambient: 0xffc8a0, sun: 0xffa060, dark: false,
-    features: ['battlefield', 'banners', 'camps', 'path', 'arena'],
-    objective: 'Survive the Battlefield',
-    landmark: 'camp',
-    waves: [
-      [[-8,0,-12],[8,0,-12]],
-      [[-12,0,-24],[0,0,-24],[12,0,-24]],
-      [[-10,0,-38],[10,0,-38]],
-      [[-14,0,-48],[0,0,-50],[14,0,-48]],
-      [[-8,0,-58],[8,0,-58],[0,0,-62]]
-    ],
-    collectibles: [[-16,-16],[16,-32],[-12,-52],[12,-64]],
-    enemyCount: 13, enemyHp: 60, enemyDmg: 9, enemySpd: 3.6,
-    needEnemies: 13, spawnGoliath: false, goliathHp: 0,
-    goliathPos: [0, 0, -72]
-  },
-  9: {
-    sky: 0x6a5048, fog: 0x6a4840, ground: 0x5a4a40, path: 0x4a3a30,
-    ambient: 0xc8a090, sun: 0xe09060, dark: false,
-    features: ['territory', 'giantMarks', 'rocks', 'path', 'arena'],
-    objective: "Enter Goliath's Territory",
-    landmark: 'footprint',
-    spawns: [[-16,0,-10],[16,0,-14],[-8,0,-26],[10,0,-32],[0,0,-40],[-14,0,-48],[14,0,-52],[-6,0,-60],[6,0,-64],[0,0,-36]],
-    collectibles: [[-18,-18],[18,-28],[-10,-54],[8,-66]],
-    enemyCount: 10, enemyHp: 68, enemyDmg: 10, enemySpd: 3.7,
-    needEnemies: 8, spawnGoliath: false, goliathHp: 0,
-    goliathPos: [0, 0, -74]
-  },
-  10: {
-    sky: 0x4a3060, fog: 0x503848, ground: 0x4a4030, path: 0x6a5040,
-    ambient: 0xc8a0d0, sun: 0xff8060, dark: false,
-    features: ['final', 'battlefield', 'banners', 'arena', 'mountains'],
-    objective: 'Defeat Goliath',
-    landmark: 'arena',
-    waves: [
-      [[-10,0,-10],[10,0,-10]],
-      [[-14,0,-24],[0,0,-22],[14,0,-24]],
-      [[-12,0,-40],[12,0,-40],[0,0,-44]],
-      [[-8,0,-56],[8,0,-56]]
-    ],
-    collectibles: [[-16,-8],[16,-26],[-14,-46],[10,-62]],
-    enemyCount: 10, enemyHp: 75, enemyDmg: 10, enemySpd: 3.8,
-    needEnemies: 10, spawnGoliath: true, goliathHp: 1600,
-    goliathPos: [0, 0, -75]
+const LEVELS = WORLD_META.map(w => ({ id: w.id, name: w.name, icon: w.icon, achievement: w.achievement }));
+
+function layoutEnemies(count) {
+  const pts = [];
+  for (let i = 0; i < count; i++) {
+    const ring = 10 + (i % 6) * 7;
+    const a = (i * 2.2) + ring * 0.08;
+    pts.push([
+      Math.cos(a) * ring,
+      0,
+      -8 - Math.abs(Math.sin(a)) * ring - Math.floor(i / 6) * 6
+    ]);
   }
-};
+  return pts;
+}
+
+const WORLD_THEMES = {};
+WORLD_META.forEach(w => {
+  const n = w.id;
+  const count = 9 + n; // World 1 = 10, then +1 each world
+  const pts = layoutEnemies(count);
+  const theme = {
+    sky: w.sky, fog: w.fog, ground: w.ground, path: w.path,
+    ambient: w.ambient, sun: w.sun, dark: w.dark,
+    features: w.features, landmark: w.landmark,
+    objective: n === 20 ? 'Defeat the guards, then Goliath' : ('Defeat ' + count + ' Shadow Guardians'),
+    collectibles: [[-14, 6], [14, -12], [-10, -28], [8, -44]],
+    enemyCount: count,
+    enemyHp: 18 + n * 3,
+    enemyDmg: 4 + Math.floor(n / 4),
+    enemySpd: 2.7 + n * 0.04,
+    needEnemies: count,
+    spawnGoliath: n === 20,
+    goliathHp: n === 20 ? 480 : 0,
+    goliathPos: [0, 0, -72]
+  };
+  if (count >= 16) {
+    const waves = [];
+    const size = 5;
+    for (let i = 0; i < pts.length; i += size) waves.push(pts.slice(i, i + size));
+    theme.waves = waves;
+  } else {
+    theme.spawns = pts;
+  }
+  WORLD_THEMES[n] = theme;
+});
 
 function getLevel(worldId) {
   const n = parseInt(worldId, 10) || 1;
@@ -270,33 +193,38 @@ class MissionSystem {
   buildMissions() {
     const id = this.worldId;
     const waves = Array.isArray(this.theme.waves) && this.theme.waves.length > 0;
-    const need = waves ? this.theme.waves.reduce((sum, wave) => sum + wave.length, 0)
+    const need = waves
+      ? this.theme.waves.reduce((sum, wave) => sum + wave.length, 0)
       : (this.theme.needEnemies != null ? this.theme.needEnemies : (this.theme.spawns || []).length);
-    const explore = {
-      id: 'explore', text: this.theme.introObjective || 'Explore the area',
-      check: g => !!g.exploredCamp,
-      onComplete: g => { UI.showMessage('Area explored!'); this.next(g); }
-    };
+    const lv = (window.LEVELS || []).filter(l => l.id === id)[0];
+    const doneName = ((lv && lv.name) ? lv.name : ('World ' + id)) + ' cleared!';
+    const fightText = waves
+      ? 'Defeat every enemy wave (' + need + ')'
+      : 'Defeat the Shadow Guardians (' + need + ')';
     const fight = {
-      id: 'enemies', text: waves ? 'Survive every enemy wave' : ('Defeat the Shadow Guardians (' + need + ')'),
+      id: 'enemies',
+      text: fightText,
       check: g => g.enemiesDefeated >= need && (!waves || g.wavesComplete === true),
-      onComplete: g => { UI.showMessage('Guardians defeated!'); this.next(g); }
+      onComplete: g => {
+        const boss = window.getWorldBoss ? window.getWorldBoss(id) : { name: 'the World Boss' };
+        UI.showMessage((id === 20 ? 'GOLIATH APPROACHES!' : (boss.name + ' APPEARS!')), 2200);
+        if (id === 20) {
+          if (g.spawnGoliath) g.spawnGoliath();
+        } else if (g.spawnWorldBoss) {
+          g.spawnWorldBoss();
+        }
+        this.next(g);
+      }
     };
-    const useCount = (flag, count, text, doneText) => ({
-      id: flag, text,
-      check: g => (g[flag] || 0) >= count,
-      onComplete: g => { UI.showMessage(doneText); this.next(g); }
-    });
-    if (id === 1) return [explore, { id:'sheep', text:'Check on the 3 sheep', check:g=>g.sheepChecked>=3, onComplete:g=>{UI.showMessage('The flock is safe!');this.next(g);} }, fight, { id:'goal', text:"Reach the valley's far end", check:g=>this.nearPoint(g,0,-52,6), onComplete:g=>this.finishWorld(g,"Shepherd's Valley is cleared!") }];
-    if (id === 2) return [explore, { id:'markers', text:'Find 3 safe paths through the rocks', check:g=>g.rockMarkers>=3, onComplete:g=>{UI.showMessage('You found the safe rocky route!');this.next(g);} }, fight, { id:'goal', text:'Reach the wilderness arch', check:g=>this.nearPoint(g,0,-56,8), onComplete:g=>this.finishWorld(g,'Rocky Wilderness crossed!') }];
-    if (id === 3) return [explore, { id:'path', text:'Reveal the Hidden Path', check:g=>!!g.hiddenPathFound, onComplete:g=>{UI.showMessage('A hidden path is revealed!');this.next(g);} }, fight, { id:'goal', text:'Reach the forest shrine', check:g=>this.nearPoint(g,-15,-22,5), onComplete:g=>this.finishWorld(g,'The hidden path is yours!') }];
-    if (id === 4) return [explore, { id:'torches', text:'Light all 4 cave torches', check:g=>g.torchesLit>=4, onComplete:g=>{UI.showMessage('The cave path is lit!');this.next(g);} }, fight, { id:'goal', text:'Escape through the crystal exit', check:g=>this.nearPoint(g,0,-62,7), onComplete:g=>this.finishWorld(g,'You escaped the Cave of Shadows!') }];
-    if (id === 5) return [explore, { id:'bridge', text:'Cross the mountain bridge', check:g=>!!g.mountainPassCrossed, onComplete:g=>{UI.showMessage('Bridge crossed! Keep climbing.');this.next(g);} }, fight, { id:'goal', text:'Reach the mountain summit', check:g=>this.nearPoint(g,0,-62,7), onComplete:g=>this.finishWorld(g,'Mountain Pass cleared!') }];
-    if (id === 6) return [explore, { id:'supplies', text:'Secure 4 supply crates', check:g=>g.suppliesSecured>=4, onComplete:g=>{UI.showMessage('The outpost supplies are secured!');this.next(g);} }, fight, { id:'goal', text:'Reach the outpost gate', check:g=>this.nearPoint(g,0,-22,5), onComplete:g=>this.finishWorld(g,'Outpost broken!') }];
-    if (id === 7) return [explore, { id:'banners', text:'Capture the 4 fortress banners', check:g=>g.bannersCaptured>=4, onComplete:g=>{UI.showMessage('All fortress banners captured!');this.next(g);} }, fight, { id:'gate', text:'Open the fortress gate', check:g=>!!g.gateOpened, onComplete:g=>{UI.showMessage('The fortress gate is open!');this.next(g);} }, { id:'goal', text:'Enter the fortress courtyard', check:g=>this.nearPoint(g,0,-29,6), onComplete:g=>this.finishWorld(g,'Fortress reached!') }];
-    if (id === 8) return [explore, { id:'standards', text:'Secure 5 battlefield standards', check:g=>g.standardsSecured>=5, onComplete:g=>{UI.showMessage('The battlefield is secured!');this.next(g);} }, fight, { id:'goal', text:'Hold the final battlefield', check:g=>g.wavesComplete===true&&g.enemiesDefeated>=need&&this.nearPoint(g,0,-58,9), onComplete:g=>this.finishWorld(g,'Battlefield survived!') }];
-    if (id === 9) return [explore, { id:'footprints', text:'Follow 5 giant footprints', check:g=>g.footprintsInspected>=5, onComplete:g=>{UI.showMessage('You have found the giant\'s trail!');this.next(g);} }, fight, { id:'goal', text:"Reach Goliath's landmark", check:g=>this.nearPoint(g,0,-60,7), onComplete:g=>this.finishWorld(g,'THE GIANT IS NEAR...') }];
-    return [explore, fight, { id:'arena', text:'Enter the final arena', check:g=>this.nearPoint(g,0,-70,12), onComplete:g=>{UI.showMessage('WARNING — A GREAT ENEMY APPROACHES...');g.spawnGoliath();this.next(g);} }, { id:'goliath', text:'Defeat Goliath', check:g=>!!g.goliathDefeated, onComplete:g=>this.finishWorld(g,'GIANT SLAYER!') }];
+    return [
+      fight,
+      {
+        id: 'boss',
+        text: id === 20 ? 'Defeat Goliath' : ('Defeat ' + ((window.getWorldBoss && getWorldBoss(id).name) || 'the World Boss')),
+        check: g => !!g.goliathDefeated,
+        onComplete: g => this.finishWorld(g, id === 20 ? 'GIANT SLAYER!' : doneName)
+      }
+    ];
   }
 
   finishWorld(game, msg) {
@@ -337,6 +265,34 @@ class MissionSystem {
   }
 }
 
+const WORLD_BOSSES = {
+  1:  { name: 'Wolf of the Valley', title: 'VALLEY BOSS', color: 0x6b4a2a, accent: 0xc4a06a, hp: 160, dmg: 8, scale: 1.9 },
+  2:  { name: 'Stone Warden', title: 'ROCK BOSS', color: 0x7a6a5a, accent: 0xd0c0a0, hp: 180, dmg: 8, scale: 2.0 },
+  3:  { name: 'Forest Stalker', title: 'FOREST BOSS', color: 0x2a5a32, accent: 0x7cba4a, hp: 200, dmg: 9, scale: 2.0 },
+  4:  { name: 'Cave Horror', title: 'CAVE BOSS', color: 0x3a2458, accent: 0xaa66ff, hp: 220, dmg: 9, scale: 2.1 },
+  5:  { name: 'Mountain Champion', title: 'MOUNTAIN BOSS', color: 0x5a6a78, accent: 0xc0d8e8, hp: 240, dmg: 10, scale: 2.1 },
+  6:  { name: 'Outpost Captain', title: 'OUTPOST BOSS', color: 0x8a5a28, accent: 0xe0a040, hp: 260, dmg: 10, scale: 2.15 },
+  7:  { name: 'Gate Keeper', title: 'FORTRESS BOSS', color: 0x4a5060, accent: 0x90a0b8, hp: 280, dmg: 11, scale: 2.2 },
+  8:  { name: 'War Banner Lord', title: 'BATTLE BOSS', color: 0x8a3020, accent: 0xff7040, hp: 300, dmg: 11, scale: 2.2 },
+  9:  { name: 'Brook Champion', title: 'BROOK BOSS', color: 0x2a6a78, accent: 0x70d0e0, hp: 320, dmg: 12, scale: 2.25 },
+  10: { name: "Camp Champion", title: 'CAMP BOSS', color: 0x7a6a30, accent: 0xe8d060, hp: 340, dmg: 12, scale: 2.25 },
+  11: { name: 'Elah Champion', title: 'ELAH BOSS', color: 0x8a7a20, accent: 0xf0d040, hp: 360, dmg: 13, scale: 2.3 },
+  12: { name: 'Ridge Captain', title: 'RIDGE BOSS', color: 0x8a3a28, accent: 0xff8050, hp: 380, dmg: 13, scale: 2.3 },
+  13: { name: 'Pine Warden', title: 'PINE BOSS', color: 0x1a3a28, accent: 0x5aaa50, hp: 400, dmg: 14, scale: 2.35 },
+  14: { name: 'Dune Raider', title: 'DUNE BOSS', color: 0xc09040, accent: 0xffe080, hp: 420, dmg: 14, scale: 2.35 },
+  15: { name: 'Storm Champion', title: 'STORM BOSS', color: 0x3a4a70, accent: 0x80b0e0, hp: 440, dmg: 15, scale: 2.4 },
+  16: { name: 'Iron Captain', title: 'IRON BOSS', color: 0x3a3a48, accent: 0xa0a8b8, hp: 460, dmg: 15, scale: 2.4 },
+  17: { name: 'Banner Warlord', title: 'BANNER BOSS', color: 0xa02820, accent: 0xff6050, hp: 480, dmg: 16, scale: 2.45 },
+  18: { name: 'Ravine Horror', title: 'RAVINE BOSS', color: 0x201828, accent: 0x8866aa, hp: 500, dmg: 16, scale: 2.5 },
+  19: { name: "Giant's Herald", title: 'HERALD BOSS', color: 0x5a3028, accent: 0xe06030, hp: 560, dmg: 17, scale: 2.7 },
+  20: { name: 'Goliath', title: 'THE PHILISTINE GIANT', color: 0x5a6a7a, accent: 0xb8956a, hp: 480, dmg: 18, scale: 3.4 }
+};
+
+function getWorldBoss(id) {
+  const n = parseInt(id, 10) || 1;
+  return WORLD_BOSSES[n] || WORLD_BOSSES[1];
+}
+
 window.BIBLE_WORLD_DATA = BIBLE_WORLD_DATA;
 window.getBibleWorldData = getBibleWorldData;
 window.LEVELS = LEVELS;
@@ -345,3 +301,5 @@ window.getLevel = getLevel;
 window.getWorldTheme = getWorldTheme;
 window.enemySpawnsFor = enemySpawnsFor;
 window.MissionSystem = MissionSystem;
+window.WORLD_BOSSES = WORLD_BOSSES;
+window.getWorldBoss = getWorldBoss;

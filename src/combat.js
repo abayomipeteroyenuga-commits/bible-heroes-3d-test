@@ -7,7 +7,7 @@ class CombatSystem {
     this.shockwaves = [];
   }
 
-  spawnStone(origin, direction, isFaith = false) {
+  spawnStone(origin, direction, isFaith = false, extraDmg = 0) {
     // Visible stone projectile
     const geo = new THREE.SphereGeometry(0.38, 10, 8);
     const mat = new THREE.MeshBasicMaterial({
@@ -25,7 +25,7 @@ class CombatSystem {
       mesh,
       velocity: vel,
       life: 2.5,
-      damage: isFaith ? 80 : 30,
+      damage: (isFaith ? 80 : 30) + (extraDmg || 0),
       isFaith,
       hitZone: null
     });

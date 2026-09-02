@@ -23,6 +23,10 @@ class Player {
     this.score = 0;
     this.hasSling = true;
     this.stones = 12;
+    this.coins = 0;
+    this.hasBow = false;
+    this.arrows = 0;
+    this.shieldBonus = 0;
     this.invincible = 0;
     this.shieldActive = 0;
     this.attackCooldown = 0;
@@ -586,6 +590,12 @@ class Player {
         return;
       }
 
+      if (code === 'KeyC' || key === 'c') {
+        e.preventDefault();
+        if (window.Game && window.Game.craftArrows) window.Game.craftArrows();
+        return;
+      }
+
       if (code === 'KeyE' || key === 'e') {
         e.preventDefault();
         if (window.Game) window.Game.tryInteract();
@@ -829,7 +839,7 @@ class Player {
   tryFaithShield() {
     if (this.faith < 25 || this.shieldActive > 0) return;
     this.faith -= 25;
-    this.shieldActive = 4;
+    this.shieldActive = 4 + (this.shieldBonus || 0);
     this.shieldMesh.visible = true;
     if (window.UI) window.UI.showMessage('SHIELD OF FAITH!');
     if (window.AudioSystem) window.AudioSystem.faithShield();

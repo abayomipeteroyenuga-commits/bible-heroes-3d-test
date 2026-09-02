@@ -15,7 +15,7 @@ const UI = {
     { key: 'fortressBreaker', icon: '🏰', title: 'Fortress Challenger', desc: 'Complete World 7' },
     { key: 'battlefieldHero', icon: '⚔️', title: 'Battlefield Hero', desc: 'Complete World 8' },
     { key: 'goliathTerritory', icon: '👣', title: "Goliath's Territory", desc: 'Complete World 9' },
-    { key: 'giantSlayer', icon: '👑', title: 'Giant Slayer', desc: 'Defeat Goliath in World 10' }
+    { key: 'giantSlayer', icon: '👑', title: 'Giant Slayer', desc: 'Defeat Goliath in World 20' }
   ],
 
   init() {
@@ -48,14 +48,15 @@ const UI = {
       bossBar: document.getElementById('boss-bar'),
       bossText: document.getElementById('boss-text'),
       mobileControls: document.getElementById('mobile-controls'),
-      biblePanel: document.getElementById('bible-panel')
+      biblePanel: document.getElementById('bible-panel'),
+      shop: document.getElementById('shop-screen')
     };
   },
 
   show(screen) {
     const all = [
       'loading', 'mainMenu', 'intro', 'game', 'pause', 'victory',
-      'howto', 'settings', 'map', 'achievements', 'credits', 'confirmReset', 'confirmQuit'
+      'howto', 'settings', 'map', 'achievements', 'credits', 'shop', 'confirmReset', 'confirmQuit'
     ];
     all.forEach(s => {
       if (this.elements[s]) this.elements[s].classList.add('hidden');
@@ -97,7 +98,8 @@ const UI = {
   },
 
   getWorldInfo(worldId) {
-    const n = Math.max(1, Math.min(10, parseInt(worldId, 10) || 1));
+    const maxW = (window.SaveSystem && SaveSystem.MAX_LEVEL) || (window.LEVELS && LEVELS.length) || 20;
+    const n = Math.max(1, Math.min(maxW, parseInt(worldId, 10) || 1));
     const lv = (window.getLevel && window.getLevel(n)) ||
       (window.LEVELS && window.LEVELS[n - 1]) ||
       { id: n, name: 'World ' + n };
@@ -116,7 +118,8 @@ const UI = {
     const play = document.getElementById('btn-play');
     if (play && window.SaveSystem) {
       const data = SaveSystem.load();
-      const done = (data.completedLevels || []).length >= 10;
+      const maxW = SaveSystem.MAX_LEVEL || 20;
+      const done = (data.completedLevels || []).length >= maxW;
       const next = SaveSystem.getContinueLevel();
       play.textContent = done ? '🗺️ ADVENTURE MAP' : ('▶️ PLAY WORLD ' + next);
     }
@@ -261,6 +264,19 @@ const UI = {
         '<span class="ach-status">' + (unlocked ? '✓' : '🔒') + '</span>' +
       '</div>';
     }).join('');
+  },
+
+  renderShop(inv) {
+    const bag = inv || {};
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    set('shop-coins', bag.coins || 0);
+    set('shop-armor-lvl', bag.armorUpgrades || 0);
+    set('shop-shield-lvl', bag.shieldBonus || 0);
+    set('shop-bow-status', bag.hasBow ? 'OWNED' : 'LOCKED');
+    set('shop-arrows', bag.arrows || 0);
+    set('craft-sticks', bag.sticks || 0);
+    set('craft-feathers', bag.feathers || 0);
+    set('craft-flint', bag.flint || 0);
   }
 };
 

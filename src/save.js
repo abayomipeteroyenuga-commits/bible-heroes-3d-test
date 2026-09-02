@@ -1,7 +1,7 @@
 // Save System using localStorage
 const SaveSystem = {
   KEY: 'pastorAbayomiBibleHeroes_v1',
-  MAX_LEVEL: 10,
+  MAX_LEVEL: 20,
 
   defaultData() {
     return {
@@ -47,7 +47,17 @@ const SaveSystem = {
         criticalHits: 0,
         levelsCompleted: 0
       },
-      totalScore: 0
+      totalScore: 0,
+      inventory: {
+        coins: 0,
+        armorUpgrades: 0,
+        shieldBonus: 0,
+        hasBow: false,
+        arrows: 0,
+        sticks: 0,
+        feathers: 0,
+        flint: 0
+      }
     };
   },
 
@@ -69,6 +79,7 @@ const SaveSystem = {
       settings: { ...def.settings, ...((raw && raw.settings) || {}) },
       achievements: { ...def.achievements, ...((raw && raw.achievements) || {}) },
       stats: { ...def.stats, ...((raw && raw.stats) || {}) },
+      inventory: { ...def.inventory, ...((raw && raw.inventory) || {}) },
       bestScores: { ...((raw && raw.bestScores) || {}) },
       stars: { ...((raw && raw.stars) || {}) }
     };
@@ -81,7 +92,7 @@ const SaveSystem = {
     Object.keys(data.stars || {}).forEach(k => {
       const id = parseInt(k, 10);
       const s = parseInt(data.stars[k], 10) || 0;
-      if (id >= 1 && id <= 10 && s > 0 && completed.indexOf(id) === -1) completed.push(id);
+      if (id >= 1 && id <= this.MAX_LEVEL && s > 0 && completed.indexOf(id) === -1) completed.push(id);
     });
     data.completedLevels = this._cleanList(completed);
 
@@ -101,7 +112,7 @@ const SaveSystem = {
     for (let i = 0; i < unlocked.length; i++) {
       if (completed.indexOf(unlocked[i]) === -1) return unlocked[i];
     }
-    return Math.min(this.MAX_LEVEL, data.highestUnlockedLevel || 10);
+    return Math.min(this.MAX_LEVEL, data.highestUnlockedLevel || 1);
   },
 
   load() {
@@ -132,6 +143,91 @@ const SaveSystem = {
   isCompleted(level) {
     const n = parseInt(level, 10);
     return this.load().completedLevels.indexOf(n) !== -1;
+  },
+
+  getInventory() {
+    const data = this.load();
+    return data.inventory || this.defaultData().inventory;
+  },
+
+  setInventoryField(key, value) {
+    const data = this.load();
+    data.inventory = data.inventory || this.defaultData().inventory;
+    data.inventory[key] = value;
+    this.save(data);
+  },
+
+  addCoins(n) {
+    const data = this.load();
+    data.inventory = data.inventory || this.defaultData().inventory;
+    data.inventory.coins = Math.max(0, (data.inventory.coins || 0) + (parseInt(n, 10) || 0));
+    this.save(data);
+    return data.inventory.coins;
+  },
+
+  buyItem(item) {
+    const data = this.load();
+    const inv = data.inventory || this.defaultData().inventory;
+    data.inventory = inv;
+    const prices = { armor: 40, shield: 35, bow: 80, arrows: 20 };
+    const price = prices[item];
+    if (!price) return { ok: false, message: 'Unknown item' };
+    if (item === 'bow' && inv.hasBow) return { ok: false, message: 'You already own the bow' };
+    if ((inv.coins || 0) < price) return { ok: false, message: 'Not enough coins' };
+    inv.coins -= price;
+    if (item === 'armor') inv.armorUpgrades = (inv.armorUpgrades || 0) + 1;
+    if (item === 'shield') inv.shieldBonus = Math.min(4, (inv.shieldBonus || 0) + 1);
+    if (item === 'bow') {
+      inv.hasBow = true;
+      inv.arrows = (inv.arrows || 0) + 8;
+    }
+    if (item === 'arrows') inv.arrows = (inv.arrows || 0) + 10;
+    this.save(data);
+    const labels = {
+      armor: 'Armor upgraded!',
+      shield: 'Faith shield strengthened!',
+      bow: 'Bow unlocked!',
+      arrows: '+10 arrows'
+    };
+    return { ok: true, message: labels[item] || 'Purchased', inventory: inv };
+  },
+
+  addMaterial(kind, amount) {
+    const data = this.load();
+    data.inventory = data.inventory || this.defaultData().inventory;
+    const key = kind === 'stick' ? 'sticks' : kind === 'feather' ? 'feathers' : kind === 'flint' ? 'flint' : null;
+    if (!key) return data.inventory;
+    data.inventory[key] = Math.max(0, (data.inventory[key] || 0) + (parseInt(amount, 10) || 1));
+    this.save(data);
+    return data.inventory;
+  },
+
+  craftArrows() {
+    const data = this.load();
+    const inv = data.inventory || this.defaultData().inventory;
+    data.inventory = inv;
+    const sticks = inv.sticks || 0;
+    const feathers = inv.feathers || 0;
+    const flint = inv.flint || 0;
+    const batches = Math.min(sticks, feathers, flint);
+    if (batches < 1) {
+      return {
+        ok: false,
+        message: 'Need 1 stick, 1 feather and 1 flint',
+        inventory: inv
+      };
+    }
+    inv.sticks = sticks - batches;
+    inv.feathers = feathers - batches;
+    inv.flint = flint - batches;
+    inv.arrows = (inv.arrows || 0) + batches * 3;
+    this.save(data);
+    return {
+      ok: true,
+      message: 'Crafted ' + (batches * 3) + ' arrows!',
+      crafted: batches * 3,
+      inventory: inv
+    };
   },
 
   getContinueLevel() {
@@ -187,7 +283,7 @@ const SaveSystem = {
       data.achievements.adventureExplorer = true;
       data.achievements.valleyExplorer = true;
     }
-    if (data.completedLevels.indexOf(10) !== -1) {
+    if (data.completedLevels.indexOf(this.MAX_LEVEL) !== -1) {
       data.achievements.bibleHeroMaster = true;
     }
 

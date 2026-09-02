@@ -22,7 +22,7 @@ class World {
     this.createTerrain();
     if (this.hasFeature('camp') || this.hasFeature('outpost') || this.hasFeature('camps')) this.createCamp();
     this.createPath();
-    if (![4, 6, 7, 8, 10].includes(this.worldId)) this.createTreesAndRocks();
+    if (![4, 6, 7, 8, 14, 16, 17, 18, 20].includes(this.worldId)) this.createTreesAndRocks();
     if (this.hasFeature('forest')) this.createDenseForest();
     if (this.hasFeature('cliffs') || this.hasFeature('mountains')) this.createCliffs();
     if (this.hasFeature('cave')) this.createCaveShell();
@@ -33,8 +33,8 @@ class World {
     if (this.hasFeature('banners') || this.hasFeature('battlefield') || this.hasFeature('final')) this.createBanners();
     if (this.hasFeature('giantMarks') || this.hasFeature('territory')) this.createGiantMarks();
     if (this.worldId >= 6) this.createEnemyArea();
-    if ([8, 10].includes(this.worldId)) this.createBattlefield();
-    if (this.worldId === 10) this.createGoliathArena();
+    if ([8, 17, 20].includes(this.worldId)) this.createBattlefield();
+    if (this.worldId === 20) this.createGoliathArena();
     this.placeCollectibles();
     this.placeCheckpoints();
     this.createLandmark();
@@ -273,16 +273,17 @@ class World {
 
   createUniqueSetpieces() {
     const id = this.worldId;
-    if (id === 1) this.createShepherdValleySetpiece();
-    if (id === 2) this.createRockMazeSetpiece();
-    if (id === 3) this.createHiddenGroveSetpiece();
-    if (id === 4) this.createTorchCaveSetpiece();
-    if (id === 5) this.createMountainPassSetpiece();
-    if (id === 6) this.createOutpostSetpiece();
-    if (id === 7) this.createFortressSetpiece();
-    if (id === 8) this.createBattlefieldSetpiece();
-    if (id === 9) this.createGoliathTerritorySetpiece();
-    if (id === 10) this.createFinalBattleSetpiece();
+    if (id === 1 || id === 10) this.createShepherdValleySetpiece();
+    if (id === 2 || id === 14) this.createRockMazeSetpiece();
+    if (id === 3 || id === 13) this.createHiddenGroveSetpiece();
+    if (id === 4 || id === 18) this.createTorchCaveSetpiece();
+    if (id === 5 || id === 15) this.createMountainPassSetpiece();
+    if (id === 6 || id === 11) this.createOutpostSetpiece();
+    if (id === 7 || id === 16) this.createFortressSetpiece();
+    if (id === 8 || id === 17) this.createBattlefieldSetpiece();
+    if (id === 9 || id === 12) this.createGoliathTerritorySetpiece();
+    if (id === 19) this.createGoliathTerritorySetpiece();
+    if (id === 20) this.createFinalBattleSetpiece();
   }
 
   addInteractable(type, position, label, color = 0xf1c40f) {
@@ -420,6 +421,13 @@ class World {
     this.addCollectible('faith', new THREE.Vector3(3, 0.4, 16), 'Faith Energy');
     this.addCollectible('faith', new THREE.Vector3(-6, 0.4, -22), 'Faith Energy');
     this.addCollectible('faith', new THREE.Vector3(4, 0.4, -50), 'Faith Energy');
+
+    this.addCollectible('stick', new THREE.Vector3(-12, 0.4, 4), 'Stick');
+    this.addCollectible('stick', new THREE.Vector3(11, 0.4, -26), 'Stick');
+    this.addCollectible('feather', new THREE.Vector3(8, 0.4, 12), 'Feather');
+    this.addCollectible('feather', new THREE.Vector3(-11, 0.4, -16), 'Feather');
+    this.addCollectible('flint', new THREE.Vector3(-3, 0.4, -6), 'Flint');
+    this.addCollectible('flint', new THREE.Vector3(13, 0.4, -42), 'Flint');
   }
 
   addCollectible(type, position, label) {
@@ -444,6 +452,22 @@ class World {
       mesh = new THREE.Mesh(
         new THREE.BoxGeometry(0.45, 0.5, 0.2),
         new THREE.MeshLambertMaterial({ color: 0x3498db, emissive: 0x112244 })
+      );
+    } else if (type === 'stick') {
+      mesh = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.05, 0.07, 0.7, 6),
+        new THREE.MeshLambertMaterial({ color: 0x8b5a2b, emissive: 0x221100 })
+      );
+      mesh.rotation.z = 0.6;
+    } else if (type === 'feather') {
+      mesh = new THREE.Mesh(
+        new THREE.ConeGeometry(0.12, 0.45, 6),
+        new THREE.MeshLambertMaterial({ color: 0xf5f0e0, emissive: 0x333322 })
+      );
+    } else if (type === 'flint') {
+      mesh = new THREE.Mesh(
+        new THREE.DodecahedronGeometry(0.22, 0),
+        new THREE.MeshLambertMaterial({ color: 0x4a5560, emissive: 0x111122 })
       );
     } else {
       mesh = new THREE.Mesh(

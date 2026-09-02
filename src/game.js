@@ -72,6 +72,16 @@ const Game = {
       UI.populateAchievements(SaveSystem.load().achievements);
       UI.show('achievements');
     });
+    click('btn-shop', () => this.openShop());
+    click('btn-pause-shop', () => this.openShop());
+    click('btn-shop-back', () => {
+      if (this.state === 'paused') UI.show('pause');
+      else UI.show('mainMenu');
+    });
+    document.querySelectorAll('[data-shop-item]').forEach(btn => {
+      btn.addEventListener('click', () => this.buyShopItem(btn.getAttribute('data-shop-item')));
+    });
+    click('btn-craft-arrows', () => this.craftArrows());
     click('btn-settings', () => { this.loadSettings(); UI.show('settings'); });
     click('btn-skip-intro', () => this.startLevel(this.currentWorld));
     click('btn-bible', () => UI.showBibleMoment(this.currentWorld));
@@ -221,7 +231,7 @@ const Game = {
 
   playContinue() {
     const data = SaveSystem.load();
-    const allDone = (data.completedLevels || []).length >= 10;
+    const allDone = (data.completedLevels || []).length >= (SaveSystem.MAX_LEVEL || 20);
     if (allDone) {
       this.populateMap();
       UI.show('map');
@@ -233,7 +243,7 @@ const Game = {
 
   startWorld(id) {
     const n = parseInt(id, 10) || 1;
-    if (n < 1 || n > 10) return;
+    if (n < 1 || n > (SaveSystem.MAX_LEVEL || 20)) return;
     if (!SaveSystem.isUnlocked(n)) {
       if (window.UI) UI.showMessage('This world is locked. Complete earlier worlds first.', 2400);
       return;
@@ -375,6 +385,7 @@ const Game = {
     this.player.updateCamera(true);
     this.player.enableSling();
     this.player.stones = Math.max(this.player.stones, 5);
+    this.applyInventoryToPlayer();
     const data = SaveSystem.load();
     if (this.player && data.settings && data.settings.sensitivity) {
       this.player.lookSensitivity = data.settings.sensitivity;
@@ -603,6 +614,11 @@ const Game = {
     } else if (item.type === 'faith') {
       this.player.addFaith(30);
       UI.showMessage('⚡ +30 FAITH');
+    } else if (item.type === 'stick' || item.type === 'feather' || item.type === 'flint') {
+      if (window.SaveSystem) SaveSystem.addMaterial(item.type, 1);
+      const labels = { stick: '🪵 STICK', feather: '🪶 FEATHER', flint: '🪨 FLINT' };
+      UI.showMessage((labels[item.type] || item.type.toUpperCase()) + ' FOR CRAFTING');
+      this.applyInventoryToPlayer();
     }
     this.player.addScore(50);
     this.updateHUD();
@@ -647,9 +663,16 @@ const Game = {
       targetDir = new THREE.Vector3().subVectors(nearest, origin).normalize();
     }
     const isFaith = this.player.shieldActive > 0 || this.player.faith > 80;
-    if (this.combat && typeof this.combat.spawnStone === 'function') {
-      this.combat.spawnStone(origin, targetDir, isFaith);
+    let extraDmg = 0;
+    if (this.player.hasBow && (this.player.arrows || 0) > 0) {
+      this.player.arrows -= 1;
+      extraDmg = 18;
+      if (window.SaveSystem) SaveSystem.setInventoryField('arrows', this.player.arrows);
     }
+    if (this.combat && typeof this.combat.spawnStone === 'function') {
+      this.combat.spawnStone(origin, targetDir, isFaith, extraDmg);
+    }
+    this.updateHUD();
   },
 
   spawnParticles(pos, color, count) {
@@ -681,6 +704,73 @@ const Game = {
     this._spawningWave = false;
     if (window.UI) UI.showMessage('WAVE ' + (this._waveIndex + 1) + '!', 1600);
     if (window.AudioSystem) AudioSystem.battleMusic();
+  },
+
+  spawnWorldBoss() {
+    if (this.goliath) return;
+    const id = this.currentWorld || 1;
+    const spec = window.getWorldBoss ? window.getWorldBoss(id) : { name: 'World Boss', hp: 200 };
+    const theme = window.getWorldTheme ? window.getWorldTheme(id) : {};
+    const gp = theme.goliathPos || [0, 0, -55];
+    this.goliath = new WorldBoss(this.scene, new THREE.Vector3(gp[0], gp[1], gp[2]), id);
+    UI.showBoss(this.goliath.health, this.goliath.maxHealth);
+    const title = document.querySelector('#boss-hud .boss-name');
+    if (title) title.textContent = (spec.name || 'BOSS').toUpperCase();
+    const sub = document.querySelector('#boss-hud .boss-subtitle');
+    if (sub) sub.textContent = spec.title || 'WORLD BOSS';
+    UI.showMessage((spec.name || 'BOSS') + ' APPEARS!', 2800);
+    if (window.AudioSystem) {
+      AudioSystem.goliathAppear();
+      AudioSystem.battleMusic();
+    }
+  },
+
+  addCoins(n) {
+    const add = parseInt(n, 10) || 0;
+    if (!add) return;
+    if (this.player) this.player.coins = (this.player.coins || 0) + add;
+    if (window.SaveSystem) SaveSystem.addCoins(add);
+    this.updateHUD();
+  },
+
+  applyInventoryToPlayer() {
+    if (!this.player || !window.SaveSystem) return;
+    const inv = SaveSystem.getInventory();
+    this.player.coins = inv.coins || 0;
+    this.player.hasBow = !!inv.hasBow;
+    this.player.arrows = inv.arrows || 0;
+    this.player.sticks = inv.sticks || 0;
+    this.player.feathers = inv.feathers || 0;
+    this.player.flint = inv.flint || 0;
+    this.player.shieldBonus = inv.shieldBonus || 0;
+    this.player.maxArmor = 50 + (inv.armorUpgrades || 0) * 15;
+    this.player.armor = Math.max(this.player.armor, Math.min(this.player.maxArmor, 30 + (inv.armorUpgrades || 0) * 10));
+  },
+
+  openShop() {
+    if (window.UI) UI.renderShop(SaveSystem.getInventory());
+    UI.show('shop');
+  },
+
+  buyShopItem(item) {
+    const result = SaveSystem.buyItem(item);
+    if (window.UI) {
+      UI.showMessage(result.message, 1800);
+      UI.renderShop(SaveSystem.getInventory());
+    }
+    if (this.player && result.ok) this.applyInventoryToPlayer();
+    this.updateHUD();
+  },
+
+  craftArrows() {
+    if (!window.SaveSystem) return;
+    const result = SaveSystem.craftArrows();
+    if (window.UI) {
+      UI.showMessage(result.message, 2000);
+      UI.renderShop(SaveSystem.getInventory());
+    }
+    if (result.ok) this.applyInventoryToPlayer();
+    this.updateHUD();
   },
 
   spawnGoliath() {
@@ -736,7 +826,7 @@ const Game = {
       if (lv.achievement) SaveSystem.setAchievement(lv.achievement);
       if (this.enemiesDefeated >= 5) SaveSystem.setAchievement('guardianDefeater');
       if (this.goliathDefeated) SaveSystem.setAchievement('bossConqueror');
-      if (worldId === 10 && this.goliathDefeated) {
+      if (worldId === 20 && this.goliathDefeated) {
         SaveSystem.setAchievement('giantSlayer');
         SaveSystem.setAchievement('davidTheBrave');
       }
@@ -763,12 +853,12 @@ const Game = {
     const stars = (this._pendingVictory && this._pendingVictory.stars) || 1;
     const result = (this._pendingVictory && this._pendingVictory.result) || {};
     const lv = (window.LEVELS && window.LEVELS[worldId - 1]) || { name: 'World ' + worldId };
-    const nextId = result.nextLevel || (worldId < 10 ? worldId + 1 : null);
+    const nextId = result.nextLevel || (worldId < (SaveSystem.MAX_LEVEL || 20) ? worldId + 1 : null);
     const nextLv = nextId && window.LEVELS ? window.LEVELS[nextId - 1] : null;
 
     const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
     setTxt('victory-title', 'WORLD ' + worldId + ' COMPLETE!');
-    if (worldId >= 10) {
+    if (worldId >= (SaveSystem.MAX_LEVEL || 20)) {
       setTxt('victory-subtitle', 'THE BIBLE HEROES ADVENTURE IS COMPLETE!');
       setTxt('victory-reward', 'GIANT SLAYER!');
       setTxt('victory-badge', '🏅 GIANT SLAYER');
@@ -785,13 +875,13 @@ const Game = {
     if (starEl) starEl.textContent = '⭐'.repeat(stars);
     const unlockEl = document.querySelector('#victory-screen .unlock');
     if (unlockEl) {
-      unlockEl.textContent = worldId === 10
+      unlockEl.textContent = worldId >= (SaveSystem.MAX_LEVEL || 20)
         ? 'THE BIBLE HEROES ADVENTURE IS COMPLETE!'
         : ('NEXT WORLD: WORLD ' + nextId + (nextLv ? ' — ' + nextLv.name.toUpperCase() : ''));
     }
     const nextBtn = document.getElementById('btn-next-world');
     if (nextBtn) {
-      const showNext = worldId < 10 && nextId;
+      const showNext = worldId < (SaveSystem.MAX_LEVEL || 20) && nextId;
       nextBtn.classList.toggle('hidden', !showNext);
       if (showNext) nextBtn.textContent = 'PLAY WORLD ' + nextId;
     }
@@ -804,7 +894,7 @@ const Game = {
   continueNextWorld() {
     const completed = (this._pendingVictory && this._pendingVictory.worldId) || this.currentWorld || 1;
     const next = completed + 1;
-    if (next <= 10 && SaveSystem.isUnlocked(next)) {
+    if (next <= (SaveSystem.MAX_LEVEL || 20) && SaveSystem.isUnlocked(next)) {
       this.startWorld(next);
       return;
     }
@@ -821,6 +911,14 @@ const Game = {
       this.player.faith, this.player.maxFaith,
       this.player.score
     );
+    const coinsEl = document.getElementById('hud-coins');
+    if (coinsEl) coinsEl.textContent = String(this.player.coins || 0);
+    const ammoEl = document.getElementById('hud-ammo');
+    if (ammoEl) {
+      ammoEl.textContent = this.player.hasBow
+        ? ('BOW ' + (this.player.arrows || 0))
+        : ('SLING ' + (this.player.stones || 0));
+    }
   },
 
   pause() {

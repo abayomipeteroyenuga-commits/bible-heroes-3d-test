@@ -426,6 +426,7 @@ class ShadowGuardian {
         22
       );
       window.Game.player.addScore(100);
+      if (window.Game.addCoins) window.Game.addCoins(6);
       if (window.UI) window.UI.showMessage('ENEMY DEFEATED! +100');
       if (window.SaveSystem) SaveSystem.bumpStat('guardiansDefeated', 1);
     }
@@ -1040,5 +1041,136 @@ class Goliath {
   }
 }
 
+class WorldBoss {
+  constructor(scene, position, worldId) {
+    const spec = (window.getWorldBoss && window.getWorldBoss(worldId)) || {
+      name: 'World Boss', title: 'BOSS', color: 0x5a3a7a, accent: 0xc4a06a, hp: 200, dmg: 10, scale: 2
+    };
+    this.scene = scene;
+    this.spec = spec;
+    this.name = spec.name;
+    this.group = new THREE.Group();
+    this.health = spec.hp;
+    this.maxHealth = spec.hp;
+    this.damage = spec.dmg;
+    this.speed = 2.6;
+    this.state = 'CHASE';
+    this.attackCooldown = 1.4;
+    this.animTime = 0;
+    this.alive = true;
+    this.hitTimer = 0;
+    this.attackProgress = 0;
+    this.buildModel(spec);
+    this.group.position.copy(position);
+    this.group.scale.set(spec.scale || 2, spec.scale || 2, spec.scale || 2);
+    scene.add(this.group);
+  }
+
+  buildModel(spec) {
+    const body = new THREE.MeshLambertMaterial({ color: spec.color });
+    const accent = new THREE.MeshLambertMaterial({ color: spec.accent });
+    const skin = new THREE.MeshLambertMaterial({ color: 0xc4a07a });
+    this.root = new THREE.Group();
+    this.group.add(this.root);
+    const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.46, 1.05, 8), body);
+    torso.position.y = 1.15;
+    this.root.add(torso);
+    const chest = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.28, 0.5), accent);
+    chest.position.set(0, 1.35, 0.08);
+    this.root.add(chest);
+    this.head = new THREE.Mesh(new THREE.SphereGeometry(0.32, 10, 8), skin);
+    this.head.position.y = 1.85;
+    this.root.add(this.head);
+    const helm = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.34, 0.28, 8), accent);
+    helm.position.y = 2.08;
+    this.root.add(helm);
+    this.leftArm = new THREE.Group();
+    this.leftArm.position.set(-0.48, 1.4, 0);
+    this.root.add(this.leftArm);
+    this.leftArm.add(new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.12, 0.8, 6), skin));
+    this.rightArm = new THREE.Group();
+    this.rightArm.position.set(0.48, 1.4, 0);
+    this.root.add(this.rightArm);
+    const club = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.16, 1.1, 6), accent);
+    club.position.set(0, -0.55, 0.1);
+    this.rightArm.add(club);
+    this.leftLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.16, 0.8, 6), body);
+    this.leftLeg.position.set(-0.2, 0.4, 0);
+    this.root.add(this.leftLeg);
+    this.rightLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.16, 0.8, 6), body);
+    this.rightLeg.position.set(0.2, 0.4, 0);
+    this.root.add(this.rightLeg);
+  }
+
+  update(dt, playerPos) {
+    if (!this.alive) return;
+    this.animTime += dt;
+    if (this.attackCooldown > 0) this.attackCooldown -= dt;
+    if (this.hitTimer > 0) {
+      this.hitTimer -= dt;
+      return;
+    }
+    const to = playerPos.clone().sub(this.group.position);
+    to.y = 0;
+    const dist = to.length();
+    if (dist > 0.2) {
+      const dir = to.normalize();
+      this.group.position.addScaledVector(dir, this.speed * dt);
+      this.group.lookAt(playerPos.x, this.group.position.y, playerPos.z);
+    }
+    const walk = Math.sin(this.animTime * 6) * 0.35;
+    if (this.leftLeg) this.leftLeg.rotation.x = walk;
+    if (this.rightLeg) this.rightLeg.rotation.x = -walk;
+    if (this.leftArm) this.leftArm.rotation.x = -walk * 0.6;
+    if (this.rightArm) this.rightArm.rotation.x = walk * 0.6;
+    if (dist < 3.2 && this.attackCooldown <= 0) {
+      this.attackCooldown = 1.8;
+      this.rightArm.rotation.x = -1.2;
+      if (window.Game && window.Game.player) window.Game.player.takeDamage(this.damage);
+    }
+  }
+
+  takeDamage(amount) {
+    if (!this.alive) return;
+    this.health = Math.max(0, this.health - amount);
+    this.hitTimer = 0.25;
+    if (window.UI) window.UI.updateBoss(this.health, this.maxHealth);
+    if (window.Game) {
+      window.Game.spawnParticles(this.group.position.clone().add(new THREE.Vector3(0, 2, 0)), this.spec.accent, 8);
+    }
+    if (this.health <= 0) this.defeat();
+  }
+
+  defeat() {
+    this.alive = false;
+    if (window.UI) {
+      window.UI.showMessage(this.name.toUpperCase() + ' DEFEATED!');
+      window.UI.hideBoss();
+    }
+    if (window.Game) {
+      window.Game.addCoins(25);
+      if (window.Game.player) window.Game.player.addScore(250);
+    }
+    let t = 0;
+    const fall = setInterval(() => {
+      t += 0.05;
+      this.group.rotation.x = Math.min(1.2, t * 1.6);
+      this.group.position.y -= 0.06;
+      this.group.traverse(c => {
+        if (c.material) {
+          c.material.transparent = true;
+          c.material.opacity = Math.max(0, 1 - t);
+        }
+      });
+      if (t >= 1) {
+        clearInterval(fall);
+        this.scene.remove(this.group);
+        if (window.Game) window.Game.onBossDefeated();
+      }
+    }, 40);
+  }
+}
+
 window.ShadowGuardian = ShadowGuardian;
 window.Goliath = Goliath;
+window.WorldBoss = WorldBoss;

@@ -59,7 +59,7 @@ You can also open `index.html` directly in some browsers, but a local server is 
 ```bash
 git init
 git add .
-git commit -m "Pastor Abayomi Bible Stories - David and Goliath 10-World Adventure"
+git commit -m "Pastor Abayomi Bible Stories - David and Goliath 20-World Adventure"
 git branch -M main
 git remote add origin https://github.com/YOUR_USERNAME/bible-heroes-adventure.git
 git push -u origin main
