@@ -46,7 +46,7 @@ class ShadowGuardian {
     this.damage = stats.damage != null ? stats.damage : 5;
     this.speed = stats.speed != null ? stats.speed : 3.2;
     this.state = 'IDLE';
-    this.detectRange = 12;
+    this.detectRange = stats.detect != null ? stats.detect : 12;
     this.attackRange = 2.2;
     this.attackCooldown = 0;
     this.patrolTarget = null;
@@ -344,6 +344,7 @@ class ShadowGuardian {
           this.attackProgress = 0;
           this.attackHitDone = false;
           this.attackCooldown = 1.4;
+          if (window.AudioSystem) AudioSystem.swing();
         }
       } else if (dist < this.detectRange) {
         this.state = 'CHASE';
@@ -389,6 +390,7 @@ class ShadowGuardian {
     this.state = 'HIT';
     this.hitTimer = 0;
     this.updateHealthBar();
+    if (window.Game && window.Game.addCameraShake) window.Game.addCameraShake(0.07, 0.12);
 
     // Flash materials
     this.group.traverse(c => {
@@ -429,6 +431,7 @@ class ShadowGuardian {
       if (window.Game.addCoins) window.Game.addCoins(6);
       if (window.UI) window.UI.showMessage('ENEMY DEFEATED! +100');
       if (window.SaveSystem) SaveSystem.bumpStat('guardiansDefeated', 1);
+      if (window.AudioSystem) AudioSystem.enemyDefeat();
     }
 
     // Fall back + fade
@@ -939,6 +942,7 @@ class Goliath {
     this.state = 'STRIKE';
     this.attackProgress = 0;
     this.attackHitDone = false;
+    if (window.AudioSystem) AudioSystem.bossSwing();
     this._pendingAttackDamage = this.damage * (this.phase === 3 ? 1.25 : 1);
     this._pendingAttackMsg = 'GROUND STRIKE!';
     this._pendingAttackRange = 9;
@@ -959,6 +963,7 @@ class Goliath {
     this.state = 'CHARGE';
     this.attackProgress = 0;
     this.attackHitDone = false;
+    if (window.AudioSystem) AudioSystem.bossSwing();
     this._pendingAttackDamage = this.damage * (this.phase === 3 ? 1.4 : 1.2);
     this._pendingAttackMsg = 'CHARGE!';
     this._pendingAttackRange = 6;
@@ -978,6 +983,7 @@ class Goliath {
     else if (hitZone === 'ARMOR') dmg *= 0.85;
     if (hitZone === this.vulnerable) {
       dmg *= 2.5;
+      if (window.Game && window.Game.addCameraShake) window.Game.addCameraShake(0.22, 0.28);
       if (window.UI) window.UI.showMessage('CRITICAL HIT!', 900);
       if (window.SaveSystem) {
         SaveSystem.bumpStat('criticalHits', 1);
@@ -1018,6 +1024,8 @@ class Goliath {
       if (window.UI) {
         window.UI.showMessage('GOLIATH DEFEATED!');
         window.UI.hideBoss();
+        if (window.SaveSystem) SaveSystem.bumpStat('bossesDefeated', 1);
+        if (window.AudioSystem) AudioSystem.enemyDefeat();
       }
     }
     // Safe fall + fade
@@ -1053,9 +1061,13 @@ class WorldBoss {
     this.health = spec.hp;
     this.maxHealth = spec.hp;
     this.damage = spec.dmg;
-    this.speed = 2.6;
-    this.state = 'CHASE';
-    this.attackCooldown = 1.4;
+    this.speed = spec.speed || 2.6;
+    this.baseSpeed = this.speed;
+    this.state = 'IDLE';
+    this.phase = 1;
+    this.detectRange = 20;
+    this.attackCooldown = 1.6;
+    this.windup = 0;
     this.animTime = 0;
     this.alive = true;
     this.hitTimer = 0;
@@ -1110,23 +1122,50 @@ class WorldBoss {
       this.hitTimer -= dt;
       return;
     }
+    const ratio = this.health / Math.max(1, this.maxHealth);
+    if (ratio <= 0.3) {
+      this.phase = 3;
+      this.speed = this.baseSpeed * 1.35;
+    } else if (ratio <= 0.6) {
+      this.phase = 2;
+      this.speed = this.baseSpeed * 1.18;
+    } else {
+      this.phase = 1;
+      this.speed = this.baseSpeed;
+    }
     const to = playerPos.clone().sub(this.group.position);
     to.y = 0;
     const dist = to.length();
-    if (dist > 0.2) {
+    if (dist > this.detectRange && this.state !== 'ATTACK') {
+      this.state = 'IDLE';
+      return;
+    }
+    this.state = dist < 3.4 ? 'ATTACK' : 'CHASE';
+    if (dist > 0.25) {
       const dir = to.normalize();
       this.group.position.addScaledVector(dir, this.speed * dt);
       this.group.lookAt(playerPos.x, this.group.position.y, playerPos.z);
     }
-    const walk = Math.sin(this.animTime * 6) * 0.35;
+    const walk = Math.sin(this.animTime * (5 + this.phase)) * 0.35;
     if (this.leftLeg) this.leftLeg.rotation.x = walk;
     if (this.rightLeg) this.rightLeg.rotation.x = -walk;
     if (this.leftArm) this.leftArm.rotation.x = -walk * 0.6;
     if (this.rightArm) this.rightArm.rotation.x = walk * 0.6;
-    if (dist < 3.2 && this.attackCooldown <= 0) {
-      this.attackCooldown = 1.8;
-      this.rightArm.rotation.x = -1.2;
-      if (window.Game && window.Game.player) window.Game.player.takeDamage(this.damage);
+    if (this.windup > 0) {
+      this.windup -= dt;
+      if (this.rightArm) this.rightArm.rotation.x = -1.35;
+      if (this.windup <= 0 && dist < 3.6) {
+        if (window.Game && window.Game.player) window.Game.player.takeDamage(this.damage);
+        if (window.Game && window.Game.addCameraShake) window.Game.addCameraShake(0.2, 0.2);
+      }
+      return;
+    }
+    const cd = this.phase === 3 ? 1.05 : this.phase === 2 ? 1.35 : 1.7;
+    if (dist < 3.3 && this.attackCooldown <= 0) {
+      this.attackCooldown = cd;
+      this.windup = this.phase === 3 ? 0.22 : 0.38;
+      if (window.AudioSystem) AudioSystem.bossSwing();
+      if (window.UI) window.UI.showMessage(this.phase === 3 ? 'FINAL STRIKE!' : 'BOSS ATTACK!', 700);
     }
   }
 
@@ -1134,6 +1173,7 @@ class WorldBoss {
     if (!this.alive) return;
     this.health = Math.max(0, this.health - amount);
     this.hitTimer = 0.25;
+    if (window.Game && window.Game.addCameraShake) window.Game.addCameraShake(0.18, 0.22);
     if (window.UI) window.UI.updateBoss(this.health, this.maxHealth);
     if (window.Game) {
       window.Game.spawnParticles(this.group.position.clone().add(new THREE.Vector3(0, 2, 0)), this.spec.accent, 8);
@@ -1151,6 +1191,8 @@ class WorldBoss {
       window.Game.addCoins(25);
       if (window.Game.player) window.Game.player.addScore(250);
     }
+    if (window.SaveSystem) SaveSystem.bumpStat('bossesDefeated', 1);
+    if (window.AudioSystem) AudioSystem.enemyDefeat();
     let t = 0;
     const fall = setInterval(() => {
       t += 0.05;

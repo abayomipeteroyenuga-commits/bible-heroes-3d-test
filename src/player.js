@@ -39,13 +39,15 @@ class Player {
     this.animTime = 0;
     this.keys = {};
     this.mouse = { x: 0, y: 0, locked: false };
-    this.cameraAngle = 0;
-    this.cameraPitch = 1.15;
-    this.cameraDistance = 16;
-    this.cameraMinDist = 10;
-    this.cameraMaxDist = 26;
-    this.cameraHeight = 16;
-    this.cameraBack = 5.5;
+    this.cameraAngle = Math.PI;
+    this.cameraPitch = 0.28;
+    this.cameraDistance = 8.2;
+    this.cameraMinDist = 5.2;
+    this.cameraMaxDist = 13.5;
+    this.cameraHeight = 8.2;
+    this.cameraBack = 8.2;
+    this._camPos = null;
+    this._camLook = null;
     this.lookSensitivity = 1;
     this._orbiting = false;
     this._lastOrbitX = 0;
@@ -587,12 +589,6 @@ class Player {
         return;
       }
 
-      if (code === 'Space' || key === ' ') {
-        e.preventDefault();
-        this.tryJump();
-        return;
-      }
-
       if (code === 'KeyC' || key === 'c') {
         e.preventDefault();
         if (window.Game && window.Game.craftArrows) window.Game.craftArrows();
@@ -622,9 +618,9 @@ class Player {
     };
 
     this._orbitByDelta = (dx, dy) => {
-      // Overhead camera: drag zooms height, does not flip to a side view
-      this.cameraHeight = Math.max(10, Math.min(26, (this.cameraHeight || 16) + dy * 0.04));
-      this.cameraDistance = this.cameraHeight;
+      const s = this.lookSensitivity || 1;
+      this.cameraAngle -= dx * 0.0048 * s;
+      this.cameraPitch = Math.max(0.12, Math.min(0.62, this.cameraPitch + dy * 0.0032 * s));
     };
 
     this._onMouseMove = (e) => {
@@ -662,11 +658,11 @@ class Player {
     this._onWheel = (e) => {
       if (!window.Game || window.Game.state !== 'playing') return;
       e.preventDefault();
-      this.cameraHeight = Math.max(
-        this.cameraMinDist || 10,
-        Math.min(this.cameraMaxDist || 26, (this.cameraHeight || 16) + (e.deltaY > 0 ? 1.1 : -1.1))
+      this.cameraDistance = Math.max(
+        this.cameraMinDist || 5.2,
+        Math.min(this.cameraMaxDist || 13.5, (this.cameraDistance || 8.2) + (e.deltaY > 0 ? 0.55 : -0.55))
       );
-      this.cameraDistance = this.cameraHeight;
+      this.cameraHeight = this.cameraDistance;
     };
 
     this._onContextMenu = (e) => {
@@ -763,7 +759,6 @@ class Player {
       this._mobileHandlers.push({ btn: sprintBtn, handler: down, extra: { up } });
     }
     const map = {
-      'btn-jump': () => this.tryJump(),
       'btn-attack': () => this.tryAttack(),
       'btn-special': () => this.tryFaithShield(),
       'btn-interact': () => { if (window.Game) window.Game.tryInteract(); },
@@ -825,15 +820,7 @@ class Player {
     this.keys = {};
   }
 
-  tryJump() {
-    if (this.onGround && this.canJump) {
-      this.velocity.y = this.jumpForce;
-      this.onGround = false;
-      this.canJump = false;
-      this.state = 'JUMP';
-      this.anim.walkCycle = 0;
-    }
-  }
+  tryJump() {}
 
   // Same range as Game.spawnProjectile auto-aim (nearest living enemy / Goliath)
   hasEnemyInAttackRange(range = 25) {
@@ -865,6 +852,7 @@ class Player {
     if (window.Game && typeof window.Game.spawnProjectile === 'function') {
       window.Game.spawnProjectile();
     }
+    if (window.Game && window.Game.addCameraShake) window.Game.addCameraShake(0.08, 0.16);
   }
 
   tryFaithShield() {
@@ -876,6 +864,7 @@ class Player {
     if (window.AudioSystem) window.AudioSystem.faithShield();
     if (window.SaveSystem) SaveSystem.bumpStat('faithShieldUses', 1);
     if (window.Game) window.Game.updateHUD();
+    if (window.Game && window.Game.addCameraShake) window.Game.addCameraShake(0.1, 0.2);
   }
 
   takeDamage(amount) {
@@ -893,6 +882,7 @@ class Player {
       this.anim.hitTimer = 0;
       this.invincible = 0.8;
       this.pendingProjectile = false;
+      if (window.Game && window.Game.addCameraShake) window.Game.addCameraShake(0.28, 0.32);
       if (window.AudioSystem) window.AudioSystem.damage();
       if (this.life > 0 && this.life <= this.maxLife * 0.25 && window.UI) {
         window.UI.showMessage('LOW HEALTH!', 1500);
@@ -990,7 +980,13 @@ class Player {
       this.velocity.x = this.direction.x * moveSpeed;
       this.velocity.z = this.direction.z * moveSpeed;
       if (this.onGround) this.state = isRunning ? 'RUN' : 'WALK';
-      this.cameraAngle = 0;
+      if (!this.mouse.locked && !this._orbiting) {
+        const behind = this.facing + Math.PI;
+        let diff = behind - this.cameraAngle;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        this.cameraAngle += diff * Math.min(1, dt * 2.6);
+      }
     } else {
       this.velocity.x *= 0.75;
       this.velocity.z *= 0.75;
@@ -1005,6 +1001,9 @@ class Player {
     this.group.position.z += this.velocity.z * dt;
 
     if (this.group.position.y <= 0) {
+      if (!this.onGround && this.velocity.y < -6 && window.Game && window.Game.addCameraShake) {
+        window.Game.addCameraShake(0.09, 0.14);
+      }
       this.group.position.y = 0;
       this.velocity.y = 0;
       this.onGround = true;
@@ -1259,14 +1258,65 @@ class Player {
     }
   }
 
-  updateCamera() {
+  updateCamera(snap) {
     if (!this.camera || !this.group) return;
     const pos = this.group.position;
-    const height = Math.max(10, Math.min(26, this.cameraHeight || 16));
-    const back = this.cameraBack != null ? this.cameraBack : 5.5;
-    this.camera.position.set(pos.x, pos.y + height, pos.z + back);
+    const distIdeal = Math.max(this.cameraMinDist || 5.2, Math.min(this.cameraMaxDist || 13.5, this.cameraDistance || 8.2));
+    const pitch = Math.max(0.12, Math.min(0.62, this.cameraPitch || 0.28));
+    const yaw = this.cameraAngle;
+    const headY = pos.y + 1.48;
+    const look = new THREE.Vector3(
+      pos.x - Math.sin(yaw) * 1.15,
+      headY,
+      pos.z - Math.cos(yaw) * 1.15
+    );
+    let dist = distIdeal;
+    const desired = new THREE.Vector3(
+      look.x + Math.sin(yaw) * dist * Math.cos(pitch),
+      look.y + Math.sin(pitch) * dist + 0.35,
+      look.z + Math.cos(yaw) * dist * Math.cos(pitch)
+    );
+    if (this.scene && THREE.Raycaster) {
+      if (!this._camRay) this._camRay = new THREE.Raycaster();
+      const from = look.clone();
+      const path = desired.clone().sub(from);
+      const len = path.length();
+      if (len > 0.2) {
+        this._camRay.set(from, path.normalize());
+        this._camRay.far = len;
+        const hits = this._camRay.intersectObjects(this.scene.children, true);
+        for (let i = 0; i < hits.length; i++) {
+          const h = hits[i];
+          if (!h.object || !h.object.visible) continue;
+          let skip = false;
+          let o = h.object;
+          while (o) {
+            if (o === this.group) { skip = true; break; }
+            o = o.parent;
+          }
+          if (skip) continue;
+          if (h.object.geometry && h.object.geometry.type === 'SphereGeometry' && (h.object.geometry.parameters.radius || 0) > 40) continue;
+          const safe = Math.max(this.cameraMinDist * 0.72, h.distance - 0.45);
+          if (safe < dist) {
+            dist = safe;
+            desired.copy(from).addScaledVector(path, dist);
+          }
+          break;
+        }
+      }
+    }
+    if (!this._camPos) this._camPos = desired.clone();
+    if (!this._camLook) this._camLook = look.clone();
+    if (snap) {
+      this._camPos.copy(desired);
+      this._camLook.copy(look);
+    } else {
+      this._camPos.lerp(desired, 0.14);
+      this._camLook.lerp(look, 0.18);
+    }
     this.camera.up.set(0, 1, 0);
-    this.camera.lookAt(pos.x, pos.y + 0.3, pos.z);
+    this.camera.position.copy(this._camPos);
+    this.camera.lookAt(this._camLook);
   }
 
   getPosition() {

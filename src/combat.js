@@ -104,11 +104,15 @@ class CombatSystem {
           else if (localX < -0.45) zone = 'SHIELD';
           goliath.takeDamage(p.damage, zone);
           hit = true;
-          if (window.AudioSystem) AudioSystem.impact();
+          if (window.AudioSystem) {
+            AudioSystem.impact();
+            AudioSystem.bossHit();
+          }
         }
       }
 
       if (p.life <= 0 || hit || p.mesh.position.y < 0) {
+        if (!hit && window.AudioSystem) AudioSystem.miss();
         this.scene.remove(p.mesh);
         this.projectiles.splice(i, 1);
       }

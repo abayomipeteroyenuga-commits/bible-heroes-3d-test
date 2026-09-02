@@ -1,7 +1,7 @@
 // Save System using localStorage
 const SaveSystem = {
   KEY: 'pastorAbayomiBibleHeroes_v1',
-  MAX_LEVEL: 20,
+  MAX_LEVEL: 40,
 
   defaultData() {
     return {
@@ -43,6 +43,7 @@ const SaveSystem = {
       },
       stats: {
         guardiansDefeated: 0,
+        bossesDefeated: 0,
         faithShieldUses: 0,
         criticalHits: 0,
         levelsCompleted: 0

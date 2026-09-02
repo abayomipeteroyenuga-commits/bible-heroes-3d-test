@@ -75,10 +75,19 @@ const BIBLE_WORLD_DATA = {
 
 function getBibleWorldData(id) {
   const n = parseInt(id, 10) || 1;
-  return BIBLE_WORLD_DATA[n] || BIBLE_WORLD_DATA[1];
+  if (BIBLE_WORLD_DATA[n]) return BIBLE_WORLD_DATA[n];
+  const base = BIBLE_WORLD_DATA[((n - 1) % 10) + 1] || BIBLE_WORLD_DATA[1];
+  return {
+    event: 'Faith Journey — World ' + n,
+    passage: base.passage,
+    story: base.story,
+    verse: base.verse,
+    lesson: base.lesson,
+    prayer: base.prayer
+  };
 }
 
-// 20 unique David vs Goliath adventure worlds
+// 40 unique David vs Goliath adventure worlds
 const WORLD_META = [
   { id: 1,  name: "Shepherd's Valley", icon: '🌿', achievement: 'valleyExplorer', sky: 0x87b8e0, fog: 0x87b8e0, ground: 0x5a8f4a, path: 0xb8956a, ambient: 0xfff5e0, sun: 0xffe8c0, dark: false, features: ['camp','trees','rocks','path'], landmark: 'hut' },
   { id: 2,  name: 'Rocky Wilderness', icon: '🪨', achievement: 'rockyWilderness', sky: 0xb8a090, fog: 0xb8a090, ground: 0x8a7a68, path: 0x6e5b48, ambient: 0xffe0c0, sun: 0xffcc88, dark: false, features: ['rocks','cliffs','path'], landmark: 'arch' },
@@ -99,7 +108,27 @@ const WORLD_META = [
   { id: 17, name: 'Banner Plains', icon: '🚩', achievement: 'bannerKeeper', sky: 0xc05040, fog: 0xb04838, ground: 0x6a5040, path: 0x8a6048, ambient: 0xffb090, sun: 0xff8060, dark: false, features: ['battlefield','banners','path','camps'], landmark: 'camp' },
   { id: 18, name: 'Shadow Ravine', icon: '🌑', achievement: 'ravineWalker', sky: 0x201828, fog: 0x2a2030, ground: 0x2a2430, path: 0x1a1820, ambient: 0x665577, sun: 0x8866aa, dark: true, features: ['cave','cliffs','crystals','rocks'], landmark: 'crystal' },
   { id: 19, name: "Giant's Approach", icon: '👣', achievement: 'goliathTerritory', sky: 0x6a4038, fog: 0x5a3830, ground: 0x5a4030, path: 0x4a3028, ambient: 0xc09070, sun: 0xe07040, dark: false, features: ['territory','giantMarks','rocks','path','arena'], landmark: 'footprint' },
-  { id: 20, name: 'Valley of the Giant', icon: '👑', achievement: 'giantSlayer', sky: 0x4a3060, fog: 0x503848, ground: 0x4a4030, path: 0x6a5040, ambient: 0xc8a0d0, sun: 0xff8060, dark: false, features: ['final','battlefield','banners','arena','mountains'], landmark: 'arena' }
+  { id: 20, name: 'Valley of the Giant', icon: '👑', achievement: 'giantSlayer', sky: 0x4a3060, fog: 0x503848, ground: 0x4a4030, path: 0x6a5040, ambient: 0xc8a0d0, sun: 0xff8060, dark: false, features: ['final','battlefield','banners','arena','mountains'], landmark: 'arena' },
+  { id: 21, name: 'Olive Grove', icon: '🫒', achievement: 'oliveWalker', sky: 0xb8c070, fog: 0xa8b060, ground: 0x6a8a40, path: 0x8a7a48, ambient: 0xf0f0c0, sun: 0xffe080, dark: false, features: ['trees','path','rocks'], landmark: 'shrine' },
+  { id: 22, name: 'Cedar Heights', icon: '🌲', achievement: 'cedarClimber', sky: 0x508070, fog: 0x609080, ground: 0x2a5a38, path: 0x4a3a28, ambient: 0xb0d0b8, sun: 0xd0e8a0, dark: false, features: ['forest','mountains','path'], landmark: 'bridge' },
+  { id: 23, name: 'Silent Marsh', icon: '🌿', achievement: 'marshScout', sky: 0x6a8070, fog: 0x7a9080, ground: 0x3a5a48, path: 0x4a4a38, ambient: 0xc0d8c8, sun: 0xd0e0b0, dark: false, features: ['stream','rocks','path'], landmark: 'bridge' },
+  { id: 24, name: 'Copper Mines', icon: '🔶', achievement: 'mineExplorer', sky: 0x8a6040, fog: 0x7a5038, ground: 0x6a4030, path: 0x5a3020, ambient: 0xe0b080, sun: 0xffa050, dark: true, features: ['cave','rocks','torches'], landmark: 'crystal' },
+  { id: 25, name: 'Watchtower Ridge', icon: '🗼', achievement: 'towerScout', sky: 0x90a8c0, fog: 0xa0b0c0, ground: 0x6a7060, path: 0x8a8070, ambient: 0xe0e8f0, sun: 0xffe8c0, dark: false, features: ['towers','cliffs','path'], landmark: 'tower' },
+  { id: 26, name: 'Sandstone Canyon', icon: '🏜️', achievement: 'canyonRunner', sky: 0xe0a060, fog: 0xd09050, ground: 0xc08040, path: 0xa06830, ambient: 0xffd090, sun: 0xffb050, dark: false, features: ['cliffs','rocks','path'], landmark: 'arch' },
+  { id: 27, name: 'Moonlit Camp', icon: '🌙', achievement: 'nightScout', sky: 0x203050, fog: 0x283858, ground: 0x2a3a38, path: 0x3a3a30, ambient: 0x88a0c8, sun: 0xb0c8e8, dark: true, features: ['camp','tents','path'], landmark: 'hut' },
+  { id: 28, name: 'Broken Wall', icon: '🧱', achievement: 'wallBreaker', sky: 0x8a8a90, fog: 0x7a7a80, ground: 0x6a6a60, path: 0x5a5a50, ambient: 0xd0d0d8, sun: 0xf0e0c0, dark: false, features: ['walls','gates','path'], landmark: 'gate' },
+  { id: 29, name: 'Lion Path', icon: '🦁', achievement: 'lionPath', sky: 0xd8a050, fog: 0xc89040, ground: 0x8a7040, path: 0x6a5030, ambient: 0xffe0a0, sun: 0xffc060, dark: false, features: ['path','rocks','cliffs'], landmark: 'arch' },
+  { id: 30, name: 'Still Waters', icon: '🌊', achievement: 'stillWaters', sky: 0x60a0c0, fog: 0x70b0c8, ground: 0x3a7a58, path: 0xb0a078, ambient: 0xd0f0ff, sun: 0xfff0d0, dark: false, features: ['stream','bridge','path'], landmark: 'bridge' },
+  { id: 31, name: 'Threshing Floor', icon: '🌾', achievement: 'threshingHero', sky: 0xe0c870, fog: 0xd0b860, ground: 0x9aaa48, path: 0xc8b070, ambient: 0xfff4c8, sun: 0xffe070, dark: false, features: ['path','camp','rocks'], landmark: 'hut' },
+  { id: 32, name: 'Hidden Brook', icon: '🪨', achievement: 'hiddenBrook', sky: 0x70b0b8, fog: 0x80c0c0, ground: 0x4a7a60, path: 0xc0b090, ambient: 0xd8f0f0, sun: 0xfff0c8, dark: false, features: ['stream','rocks','path'], landmark: 'bridge' },
+  { id: 33, name: 'Ashen Field', icon: '🔥', achievement: 'ashenWalker', sky: 0xa05040, fog: 0x904838, ground: 0x5a4030, path: 0x4a3020, ambient: 0xffb090, sun: 0xff7040, dark: false, features: ['battlefield','banners','path'], landmark: 'camp' },
+  { id: 34, name: 'Bronze Gate', icon: '🚪', achievement: 'bronzeBreaker', sky: 0x8a7048, fog: 0x7a6038, ground: 0x6a5030, path: 0x5a4028, ambient: 0xe0c080, sun: 0xffb060, dark: false, features: ['walls','gates','towers','path'], landmark: 'gate' },
+  { id: 35, name: 'High Place', icon: '⛰️', achievement: 'highPlace', sky: 0xa0c8e8, fog: 0xb0d0e8, ground: 0x7a8a80, path: 0x9a8a70, ambient: 0xe8f4ff, sun: 0xfff4d8, dark: false, features: ['mountains','bridge','path'], landmark: 'bridge' },
+  { id: 36, name: 'Night Watch', icon: '🕯️', achievement: 'nightWatch', sky: 0x181828, fog: 0x222238, ground: 0x2a2430, path: 0x1a1820, ambient: 0x7766aa, sun: 0xaa88ff, dark: true, features: ['cave','torches','rocks'], landmark: 'crystal' },
+  { id: 37, name: 'War Camp East', icon: '⚔️', achievement: 'eastCamp', sky: 0xc06040, fog: 0xb05838, ground: 0x6a5040, path: 0x8a6048, ambient: 0xffc0a0, sun: 0xff9050, dark: false, features: ['battlefield','camps','banners','path'], landmark: 'camp' },
+  { id: 38, name: 'Philistine Road', icon: '🛤️', achievement: 'roadRunner', sky: 0xc08060, fog: 0xb07050, ground: 0x8a6048, path: 0x6a4838, ambient: 0xffd0b0, sun: 0xffa060, dark: false, features: ['path','rocks','outpost'], landmark: 'tower' },
+  { id: 39, name: "Champion's Gate", icon: '🛡️', achievement: 'championGate', sky: 0x5a3040, fog: 0x4a2838, ground: 0x4a3030, path: 0x3a2020, ambient: 0xc08090, sun: 0xff7060, dark: false, features: ['walls','arena','banners','path'], landmark: 'gate' },
+  { id: 40, name: 'Final Valley', icon: '👑', achievement: 'bibleHeroMaster', sky: 0x3a2048, fog: 0x402838, ground: 0x3a3028, path: 0x5a4038, ambient: 0xc090d0, sun: 0xff7050, dark: false, features: ['final','battlefield','banners','arena','mountains'], landmark: 'arena' }
 ];
 
 const LEVELS = WORLD_META.map(w => ({ id: w.id, name: w.name, icon: w.icon, achievement: w.achievement }));
@@ -119,33 +148,36 @@ function layoutEnemies(count) {
 }
 
 const WORLD_THEMES = {};
+function guardianCountFor(n) {
+  const early = [15, 18, 21, 24, 27, 30, 33, 36, 40, 45];
+  if (n <= 10) return early[n - 1];
+  return 45 + (n - 10) * 2;
+}
+
 WORLD_META.forEach(w => {
   const n = w.id;
-  const count = 9 + n; // World 1 = 10, then +1 each world
+  const count = guardianCountFor(n);
   const pts = layoutEnemies(count);
   const theme = {
     sky: w.sky, fog: w.fog, ground: w.ground, path: w.path,
     ambient: w.ambient, sun: w.sun, dark: w.dark,
     features: w.features, landmark: w.landmark,
-    objective: n === 20 ? 'Defeat the guards, then Goliath' : ('Defeat ' + count + ' Shadow Guardians'),
+    objective: 'Defeat ' + count + ' Shadow Guardians, then the world boss',
     collectibles: [[-14, 6], [14, -12], [-10, -28], [8, -44]],
     enemyCount: count,
-    enemyHp: 18 + n * 3,
-    enemyDmg: 4 + Math.floor(n / 4),
-    enemySpd: 2.7 + n * 0.04,
+    enemyHp: 16 + n * 2,
+    enemyDmg: 4 + Math.floor(n / 5),
+    enemySpd: 2.5 + n * 0.035,
+    enemyDetect: 11 + Math.min(8, Math.floor(n / 5)),
     needEnemies: count,
-    spawnGoliath: n === 20,
-    goliathHp: n === 20 ? 480 : 0,
+    spawnGoliath: true,
+    goliathHp: 150 + n * 18,
     goliathPos: [0, 0, -72]
   };
-  if (count >= 16) {
-    const waves = [];
-    const size = 5;
-    for (let i = 0; i < pts.length; i += size) waves.push(pts.slice(i, i + size));
-    theme.waves = waves;
-  } else {
-    theme.spawns = pts;
-  }
+  const waves = [];
+  const size = 6;
+  for (let i = 0; i < pts.length; i += size) waves.push(pts.slice(i, i + size));
+  theme.waves = waves;
   WORLD_THEMES[n] = theme;
 });
 
@@ -207,8 +239,8 @@ class MissionSystem {
       check: g => g.enemiesDefeated >= need && (!waves || g.wavesComplete === true),
       onComplete: g => {
         const boss = window.getWorldBoss ? window.getWorldBoss(id) : { name: 'the World Boss' };
-        UI.showMessage((id === 20 ? 'GOLIATH APPROACHES!' : (boss.name + ' APPEARS!')), 2200);
-        if (id === 20) {
+        UI.showMessage((id === 40 ? 'GOLIATH APPROACHES!' : (boss.name + ' APPEARS!')), 2200);
+        if (id === 40) {
           if (g.spawnGoliath) g.spawnGoliath();
         } else if (g.spawnWorldBoss) {
           g.spawnWorldBoss();
@@ -285,7 +317,27 @@ const WORLD_BOSSES = {
   17: { name: 'Banner Warlord', title: 'BANNER BOSS', color: 0xa02820, accent: 0xff6050, hp: 480, dmg: 16, scale: 2.45 },
   18: { name: 'Ravine Horror', title: 'RAVINE BOSS', color: 0x201828, accent: 0x8866aa, hp: 500, dmg: 16, scale: 2.5 },
   19: { name: "Giant's Herald", title: 'HERALD BOSS', color: 0x5a3028, accent: 0xe06030, hp: 560, dmg: 17, scale: 2.7 },
-  20: { name: 'Goliath', title: 'THE PHILISTINE GIANT', color: 0x5a6a7a, accent: 0xb8956a, hp: 480, dmg: 18, scale: 3.4 }
+  20: { name: 'Goliath', title: 'THE PHILISTINE GIANT', color: 0x5a6a7a, accent: 0xb8956a, hp: 520, dmg: 18, scale: 3.2, speed: 3.0 },
+  21: { name: 'Olive Sentinel', title: 'GROVE BOSS', color: 0x6a8a30, accent: 0xd0e060, hp: 540, dmg: 18, scale: 2.5, speed: 3.0 },
+  22: { name: 'Cedar Titan', title: 'CEDAR BOSS', color: 0x2a5a38, accent: 0x70b060, hp: 560, dmg: 19, scale: 2.55, speed: 3.05 },
+  23: { name: 'Marsh Warden', title: 'MARSH BOSS', color: 0x3a6a58, accent: 0x80c0a0, hp: 580, dmg: 19, scale: 2.55, speed: 3.05 },
+  24: { name: 'Copper King', title: 'MINE BOSS', color: 0x8a4a20, accent: 0xffa040, hp: 600, dmg: 20, scale: 2.6, speed: 3.1 },
+  25: { name: 'Tower Captain', title: 'WATCH BOSS', color: 0x506878, accent: 0xa0c0d8, hp: 620, dmg: 20, scale: 2.6, speed: 3.1 },
+  26: { name: 'Canyon Raider', title: 'CANYON BOSS', color: 0xc07030, accent: 0xffd070, hp: 640, dmg: 21, scale: 2.65, speed: 3.15 },
+  27: { name: 'Moon Champion', title: 'NIGHT BOSS', color: 0x304060, accent: 0x90b0e0, hp: 660, dmg: 21, scale: 2.65, speed: 3.15 },
+  28: { name: 'Wall Crusher', title: 'WALL BOSS', color: 0x6a6a70, accent: 0xc0c0c8, hp: 680, dmg: 22, scale: 2.7, speed: 3.2 },
+  29: { name: 'Path Lion', title: 'LION BOSS', color: 0xb07030, accent: 0xffd060, hp: 700, dmg: 22, scale: 2.7, speed: 3.2 },
+  30: { name: 'River Giant', title: 'WATER BOSS', color: 0x2a6a88, accent: 0x70d0e8, hp: 720, dmg: 23, scale: 2.75, speed: 3.25 },
+  31: { name: 'Harvest Lord', title: 'FIELD BOSS', color: 0x8a7a28, accent: 0xf0d040, hp: 740, dmg: 23, scale: 2.75, speed: 3.25 },
+  32: { name: 'Brook Horror', title: 'BROOK BOSS', color: 0x3a6a70, accent: 0x90d0d8, hp: 760, dmg: 24, scale: 2.8, speed: 3.3 },
+  33: { name: 'Ash Warlord', title: 'ASH BOSS', color: 0x8a3020, accent: 0xff6040, hp: 780, dmg: 24, scale: 2.8, speed: 3.3 },
+  34: { name: 'Bronze Champion', title: 'BRONZE BOSS', color: 0x8a6030, accent: 0xe0a050, hp: 800, dmg: 25, scale: 2.85, speed: 3.35 },
+  35: { name: 'High Warden', title: 'PEAK BOSS', color: 0x4a6a80, accent: 0xb0d0f0, hp: 820, dmg: 25, scale: 2.85, speed: 3.35 },
+  36: { name: 'Night Horror', title: 'WATCH BOSS', color: 0x2a2048, accent: 0x9977dd, hp: 840, dmg: 26, scale: 2.9, speed: 3.4 },
+  37: { name: 'East Warlord', title: 'CAMP BOSS', color: 0xa03820, accent: 0xff7050, hp: 860, dmg: 26, scale: 2.9, speed: 3.4 },
+  38: { name: 'Road Champion', title: 'ROAD BOSS', color: 0x8a4830, accent: 0xffa070, hp: 880, dmg: 27, scale: 2.95, speed: 3.45 },
+  39: { name: 'Gate Colossus', title: 'GATE BOSS', color: 0x5a2030, accent: 0xff6070, hp: 920, dmg: 28, scale: 3.1, speed: 3.5 },
+  40: { name: 'Goliath the Giant', title: 'FINAL PHILISTINE GIANT', color: 0x4a5a6a, accent: 0xc0a070, hp: 1100, dmg: 30, scale: 3.6, speed: 3.2 }
 };
 
 function getWorldBoss(id) {

@@ -272,6 +272,9 @@ const Game = {
     this.outpostBroken = false;
     this.fortressReached = false;
     this.goliathTerritoryEntered = false;
+    this._shakeAmp = 0;
+    this._shakeTime = 0;
+    this._shakeDur = 0;
     this.jaruscopeCooldown = 0;
     this.jaruscopeActive = 0;
     this.mapOpen = false;
@@ -412,7 +415,7 @@ const Game = {
     // multi-wave levels remain incomplete until every wave has spawned and died.
     this.wavesComplete = !(theme.waves && theme.waves.length > 1);
     const spots = window.enemySpawnsFor ? window.enemySpawnsFor(this.currentWorld || 1) : [];
-    const stats = { health: theme.enemyHp || 30, damage: theme.enemyDmg || 5, speed: theme.enemySpd || 3.2 };
+    const stats = { health: theme.enemyHp || 30, damage: theme.enemyDmg || 5, speed: theme.enemySpd || 3.2, detect: theme.enemyDetect || 12 };
     this._enemyStats = stats;
     spots.forEach((s, i) => {
       this.enemies.push(new ShadowGuardian(this.scene, new THREE.Vector3(s.x, s.y, s.z), i % 3, stats));
@@ -438,15 +441,26 @@ const Game = {
     this.renderer.render(this.scene, this.camera);
   },
 
+  addCameraShake(amount, duration) {
+    this._shakeAmp = Math.max(this._shakeAmp || 0, Math.min(0.55, amount || 0.12));
+    this._shakeDur = Math.max(this._shakeDur || 0, duration || 0.22);
+    this._shakeTime = this._shakeDur;
+  },
+
+  applyCameraShake() {
+    if (!this.camera || !this._shakeTime || this._shakeTime <= 0) return;
+    const t = this._shakeTime / Math.max(0.01, this._shakeDur || 0.22);
+    const mag = (this._shakeAmp || 0.1) * t * t;
+    this.camera.position.x += (Math.random() - 0.5) * mag * 1.4;
+    this.camera.position.y += (Math.random() - 0.5) * mag * 0.9;
+    this.camera.position.z += (Math.random() - 0.5) * mag * 1.4;
+  },
+
   followCamera() {
-    if (!this.player || !this.camera) return;
-    const pos = this.player.group ? this.player.group.position : this.player.getPosition();
-    if (!pos) return;
-    const height = Math.max(10, Math.min(26, this.player.cameraHeight || 16));
-    const back = this.player.cameraBack != null ? this.player.cameraBack : 5.5;
-    this.camera.position.set(pos.x, pos.y + height, pos.z + back);
-    this.camera.up.set(0, 1, 0);
-    this.camera.lookAt(pos.x, pos.y + 0.3, pos.z);
+    if (this.player && typeof this.player.updateCamera === 'function') {
+      this.player.updateCamera();
+    }
+    this.applyCameraShake();
   },
 
   onResize() {
@@ -470,6 +484,7 @@ const Game = {
     if (this.state === 'paused') return;
 
     const dt = Math.min(this.clock.getDelta(), 0.05);
+    if (this._shakeTime > 0) this._shakeTime = Math.max(0, this._shakeTime - dt);
 
     // Restore camera after Goliath entrance emphasis
     if (this._bossCamTimer != null && this._bossCamTimer > 0) {
@@ -798,6 +813,7 @@ const Game = {
     const iCount = marks.filter(m => m.kind === 'item').length;
     if (window.UI) UI.showMessage('JARUSCOPE: ' + gCount + ' foes · ' + iCount + ' treasures', 2200);
     if (window.AudioSystem) AudioSystem.faithShield();
+    this.addCameraShake(0.06, 0.18);
     this.updateHUD();
   },
 
@@ -890,6 +906,7 @@ const Game = {
     const sub = document.querySelector('#boss-hud .boss-subtitle');
     if (sub) sub.textContent = spec.title || 'WORLD BOSS';
     UI.showMessage((spec.name || 'BOSS') + ' APPEARS!', 2800);
+    this.addCameraShake(0.32, 0.55);
     if (window.AudioSystem) {
       AudioSystem.goliathAppear();
       AudioSystem.battleMusic();
@@ -955,6 +972,7 @@ const Game = {
     }
     UI.showBoss(this.goliath.health, this.goliath.maxHealth);
     UI.showMessage('GOLIATH — THE PHILISTINE GIANT!', 3000);
+    this.addCameraShake(0.4, 0.7);
     if (window.AudioSystem) {
       AudioSystem.goliathAppear();
       AudioSystem.battleMusic();
@@ -968,9 +986,9 @@ const Game = {
         dist: this.player.cameraDistance,
         height: this.player.cameraHeight
       };
-      this.player.cameraHeight = 22;
-      this.player.cameraDistance = 22;
-      this.player.cameraAngle = 0;
+      this.player.cameraHeight = 10;
+      this.player.cameraDistance = 10;
+      this.player.cameraPitch = 0.32;
     }
   },
 
@@ -1010,6 +1028,7 @@ const Game = {
   showVictory() {
     if (this._victoryScreenShown) return;
     this._victoryScreenShown = true;
+    this.addCameraShake(0.16, 0.4);
     this.state = 'victory';
     cancelAnimationFrame(this.animFrame);
     this._loopRunning = false;
@@ -1095,9 +1114,16 @@ const Game = {
     if (stamBar) stamBar.style.width = Math.max(0, Math.min(100, this.player.stamina || 0)) + '%';
     if (stamText) stamText.textContent = Math.ceil(this.player.stamina || 0) + ' / ' + (this.player.maxStamina || 100);
     const worldKills = this.enemiesDefeated || 0;
-    const totalKills = (window.SaveSystem && SaveSystem.load().stats.guardiansDefeated) || 0;
+    const need = (this.world && this.world.theme && this.world.theme.needEnemies) || worldKills;
+    const data = window.SaveSystem ? SaveSystem.load() : { stats: {} };
+    const totalKills = (data.stats && data.stats.guardiansDefeated) || 0;
+    const bosses = (data.stats && data.stats.bossesDefeated) || 0;
+    const maxW = (window.SaveSystem && SaveSystem.MAX_LEVEL) || 40;
     const killEl = document.getElementById('hud-kills');
-    if (killEl) killEl.textContent = 'GUARDIANS DEFEATED: ' + worldKills + '  ·  TOTAL: ' + totalKills;
+    if (killEl) {
+      killEl.innerHTML = 'GUARDIANS ' + worldKills + ' / ' + need +
+        '<br>TOTAL ' + totalKills + ' · BOSSES ' + bosses + ' / ' + maxW;
+    }
     const jarEl = document.getElementById('jaruscope-status');
     if (jarEl) {
       if (this.jaruscopeActive > 0) jarEl.textContent = 'SCANNING';

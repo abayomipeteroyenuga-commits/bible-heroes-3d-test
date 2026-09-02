@@ -92,6 +92,7 @@ const AudioSystem = {
   play(name, opts = {}) {
     if (!this.enabled) return;
     const vol = opts.volume != null ? opts.volume : 1;
+    const rate = opts.rate != null ? opts.rate : 1;
 
     // Web Audio path
     if (this.ctx && this.buffers[name]) {
@@ -99,6 +100,7 @@ const AudioSystem = {
         if (this.ctx.state === 'suspended') this.ctx.resume();
         const src = this.ctx.createBufferSource();
         src.buffer = this.buffers[name];
+        src.playbackRate.value = rate;
         const g = this.ctx.createGain();
         g.gain.value = vol;
         src.connect(g);
@@ -196,10 +198,15 @@ const AudioSystem = {
   },
 
   // Convenience aliases
-  sling() { this.play('sling_fire', { volume: 0.85 }); },
+  sling() { this.play('sling_fire', { volume: 0.9, rate: 1 }); },
   impact() { this.play('impact', { volume: 0.9 }); },
-  enemyHit() { this.play('enemy_hit', { volume: 0.8 }); },
-  damage() { this.play('damage', { volume: 0.85 }); },
+  enemyHit() { this.play('enemy_hit', { volume: 0.85 }); },
+  damage() { this.play('damage', { volume: 0.9 }); },
+  swing() { this.play('sling_fire', { volume: 0.45, rate: 0.7 }); },
+  bossSwing() { this.play('goliath_appear', { volume: 0.35, rate: 1.35 }); },
+  bossHit() { this.play('enemy_hit', { volume: 1, rate: 0.75 }); },
+  enemyDefeat() { this.play('impact', { volume: 0.7, rate: 0.85 }); },
+  miss() { this.play('ui_click', { volume: 0.25, rate: 0.6 }); },
   collect() { this.play('collect', { volume: 0.9 }); },
   faithShield() { this.play('faith_shield', { volume: 0.9 }); },
   goliathAppear() { this.play('goliath_appear', { volume: 1 }); },
