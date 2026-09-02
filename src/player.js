@@ -20,6 +20,9 @@ class Player {
     this.maxArmor = 50;
     this.faith = 100;
     this.maxFaith = 100;
+    this.stamina = 100;
+    this.maxStamina = 100;
+    this.sprintHeld = false;
     this.score = 0;
     this.hasSling = true;
     this.stones = 12;
@@ -596,6 +599,18 @@ class Player {
         return;
       }
 
+      if (code === 'KeyJ' || key === 'j') {
+        e.preventDefault();
+        if (window.Game) window.Game.useJaruscope();
+        return;
+      }
+
+      if (code === 'KeyM' || key === 'm') {
+        e.preventDefault();
+        if (window.Game) window.Game.toggleGameMap();
+        return;
+      }
+
       if (code === 'KeyE' || key === 'e') {
         e.preventDefault();
         if (window.Game) window.Game.tryInteract();
@@ -738,11 +753,22 @@ class Player {
 
   setupMobileButtons() {
     this._mobileHandlers = [];
+    const sprintBtn = document.getElementById('btn-sprint');
+    if (sprintBtn) {
+      const down = (e) => { e.preventDefault(); this.sprintHeld = true; };
+      const up = () => { this.sprintHeld = false; };
+      sprintBtn.addEventListener('pointerdown', down);
+      window.addEventListener('pointerup', up);
+      window.addEventListener('pointercancel', up);
+      this._mobileHandlers.push({ btn: sprintBtn, handler: down, extra: { up } });
+    }
     const map = {
       'btn-jump': () => this.tryJump(),
       'btn-attack': () => this.tryAttack(),
       'btn-special': () => this.tryFaithShield(),
-      'btn-interact': () => { if (window.Game) window.Game.tryInteract(); }
+      'btn-interact': () => { if (window.Game) window.Game.tryInteract(); },
+      'btn-jaruscope': () => { if (window.Game) window.Game.useJaruscope(); },
+      'btn-game-map': () => { if (window.Game) window.Game.toggleGameMap(); }
     };
     Object.keys(map).forEach(id => {
       const btn = document.getElementById(id);
@@ -784,9 +810,14 @@ class Player {
     if (this._mobileHandlers) {
       this._mobileHandlers.forEach(h => {
         h.btn.removeEventListener('pointerdown', h.handler);
+        if (h.extra && h.extra.up) {
+          window.removeEventListener('pointerup', h.extra.up);
+          window.removeEventListener('pointercancel', h.extra.up);
+        }
       });
       this._mobileHandlers = [];
     }
+    this.sprintHeld = false;
 
     this.joystick.active = false;
     this.joystick.x = 0;
@@ -928,7 +959,14 @@ class Player {
     }
     // Jump / attack / faith / interact handled on keydown (single-press)
 
-    const isRunning = this.keys['ShiftLeft'] || this.keys['ShiftRight'];
+    const wantsSprint = !!(this.keys['ShiftLeft'] || this.keys['ShiftRight'] || this.sprintHeld);
+    const movingNow = (inputX !== 0 || inputZ !== 0 || this.joystick.active);
+    if (wantsSprint && movingNow && this.stamina > 1) {
+      this.stamina = Math.max(0, this.stamina - 22 * dt);
+    } else {
+      this.stamina = Math.min(this.maxStamina, this.stamina + 16 * dt);
+    }
+    const isRunning = wantsSprint && this.stamina > 1 && movingNow;
     const moveSpeed = this.speed * (isRunning ? this.runMultiplier : 1);
 
     const forward = new THREE.Vector3(-Math.sin(this.cameraAngle), 0, -Math.cos(this.cameraAngle));

@@ -85,6 +85,12 @@
           <div class="bar-bg"><div id="faith-bar" class="bar faith"></div></div>
           <span id="faith-text">100 / 100</span>
         </div>
+        <div class="hud-stat">
+          <span class="icon">💨</span>
+          <span class="label">SPRINT</span>
+          <div class="bar-bg"><div id="stamina-bar" class="bar stamina"></div></div>
+          <span id="stamina-text">100 / 100</span>
+        </div>
       </div>
       <div id="hud-right">
         <div id="hud-world">WORLD 1</div>
@@ -92,7 +98,10 @@
         <div class="score-box">⭐ <span id="score-text">0</span></div>
         <div class="score-box">🪙 <span id="hud-coins">0</span></div>
         <div class="score-box" id="hud-ammo">SLING 12</div>
+        <div class="score-box" id="hud-kills">GUARDIANS DEFEATED: 0  ·  TOTAL: 0</div>
         <div class="hud-quick-actions">
+          <button id="btn-hud-map" class="hud-bible-btn" type="button" title="Game Map">🗺️ MAP</button>
+          <button id="btn-hud-jaruscope" class="hud-bible-btn" type="button" title="Jaruscope">🔭 <span id="jaruscope-status">READY</span></button>
           <button id="btn-bible" class="hud-bible-btn" type="button" title="Bible Moment">📖 BIBLE</button>
           <button id="btn-mute" class="mute-btn" type="button" title="Mute / Unmute">🔊</button>
         </div>
@@ -132,10 +141,24 @@
         </div>
       </div>
       <div id="action-buttons">
+        <button id="btn-sprint" class="action-btn sprint">SPRINT</button>
         <button id="btn-jump" class="action-btn">JUMP</button>
         <button id="btn-attack" class="action-btn attack">ATTACK</button>
         <button id="btn-special" class="action-btn special">FAITH</button>
+        <button id="btn-jaruscope" class="action-btn">SCOPE</button>
+        <button id="btn-game-map" class="action-btn">MAP</button>
         <button id="btn-interact" class="action-btn">E</button>
+      </div>
+    </div>
+
+    <div id="game-map-overlay" class="hidden">
+      <div class="game-map-panel">
+        <div class="game-map-head">
+          <h3>🗺️ ADVENTURE MAP</h3>
+          <button id="btn-map-close" type="button">✕</button>
+        </div>
+        <canvas id="game-map-canvas" width="520" height="360"></canvas>
+        <p class="game-map-legend">🔵 You &nbsp; 🔴 Guardian &nbsp; 🟡 Treasure &nbsp; Dark areas are still unexplored</p>
       </div>
     </div>
   </div>
@@ -192,7 +215,9 @@
             <h3>⌨️ Desktop Controls</h3>
             <ul class="ctrl-list">
               <li>WASD / ARROW KEYS — MOVE</li>
-              <li>SHIFT — RUN</li>
+              <li>SHIFT — SPRINT (uses stamina)</li>
+              <li>J — JARUSCOPE SCAN</li>
+              <li>M — GAME MAP</li>
               <li>SPACE — JUMP</li>
               <li>F / G / T / K — FIRE SLING</li>
               <li>LEFT CLICK — FIRE SLING</li>

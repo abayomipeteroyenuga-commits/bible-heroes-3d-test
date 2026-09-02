@@ -72,6 +72,9 @@ const Game = {
       UI.populateAchievements(SaveSystem.load().achievements);
       UI.show('achievements');
     });
+    click('btn-hud-map', () => this.toggleGameMap());
+    click('btn-hud-jaruscope', () => this.useJaruscope());
+    click('btn-map-close', () => { this.mapOpen = false; const el = document.getElementById('game-map-overlay'); if (el) el.classList.add('hidden'); });
     click('btn-shop', () => this.openShop());
     click('btn-pause-shop', () => this.openShop());
     click('btn-shop-back', () => {
@@ -269,6 +272,10 @@ const Game = {
     this.outpostBroken = false;
     this.fortressReached = false;
     this.goliathTerritoryEntered = false;
+    this.jaruscopeCooldown = 0;
+    this.jaruscopeActive = 0;
+    this.mapOpen = false;
+    this.exploredCells = this.loadExploredCells(this.currentWorld);
     UI.showGame();
     if (window.UI) UI.setWorldDisplay(this.currentWorld);
     if (typeof THREE === 'undefined') {
@@ -318,6 +325,11 @@ const Game = {
     this.enemies = [];
     this.goliath = null;
     this.combat = null;
+    this.mapOpen = false;
+    const mapEl = document.getElementById('game-map-overlay');
+    if (mapEl) mapEl.classList.add('hidden');
+    this._scanPulse = null;
+    this._scanMarks = [];
     if (this.scene) {
       while (this.scene.children.length) this.scene.remove(this.scene.children[0]);
     }
@@ -489,6 +501,13 @@ const Game = {
       const start = new THREE.Vector3(0, 0, 8);
       if (playerPos.distanceTo(start) >= 6) this.exploredCamp = true;
     }
+    this.markExplored(playerPos);
+    if (this.jaruscopeCooldown > 0) this.jaruscopeCooldown -= dt;
+    if (this.jaruscopeActive > 0) {
+      this.jaruscopeActive -= dt;
+      this.updateJaruscopePulse(dt);
+    }
+    if (this.mapOpen) this.drawGameMap();
 
     // Keep legacy flags for HUD/compatibility, but make them match the same
     // visible landmarks used by MissionSystem.
@@ -543,6 +562,7 @@ const Game = {
       // silent - player presses E
     }
 
+    this.updateHUD();
     this.renderer.render(this.scene, this.camera);
   },
 
@@ -704,6 +724,157 @@ const Game = {
     this._spawningWave = false;
     if (window.UI) UI.showMessage('WAVE ' + (this._waveIndex + 1) + '!', 1600);
     if (window.AudioSystem) AudioSystem.battleMusic();
+  },
+
+  loadExploredCells(worldId) {
+    const data = window.SaveSystem ? SaveSystem.load() : {};
+    const key = 'w' + (worldId || 1);
+    const stored = data.itemsFound && data.itemsFound.explored && data.itemsFound.explored[key];
+    return new Set(Array.isArray(stored) ? stored : []);
+  },
+
+  markExplored(pos) {
+    if (!pos) return;
+    const cell = Math.round(pos.x / 8) + ':' + Math.round(pos.z / 8);
+    if (this.exploredCells.has(cell)) return;
+    this.exploredCells.add(cell);
+    if (!window.SaveSystem) return;
+    const data = SaveSystem.load();
+    data.itemsFound = data.itemsFound || {};
+    data.itemsFound.explored = data.itemsFound.explored || {};
+    const key = 'w' + (this.currentWorld || 1);
+    data.itemsFound.explored[key] = Array.from(this.exploredCells);
+    SaveSystem.save(data);
+  },
+
+  useJaruscope() {
+    if (this.state !== 'playing' || !this.player) return;
+    if (this.jaruscopeCooldown > 0) {
+      if (window.UI) UI.showMessage('JARUSCOPE RECHARGING...', 1200);
+      return;
+    }
+    this.jaruscopeActive = 2.4;
+    this.jaruscopeCooldown = 8;
+    const origin = this.player.getPosition();
+    const marks = [];
+    (this.enemies || []).forEach(e => {
+      if (!e.alive || !e.group) return;
+      if (origin.distanceTo(e.group.position) < 28) marks.push({ kind: 'guardian', pos: e.group.position });
+    });
+    if (this.goliath && this.goliath.alive && this.goliath.group) {
+      if (origin.distanceTo(this.goliath.group.position) < 40) marks.push({ kind: 'boss', pos: this.goliath.group.position });
+    }
+    if (this.world && this.world.collectibles) {
+      this.world.collectibles.forEach(c => {
+        if (c.collected || !c.group) return;
+        if (origin.distanceTo(c.group.position) < 26) marks.push({ kind: 'item', pos: c.group.position });
+      });
+    }
+    this._scanMarks = [];
+    marks.forEach(m => {
+      const ring = new THREE.Mesh(
+        new THREE.RingGeometry(0.6, 0.85, 20),
+        new THREE.MeshBasicMaterial({
+          color: m.kind === 'boss' ? 0xff8844 : m.kind === 'guardian' ? 0xff5577 : 0xf0c14b,
+          transparent: true,
+          opacity: 0.9,
+          side: THREE.DoubleSide
+        })
+      );
+      ring.rotation.x = -Math.PI / 2;
+      ring.position.set(m.pos.x, 0.12, m.pos.z);
+      this.scene.add(ring);
+      this._scanMarks.push(ring);
+    });
+    const pulse = new THREE.Mesh(
+      new THREE.RingGeometry(1.2, 1.6, 32),
+      new THREE.MeshBasicMaterial({ color: 0x88ddff, transparent: true, opacity: 0.7, side: THREE.DoubleSide })
+    );
+    pulse.rotation.x = -Math.PI / 2;
+    pulse.position.set(origin.x, 0.2, origin.z);
+    this.scene.add(pulse);
+    this._scanPulse = pulse;
+    const gCount = marks.filter(m => m.kind === 'guardian' || m.kind === 'boss').length;
+    const iCount = marks.filter(m => m.kind === 'item').length;
+    if (window.UI) UI.showMessage('JARUSCOPE: ' + gCount + ' foes · ' + iCount + ' treasures', 2200);
+    if (window.AudioSystem) AudioSystem.faithShield();
+    this.updateHUD();
+  },
+
+  updateJaruscopePulse(dt) {
+    if (this._scanPulse) {
+      const s = 1 + (2.4 - this.jaruscopeActive) * 6;
+      this._scanPulse.scale.set(s, s, s);
+      this._scanPulse.material.opacity = Math.max(0, this.jaruscopeActive / 2.4);
+      if (this.jaruscopeActive <= 0) {
+        this.scene.remove(this._scanPulse);
+        this._scanPulse = null;
+        (this._scanMarks || []).forEach(m => this.scene.remove(m));
+        this._scanMarks = [];
+      }
+    }
+  },
+
+  toggleGameMap() {
+    if (this.state !== 'playing' && this.state !== 'paused') return;
+    this.mapOpen = !this.mapOpen;
+    const el = document.getElementById('game-map-overlay');
+    if (el) el.classList.toggle('hidden', !this.mapOpen);
+    if (this.mapOpen) this.drawGameMap();
+  },
+
+  drawGameMap() {
+    const canvas = document.getElementById('game-map-canvas');
+    if (!canvas || !this.player) return;
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width;
+    const h = canvas.height;
+    ctx.fillStyle = '#0b1a2c';
+    ctx.fillRect(0, 0, w, h);
+    const bounds = (this.world && this.world.bounds) || { minX: -45, maxX: 45, minZ: -90, maxZ: 30 };
+    const toX = (x) => ((x - bounds.minX) / (bounds.maxX - bounds.minX)) * w;
+    const toY = (z) => ((z - bounds.minZ) / (bounds.maxZ - bounds.minZ)) * h;
+    // fog
+    ctx.fillStyle = '#071018';
+    ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = '#1d4a32';
+    this.exploredCells.forEach(cell => {
+      const parts = cell.split(':');
+      const cx = parseInt(parts[0], 10) * 8;
+      const cz = parseInt(parts[1], 10) * 8;
+      ctx.fillRect(toX(cx - 4), toY(cz - 4), toX(cx + 4) - toX(cx - 4), toY(cz + 4) - toY(cz - 4));
+    });
+    const reveal = (pos, color, r) => {
+      if (!pos) return;
+      const cell = Math.round(pos.x / 8) + ':' + Math.round(pos.z / 8);
+      if (!this.exploredCells.has(cell) && this.jaruscopeActive <= 0) return;
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(toX(pos.x), toY(pos.z), r, 0, Math.PI * 2);
+      ctx.fill();
+    };
+    if (this.world && this.world.collectibles) {
+      this.world.collectibles.forEach(c => {
+        if (!c.collected && c.group) reveal(c.group.position, '#f0c14b', 4);
+      });
+    }
+    (this.enemies || []).forEach(e => {
+      if (e.alive && e.group) reveal(e.group.position, '#e74c3c', 5);
+    });
+    if (this.goliath && this.goliath.alive && this.goliath.group) {
+      reveal(this.goliath.group.position, '#9b59b6', 8);
+    }
+    const p = this.player.getPosition();
+    ctx.fillStyle = '#4fc3f7';
+    ctx.beginPath();
+    ctx.arc(toX(p.x), toY(p.z), 7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillStyle = '#f0c14b';
+    ctx.font = 'bold 16px Nunito, sans-serif';
+    ctx.fillText('WORLD ' + (this.currentWorld || 1), 12, 24);
   },
 
   spawnWorldBoss() {
@@ -919,6 +1090,22 @@ const Game = {
         ? ('BOW ' + (this.player.arrows || 0))
         : ('SLING ' + (this.player.stones || 0));
     }
+    const stamBar = document.getElementById('stamina-bar');
+    const stamText = document.getElementById('stamina-text');
+    if (stamBar) stamBar.style.width = Math.max(0, Math.min(100, this.player.stamina || 0)) + '%';
+    if (stamText) stamText.textContent = Math.ceil(this.player.stamina || 0) + ' / ' + (this.player.maxStamina || 100);
+    const worldKills = this.enemiesDefeated || 0;
+    const totalKills = (window.SaveSystem && SaveSystem.load().stats.guardiansDefeated) || 0;
+    const killEl = document.getElementById('hud-kills');
+    if (killEl) killEl.textContent = 'GUARDIANS DEFEATED: ' + worldKills + '  ·  TOTAL: ' + totalKills;
+    const jarEl = document.getElementById('jaruscope-status');
+    if (jarEl) {
+      if (this.jaruscopeActive > 0) jarEl.textContent = 'SCANNING';
+      else if (this.jaruscopeCooldown > 0) jarEl.textContent = 'WAIT ' + Math.ceil(this.jaruscopeCooldown) + 's';
+      else jarEl.textContent = 'READY';
+    }
+    const jarBtn = document.getElementById('btn-hud-jaruscope');
+    if (jarBtn) jarBtn.classList.toggle('cooling', this.jaruscopeCooldown > 0 && this.jaruscopeActive <= 0);
   },
 
   pause() {

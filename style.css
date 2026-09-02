@@ -265,6 +265,7 @@ html, body {
 .bar.life { background: linear-gradient(90deg, #e74c3c, #c0392b); width: 100%; }
 .bar.armor { background: linear-gradient(90deg, #3498db, #2980b9); width: 100%; }
 .bar.faith { background: linear-gradient(90deg, #f1c40f, #f39c12); width: 100%; }
+.bar.stamina { background: linear-gradient(90deg, #2ecc71, #27ae60); width: 100%; }
 .bar.boss { background: linear-gradient(90deg, #9b59b6, #8e44ad); width: 100%; }
 
 #hud-right {
@@ -303,6 +304,11 @@ html, body {
   font-size: 1.3rem;
   font-weight: 700;
   color: #f0c14b;
+}
+#hud-kills {
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+  padding: 6px 10px;
 }
 
 .mute-btn {
@@ -452,6 +458,65 @@ html, body {
 .action-btn.special {
   background: rgba(241, 196, 15, 0.9);
   color: #1a2a1a;
+}
+.action-btn.sprint {
+  background: rgba(46, 204, 113, 0.92);
+  color: #0a2010;
+}
+#btn-hud-jaruscope.cooling {
+  opacity: 0.55;
+}
+#action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  max-width: 240px;
+}
+#game-map-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(4, 10, 18, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 40;
+  pointer-events: auto;
+}
+#game-map-overlay.hidden { display: none !important; }
+.game-map-panel {
+  background: #102033;
+  border: 3px solid rgba(240, 193, 75, 0.7);
+  border-radius: 16px;
+  padding: 12px;
+  width: min(92vw, 560px);
+}
+.game-map-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+#game-map-canvas {
+  width: 100%;
+  height: auto;
+  background: #0b1a2c;
+  border-radius: 10px;
+}
+.game-map-legend {
+  margin-top: 8px;
+  font-size: 0.85rem;
+  color: #d0d8e0;
+}
+#btn-map-close {
+  pointer-events: auto;
+  background: #3a2030;
+  color: #fff;
+  border: 0;
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 1.1rem;
+  cursor: pointer;
 }
 
 /* Victory */
@@ -722,7 +787,7 @@ kbd {
 .bible-verse span, .bible-lesson span,
 .victory-lesson span, .victory-prayer span { display: block; color: #fff; line-height: 1.45; font-size: 0.86rem; }
 
-.hud-quick-actions { display: flex; align-items: center; gap: 6px; }
+.hud-quick-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; max-width: 280px; }
 .hud-bible-btn {
   pointer-events: auto;
   border: 2px solid rgba(240,193,75,0.65);
