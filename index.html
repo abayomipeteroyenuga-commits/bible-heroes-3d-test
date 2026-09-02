@@ -33,6 +33,7 @@
         <button id="btn-map" class="menu-btn">🗺️ ADVENTURE MAP</button>
         <button id="btn-howto" class="menu-btn">📖 HOW TO PLAY</button>
         <button id="btn-achievements" class="menu-btn">🏅 ACHIEVEMENTS</button>
+        <button id="btn-rewards" class="menu-btn">💎 REWARDS</button>
         <button id="btn-shop" class="menu-btn">🛒 SHOP</button>
         <button id="btn-settings" class="menu-btn">⚙️ SETTINGS</button>
       </div>
@@ -97,6 +98,7 @@
         <div id="hud-world-name">SHEPHERD'S VALLEY</div>
         <div class="score-box">⭐ <span id="score-text">0</span></div>
         <div class="score-box">🪙 <span id="hud-coins">0</span></div>
+        <div class="score-box">💎 <span id="hud-gems">0</span></div>
         <div class="score-box" id="hud-ammo">SLING 12</div>
         <div class="score-box" id="hud-kills">GUARDIANS DEFEATED: 0  ·  TOTAL: 0</div>
         <div class="hud-quick-actions">
@@ -218,6 +220,8 @@
         <p>SCORE: <span id="victory-score">0</span></p>
         <p>ITEMS FOUND: <span id="victory-items">0</span></p>
         <p>ENEMIES DEFEATED: <span id="victory-enemies">0</span></p>
+        <p>XP EARNED: <span id="victory-xp">0</span></p>
+        <p>GEMS EARNED: 💎 <span id="victory-gems">0</span></p>
         <p class="unlock">NEXT WORLD UNLOCKED</p>
         <button id="btn-next-world" class="menu-btn primary">PLAY WORLD 2</button>
         <button id="btn-continue" class="menu-btn">RETURN TO ADVENTURE MAP</button>
@@ -282,6 +286,7 @@
               <option value="low">LOW</option>
               <option value="medium" selected>MEDIUM</option>
               <option value="high">HIGH</option>
+              <option value="ultra">ULTRA</option>
             </select>
           </label>
           <label class="setting-row"><span>Mobile Sensitivity</span>
@@ -382,6 +387,23 @@
       </div>
     </div>
 
+    <div id="rewards-screen" class="screen hidden">
+      <div class="menu-container wide">
+        <img src="assets/ui/pastor-abayomi-bible-stories-logo.png" alt="Pastor Abayomi Bible Stories" class="brand-logo brand-logo-sm" onerror="this.onerror=null;this.src='assets/ui/logo.svg'" />
+        <h2>💎 REWARDS</h2>
+        <div class="howto-cards">
+          <div class="info-card"><h3>💎 Gems</h3><p id="rewards-gems">0</p></div>
+          <div class="info-card"><h3>⭐ XP</h3><p id="rewards-xp">0</p></div>
+          <div class="info-card"><h3>🏆 Achievements</h3><p id="rewards-ach">0 / 0</p></div>
+          <div class="info-card"><h3>🎖️ Badges</h3><p id="rewards-badges">0 / 0</p></div>
+          <div class="info-card"><h3>🌍 Worlds</h3><p id="rewards-worlds">0 / 40</p></div>
+        </div>
+        <h3>BADGES</h3>
+        <div id="rewards-badge-list"></div>
+        <button id="btn-rewards-back" class="menu-btn">BACK</button>
+      </div>
+    </div>
+
     <!-- Achievements -->
     <div id="achievements-screen" class="screen hidden">
       <div class="menu-container wide">
@@ -391,6 +413,8 @@
         <button id="btn-ach-back" class="menu-btn">BACK</button>
       </div>
     </div>
+
+    <div id="reward-toasts"></div>
 
   <!-- Three.js CDN -->
   <script src="src/three.min.js"></script>

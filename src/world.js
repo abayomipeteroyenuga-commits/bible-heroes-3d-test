@@ -8,8 +8,31 @@ class World {
     this.checkpoints = [];
     this.interactables = [];
     this.uniqueObjects = [];
+    this.colliders = [];
     this.bounds = { minX: -45, maxX: 45, minZ: -90, maxZ: 30 };
     this.build();
+  }
+
+  addCollider(x, z, r) {
+    this.colliders.push({ x: x, z: z, r: r });
+  }
+
+  resolveCircle(x, z, radius) {
+    const list = this.colliders || [];
+    for (let i = 0; i < list.length; i++) {
+      const c = list[i];
+      const dx = x - c.x;
+      const dz = z - c.z;
+      const min = (c.r || 0.8) + radius;
+      const d2 = dx * dx + dz * dz;
+      if (d2 > 0.0001 && d2 < min * min) {
+        const d = Math.sqrt(d2);
+        const push = (min - d) / d;
+        x += dx * push;
+        z += dz * push;
+      }
+    }
+    return { x: x, z: z };
   }
 
   hasFeature(name) {
@@ -116,7 +139,10 @@ class World {
     const tentPositions = [
       [-8, 0, 12], [-12, 0, 6], [8, 0, 10], [11, 0, 4], [-5, 0, 18]
     ];
-    tentPositions.forEach(p => this.createTent(p[0], p[1], p[2]));
+    tentPositions.forEach(p => {
+      this.createTent(p[0], p[1], p[2]);
+      this.addCollider(p[0], p[2], 1.7);
+    });
 
     // Campfire
     this.createCampfire(0, 0, 10);
@@ -127,7 +153,9 @@ class World {
       const crate = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1, 1.2), crateMat);
       crate.position.set(-6 + i * 1.5, 0.5, 15);
       crate.castShadow = true;
+      crate.receiveShadow = true;
       this.scene.add(crate);
+      this.addCollider(crate.position.x, crate.position.z, 0.85);
     }
 
     // Flag pole
@@ -220,7 +248,10 @@ class World {
       const x = (Math.random() > 0.5 ? 1 : -1) * (12 + Math.random() * 25);
       const z = 20 - Math.random() * 80;
       group.position.set(x, 0, z);
+      trunk.castShadow = true;
+      leaves.castShadow = true;
       this.scene.add(group);
+      this.addCollider(x, z, 0.85);
     }
 
     // Distant mountains
@@ -521,18 +552,22 @@ class World {
       const hut = new THREE.Mesh(new THREE.ConeGeometry(2.2, 3, 6), new THREE.MeshLambertMaterial({ color: 0x8b5a2b }));
       hut.position.set(-14, 1.5, 10);
       this.scene.add(hut);
+      this.addCollider(-14, 10, 1.8);
     } else if (kind === 'arch') {
       const mat = new THREE.MeshLambertMaterial({ color: 0x7a6a58 });
       const l = new THREE.Mesh(new THREE.BoxGeometry(1.5, 8, 1.5), mat); l.position.set(-4, 4, -56);
       const r = new THREE.Mesh(new THREE.BoxGeometry(1.5, 8, 1.5), mat); r.position.set(4, 4, -56);
       const t = new THREE.Mesh(new THREE.BoxGeometry(10, 1.5, 1.5), mat); t.position.set(0, 8.2, -56);
       this.scene.add(l); this.scene.add(r); this.scene.add(t);
+      this.addCollider(-4, -56, 1.2);
+      this.addCollider(4, -56, 1.2);
     } else if (kind === 'shrine') {
       const base = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.6, 0.5, 8), new THREE.MeshLambertMaterial({ color: 0xc8c0a0 }));
       base.position.set(-15, 0.25, -22);
       const stone = new THREE.Mesh(new THREE.BoxGeometry(1, 2.2, 0.4), new THREE.MeshLambertMaterial({ color: 0xddd4b0 }));
       stone.position.set(-15, 1.5, -22);
       this.scene.add(base); this.scene.add(stone);
+      this.addCollider(-15, -22, 1.3);
     } else if (kind === 'crystal') {
       const c = new THREE.Mesh(new THREE.OctahedronGeometry(2.2), new THREE.MeshLambertMaterial({ color: 0x88ccff, emissive: 0x224466 }));
       c.position.set(0, 2.2, -62);
@@ -541,6 +576,7 @@ class World {
       const tw = new THREE.Mesh(new THREE.BoxGeometry(3.5, 10, 3.5), new THREE.MeshLambertMaterial({ color: 0x6a5a48 }));
       tw.position.set(16, 5, -8);
       this.scene.add(tw);
+      this.addCollider(16, -8, 2.2);
     }
   }
 
@@ -557,6 +593,7 @@ class World {
       const side = i % 2 === 0 ? -1 : 1;
       g.position.set(side * (10 + (i % 5) * 2.2), 0, -8 - i * 2.4);
       this.scene.add(g);
+      this.addCollider(g.position.x, g.position.z, 0.9);
     }
   }
 

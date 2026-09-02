@@ -17,16 +17,22 @@ function Humanoid(parent, opt) {
 }
 
 Humanoid.prototype.build = function (opt) {
-  const skin = new THREE.MeshPhongMaterial({ color: opt.skin || 0xf0c4a0, shininess: 28 });
-  const skinDark = new THREE.MeshLambertMaterial({ color: opt.skinDark || 0xd9a07c });
-  const shirt = new THREE.MeshPhongMaterial({ color: opt.shirt || 0x4a7c59, shininess: 16 });
-  const pants = new THREE.MeshLambertMaterial({ color: opt.pants || 0x4a3a2c });
-  const pantsDark = new THREE.MeshLambertMaterial({ color: opt.pantsDark || 0x33261c });
-  const boot = new THREE.MeshLambertMaterial({ color: opt.boot || 0x5c3a22 });
-  const leather = new THREE.MeshLambertMaterial({ color: opt.leather || 0x8a5a32 });
-  const hairM = new THREE.MeshLambertMaterial({ color: opt.hair || 0x2c1a0e });
-  const accent = new THREE.MeshLambertMaterial({ color: opt.accent || 0xc9a15b });
-  const armor = new THREE.MeshLambertMaterial({ color: opt.armor || 0x6a5a48 });
+  const std = function (color, rough, metal) {
+    if (THREE.MeshStandardMaterial) {
+      return new THREE.MeshStandardMaterial({ color: color, roughness: rough == null ? 0.7 : rough, metalness: metal || 0 });
+    }
+    return new THREE.MeshPhongMaterial({ color: color, shininess: 18 });
+  };
+  const skin = std(opt.skin || 0xf0c4a0, 0.58, 0.03);
+  const skinDark = std(opt.skinDark || 0xd9a07c, 0.62, 0.03);
+  const shirt = std(opt.shirt || 0x4a7c59, 0.82, 0);
+  const pants = std(opt.pants || 0x4a3a2c, 0.86, 0);
+  const pantsDark = std(opt.pantsDark || 0x33261c, 0.88, 0);
+  const boot = std(opt.boot || 0x5c3a22, 0.7, 0.05);
+  const leather = std(opt.leather || 0x8a5a32, 0.72, 0.04);
+  const hairM = std(opt.hair || 0x2c1a0e, 0.78, 0);
+  const accent = std(opt.accent || 0xc9a15b, 0.45, 0.35);
+  const armor = std(opt.armor || 0x6a5a48, 0.42, 0.45);
 
   this.root = new THREE.Group();
   this.root.name = 'HipsRoot';
@@ -100,6 +106,10 @@ Humanoid.prototype.build = function (opt) {
   this.smile.position.set(0, -0.048, 0.128);
   this.smile.scale.set(1.6, 0.55, 0.45);
   this.head.add(this.smile);
+  if (opt.helmet) {
+    if (hair) hair.visible = false;
+    this.addHelmet(opt.helmet, armor, accent, leather);
+  }
 
   this.shoulderL = new THREE.Group();
   this.shoulderL.position.set(-0.22, 0.24, 0);
@@ -194,6 +204,28 @@ Humanoid.prototype.build = function (opt) {
   this.rightLegGroup = this.thighR;
   this.slingMesh = this.sling;
   this.initMixer();
+};
+
+Humanoid.prototype.addHelmet = function (style, armor, accent, leather) {
+  const helm = new THREE.Group();
+  this.head.add(helm);
+  this.helmet = helm;
+  const metal = armor || new THREE.MeshLambertMaterial({ color: 0x6a5a48 });
+  const trim = accent || new THREE.MeshLambertMaterial({ color: 0xc9a15b });
+  const dark = leather || new THREE.MeshLambertMaterial({ color: 0x3a2a1c });
+  const kind = style === true ? 'basic' : String(style);
+  const domeR = kind === 'heavy' || kind === 'boss' ? 0.2 : 0.19;
+  const dome = new THREE.Mesh(
+    new THREE.SphereGeometry(domeR, 16, 12, 0, Math.PI * 2, 0, Math.PI * 0.58),
+    metal
+  );
+  dome.position.set(0, 0.02, -0.016);
+  helm.add(dome);
+  if (kind === 'elite' || kind === 'commander' || kind === 'boss') {
+    const crest = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 6), trim);
+    crest.position.set(0, 0.18, -0.02);
+    helm.add(crest);
+  }
 };
 
 Humanoid.prototype.makeArm = function (side, skin, shirt, leather) {

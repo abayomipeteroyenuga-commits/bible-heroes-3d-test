@@ -640,6 +640,11 @@ class Player {
       this.group.position.x = Math.max(worldBounds.minX, Math.min(worldBounds.maxX, this.group.position.x));
       this.group.position.z = Math.max(worldBounds.minZ, Math.min(worldBounds.maxZ, this.group.position.z));
     }
+    if (window.Game && Game.world && Game.world.resolveCircle) {
+      const fixed = Game.world.resolveCircle(this.group.position.x, this.group.position.z, 0.45);
+      this.group.position.x = fixed.x;
+      this.group.position.z = fixed.z;
+    }
 
     this.animate(dt);
 

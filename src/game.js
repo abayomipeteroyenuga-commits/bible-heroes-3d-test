@@ -72,6 +72,11 @@ const Game = {
       UI.populateAchievements(SaveSystem.load().achievements);
       UI.show('achievements');
     });
+    click('btn-rewards', () => {
+      if (UI.populateRewards) UI.populateRewards();
+      UI.show('rewards');
+    });
+    click('btn-rewards-back', () => UI.show('mainMenu'));
     document.querySelectorAll('[data-emote]').forEach(btn => {
       btn.addEventListener('click', () => {
         if (this.player && this.player.playEmote) this.player.playEmote(btn.getAttribute('data-emote'));
@@ -349,9 +354,14 @@ const Game = {
     if (!this.renderer) return;
     const data = SaveSystem.load();
     const g = (data.settings && data.settings.graphics) || 'medium';
-    const cap = g === 'low' ? 1 : g === 'high' ? 2 : 1.5;
+    const cap = g === 'low' ? 1 : g === 'medium' ? 1.5 : g === 'ultra' ? 2 : 1.75;
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, cap));
     this.renderer.shadowMap.enabled = g !== 'low';
+    if (THREE.PCFSoftShadowMap) this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    if (THREE.ACESFilmicToneMapping) {
+      this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      this.renderer.toneMappingExposure = g === 'low' ? 0.95 : 1.08;
+    }
   },
 
   initThree() {
@@ -370,7 +380,12 @@ const Game = {
         alpha: false,
         failIfMajorPerformanceCaveat: false
       });
-      this.renderer.shadowMap.enabled = false;
+      this.renderer.shadowMap.enabled = true;
+      if (THREE.PCFSoftShadowMap) this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      if (THREE.ACESFilmicToneMapping) {
+        this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        this.renderer.toneMappingExposure = 1.08;
+      }
     }
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     this.renderer.setSize(w, h, true);
@@ -632,6 +647,9 @@ const Game = {
     if (window.AudioSystem) AudioSystem.collect();
     UI.showMessage(item.label + ' ✓', 1200);
     this.player.addScore(75);
+    if (window.RewardSystem && (t === 'cave' || t === 'summit' || t === 'arena')) {
+      RewardSystem.onSecret(this.currentWorld || 1, t);
+    }
     this.updateHUD();
   },
 
@@ -664,6 +682,9 @@ const Game = {
       this.applyInventoryToPlayer();
     }
     this.player.addScore(50);
+    if (window.RewardSystem && (item.type === 'faith' || item.type === 'scroll')) {
+      RewardSystem.onScroll(this.currentWorld || 1, this.itemsCollected || 0);
+    }
     this.updateHUD();
   },
 
@@ -1027,6 +1048,9 @@ const Game = {
     const score = this.player ? this.player.score : 0;
     const stars = score > 1200 ? 3 : score > 700 ? 2 : 1;
     const result = SaveSystem.completeLevel(worldId, score, stars);
+    if (window.RewardSystem && result.newlyCompleted) {
+      RewardSystem.onWorldComplete(worldId, stars);
+    }
 
     const lv = (window.LEVELS && window.LEVELS[worldId - 1]) || {};
     if (result.newlyCompleted) {
@@ -1077,6 +1101,10 @@ const Game = {
     }
     UI.populateVictoryBible(worldId);
     setTxt('victory-score', score);
+    const rv = window.RewardSystem ? RewardSystem.VALUES.world : { xp: 500, gems: 100 };
+    const extra = stars >= 3 && window.RewardSystem ? RewardSystem.VALUES.perfect : { xp: 0, gems: 0 };
+    setTxt('victory-xp', '+' + (rv.xp + extra.xp));
+    setTxt('victory-gems', '+' + (rv.gems + extra.gems));
     setTxt('victory-items', this.itemsCollected);
     setTxt('victory-enemies', this.enemiesDefeated);
     const starEl = document.getElementById('victory-stars');
@@ -1121,6 +1149,8 @@ const Game = {
     );
     const coinsEl = document.getElementById('hud-coins');
     if (coinsEl) coinsEl.textContent = String(this.player.coins || 0);
+    const gemsEl = document.getElementById('hud-gems');
+    if (gemsEl && window.SaveSystem) gemsEl.textContent = String(SaveSystem.load().gems || 0);
     const ammoEl = document.getElementById('hud-ammo');
     if (ammoEl) {
       ammoEl.textContent = this.player.hasBow

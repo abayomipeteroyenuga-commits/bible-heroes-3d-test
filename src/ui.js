@@ -15,7 +15,16 @@ const UI = {
     { key: 'fortressBreaker', icon: '🏰', title: 'Fortress Challenger', desc: 'Complete World 7' },
     { key: 'battlefieldHero', icon: '⚔️', title: 'Battlefield Hero', desc: 'Complete World 8' },
     { key: 'goliathTerritory', icon: '👣', title: "Goliath's Territory", desc: 'Complete World 9' },
-    { key: 'giantSlayer', icon: '👑', title: 'Giant Slayer', desc: 'Defeat Goliath in World 20' }
+    { key: 'giantSlayer', icon: '👑', title: 'Giant Slayer', desc: 'Defeat Goliath in World 40' },
+    { key: 'guardianHunter', icon: '⚔', title: 'Guardian Hunter', desc: 'Defeat 100 Guardians' },
+    { key: 'eliteHunter', icon: '🛡', title: 'Elite Hunter', desc: 'Defeat 25 Elite Guardians' },
+    { key: 'braveWarrior', icon: '🎖', title: 'Brave Warrior', desc: 'Complete 5 worlds' },
+    { key: 'champion', icon: '🏅', title: 'Champion', desc: 'Complete 10 worlds' },
+    { key: 'explorer', icon: '🔎', title: 'Explorer', desc: 'Discover 10 secret areas' },
+    { key: 'bibleScholar', icon: '📜', title: 'Bible Scholar', desc: 'Collect 10 Bible scrolls' },
+    { key: 'bossSlayer', icon: '⚔', title: 'Boss Slayer', desc: 'Defeat 10 bosses' },
+    { key: 'davidsChampion', icon: '🌟', title: "David's Champion", desc: 'Complete World 20' },
+    { key: 'goliathSlayer', icon: '🗿', title: 'Goliath Slayer', desc: 'Defeat Goliath in World 40' }
   ],
 
   init() {
@@ -30,6 +39,7 @@ const UI = {
       settings: document.getElementById('settings-screen'),
       map: document.getElementById('map-screen'),
       achievements: document.getElementById('achievements-screen'),
+      rewards: document.getElementById('rewards-screen'),
       credits: document.getElementById('credits-screen'),
       confirmReset: document.getElementById('confirm-reset'),
       confirmQuit: document.getElementById('confirm-quit'),
@@ -56,7 +66,7 @@ const UI = {
   show(screen) {
     const all = [
       'loading', 'mainMenu', 'intro', 'game', 'pause', 'victory',
-      'howto', 'settings', 'map', 'achievements', 'credits', 'shop', 'confirmReset', 'confirmQuit'
+      'howto', 'settings', 'map', 'achievements', 'rewards', 'credits', 'shop', 'confirmReset', 'confirmQuit'
     ];
     all.forEach(s => {
       if (this.elements[s]) this.elements[s].classList.add('hidden');
@@ -277,6 +287,47 @@ const UI = {
     set('craft-sticks', bag.sticks || 0);
     set('craft-feathers', bag.feathers || 0);
     set('craft-flint', bag.flint || 0);
+  },
+
+  updateGems(n) {
+    const el = document.getElementById('hud-gems');
+    if (el) el.textContent = String(n || 0);
+    const el2 = document.getElementById('rewards-gems');
+    if (el2) el2.textContent = String(n || 0);
+  },
+
+  showRewardToast(text) {
+    let host = document.getElementById('reward-toasts');
+    if (!host) {
+      host = document.createElement('div');
+      host.id = 'reward-toasts';
+      document.body.appendChild(host);
+    }
+    const card = document.createElement('div');
+    card.className = 'reward-toast';
+    card.textContent = text;
+    host.appendChild(card);
+    if (window.AudioSystem && AudioSystem.collect) AudioSystem.collect();
+    setTimeout(() => { card.classList.add('out'); }, 2400);
+    setTimeout(() => { if (card.parentNode) card.parentNode.removeChild(card); }, 3200);
+  },
+
+  populateRewards() {
+    const s = window.RewardSystem ? RewardSystem.summary() : { gems: 0, xp: 0, worlds: 0, maxWorlds: 40, achievements: 0, maxAchievements: 10, badges: 0, maxBadges: 10 };
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    set('rewards-gems', s.gems);
+    set('rewards-xp', s.xp);
+    set('rewards-ach', s.achievements + ' / ' + s.maxAchievements);
+    set('rewards-badges', s.badges + ' / ' + s.maxBadges);
+    set('rewards-worlds', s.worlds + ' / ' + s.maxWorlds);
+    const list = document.getElementById('rewards-badge-list');
+    if (list && window.SaveSystem) {
+      const badges = SaveSystem.load().badges || {};
+      const keys = Object.keys(badges);
+      list.innerHTML = keys.length
+        ? keys.map(k => '<div class="badge-chip">🎖️ ' + badges[k] + '</div>').join('')
+        : '<p class="muted">Win battles and complete worlds to earn badges.</p>';
+    }
   }
 };
 

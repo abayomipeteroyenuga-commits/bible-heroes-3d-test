@@ -82,7 +82,8 @@ class ShadowGuardian {
       eye: v.eye || 0x3a4a2a,
       pads: true,
       armorChest: true,
-      weapon: 'club'
+      weapon: 'club',
+      helmet: ({ band: 'basic', cap: 'armored', wrap: 'wrap' }[v.helm]) || ['basic', 'armored', 'wrap', 'elite', 'heavy', 'commander'][GUARDIAN_VARIANTS.indexOf(v) % 6]
     });
     this.root = this.humanoid.root;
     this.torsoGroup = this.humanoid.torsoGroup;
@@ -96,24 +97,8 @@ class ShadowGuardian {
     this.browL = this.humanoid.browL;
     this.browR = this.humanoid.browR;
 
-    // --- Health bar (billboard) ---
-    this.hpGroup = new THREE.Group();
-    this.hpGroup.position.y = 1.55;
-    this.group.add(this.hpGroup);
-
-    const barBg = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.7, 0.1),
-      new THREE.MeshBasicMaterial({ color: 0x1a1a2e, transparent: true, opacity: 0.85, depthTest: false })
-    );
-    this.hpGroup.add(barBg);
-
-    this.hpBar = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.66, 0.07),
-      new THREE.MeshBasicMaterial({ color: 0xe53e3e, transparent: true, opacity: 0.95, depthTest: false })
-    );
-    this.hpBar.position.z = 0.01;
-    this.hpGroup.add(this.hpBar);
-    this.hpBarBaseWidth = 0.66;
+    this.hpGroup = null;
+    this.hpBar = null;
   }
 
   _updateHumanFace() {
@@ -127,12 +112,7 @@ class ShadowGuardian {
     if (this.browR) this.browR.rotation.z = -z;
   }
 
-  updateHealthBar() {
-    const ratio = Math.max(0, this.health / this.maxHealth);
-    this.hpBar.scale.x = Math.max(0.01, ratio);
-    this.hpBar.position.x = -this.hpBarBaseWidth * 0.5 * (1 - ratio);
-    this.hpBar.material.color.setHex(ratio > 0.5 ? 0x48bb78 : ratio > 0.25 ? 0xed8936 : 0xe53e3e);
-  }
+  updateHealthBar() {}
 
   animate(dt) {
     let clip = this.state === 'PATROL' ? 'WALK' : this.state;
@@ -223,13 +203,18 @@ class ShadowGuardian {
       this.group.position.x = Math.max(b.minX + 1, Math.min(b.maxX - 1, this.group.position.x));
       this.group.position.z = Math.max(b.minZ + 1, Math.min(b.maxZ - 1, this.group.position.z));
     }
+    if (window.Game && Game.world && Game.world.resolveCircle) {
+      const fixed = Game.world.resolveCircle(this.group.position.x, this.group.position.z, 0.5);
+      this.group.position.x = fixed.x;
+      this.group.position.z = fixed.z;
+    }
 
     this.animate(dt);
     this.updateHealthBar();
 
     // Billboard health bar toward camera
     if (window.Game && window.Game.camera) {
-      this.hpGroup.lookAt(window.Game.camera.position);
+      if (this.hpGroup) this.hpGroup.lookAt(window.Game.camera.position);
     }
   }
 
@@ -273,7 +258,7 @@ class ShadowGuardian {
   defeat() {
     this.alive = false;
     this.state = 'DEFEATED';
-    this.hpGroup.visible = false;
+    if (this.hpGroup) this.hpGroup.visible = false;
 
     if (window.Game) {
       window.Game.spawnParticles(
@@ -285,6 +270,11 @@ class ShadowGuardian {
       if (window.Game.addCoins) window.Game.addCoins(6);
       if (window.UI) window.UI.showMessage('ENEMY DEFEATED! +100');
       if (window.SaveSystem) SaveSystem.bumpStat('guardiansDefeated', 1);
+      if (window.RewardSystem) {
+        const helm = (this.variant && this.variant.helm) || 'band';
+        const kind = helm === 'cap' ? 'heavy' : helm === 'wrap' ? 'elite' : 'guardian';
+        RewardSystem.onGuardian(kind, 'guard-' + (window.Game && Game.currentWorld) + '-' + Math.round(this.group.position.x) + '-' + Math.round(this.group.position.z));
+      }
       if (window.AudioSystem) AudioSystem.enemyDefeat();
     }
 
@@ -910,6 +900,7 @@ class Goliath {
         window.UI.showMessage('GOLIATH DEFEATED!');
         window.UI.hideBoss();
         if (window.SaveSystem) SaveSystem.bumpStat('bossesDefeated', 1);
+        if (window.RewardSystem) RewardSystem.onBoss(true, 40);
         if (window.AudioSystem) AudioSystem.enemyDefeat();
       }
     }
@@ -983,7 +974,8 @@ class WorldBoss {
       accent: spec.accent || 0xc4a06a,
       pads: true,
       armorChest: true,
-      weapon: spec.weapon || 'club'
+      weapon: spec.weapon || 'club',
+      helmet: 'boss'
     });
     this.root = this.humanoid.root;
     this.leftArm = this.humanoid.armL.root;
@@ -1036,6 +1028,11 @@ class WorldBoss {
       else this.state = 'CHASE';
     }
 
+    if (window.Game && Game.world && Game.world.resolveCircle) {
+      const fixed = Game.world.resolveCircle(this.group.position.x, this.group.position.z, 0.9);
+      this.group.position.x = fixed.x;
+      this.group.position.z = fixed.z;
+    }
     if (this.humanoid) {
       const clip = this.state === 'ATTACK' ? 'ATTACK' : this.state === 'HIT' ? 'HIT' : this.state === 'CHASE' ? 'RUN' : 'IDLE';
       this.humanoid.update(dt, clip, { mood: this.phase >= 3 ? 'determined' : 'alert', fire: this.state === 'ATTACK' });
@@ -1132,6 +1129,7 @@ class WorldBoss {
       if (window.Game.player) window.Game.player.addScore(250);
     }
     if (window.SaveSystem) SaveSystem.bumpStat('bossesDefeated', 1);
+    if (window.RewardSystem) RewardSystem.onBoss(false, window.Game && Game.currentWorld);
     if (window.AudioSystem) {
       if (AudioSystem.bossDefeat) AudioSystem.bossDefeat();
       else AudioSystem.enemyDefeat();

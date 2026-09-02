@@ -30,6 +30,15 @@ const SaveSystem = {
         bossConqueror: false,
         adventureExplorer: false,
         bibleHeroMaster: false,
+        guardianHunter: false,
+        eliteHunter: false,
+        braveWarrior: false,
+        champion: false,
+        explorer: false,
+        bibleScholar: false,
+        bossSlayer: false,
+        davidsChampion: false,
+        goliathSlayer: false,
         valleyExplorer: false,
         rockyWilderness: false,
         forestSurvivor: false,
@@ -46,8 +55,16 @@ const SaveSystem = {
         bossesDefeated: 0,
         faithShieldUses: 0,
         criticalHits: 0,
-        levelsCompleted: 0
+        levelsCompleted: 0,
+        scrollsCollected: 0,
+        secretsDiscovered: 0,
+        eliteDefeated: 0,
+        quizzesCompleted: 0
       },
+      gems: 0,
+      totalXP: 0,
+      claimedRewards: {},
+      badges: {},
       totalScore: 0,
       inventory: {
         coins: 0,
@@ -82,8 +99,12 @@ const SaveSystem = {
       stats: { ...def.stats, ...((raw && raw.stats) || {}) },
       inventory: { ...def.inventory, ...((raw && raw.inventory) || {}) },
       bestScores: { ...((raw && raw.bestScores) || {}) },
-      stars: { ...((raw && raw.stars) || {}) }
+      stars: { ...((raw && raw.stars) || {}) },
+      claimedRewards: { ...((raw && raw.claimedRewards) || {}) },
+      badges: { ...((raw && raw.badges) || {}) }
     };
+    data.gems = parseInt(data.gems, 10) || 0;
+    data.totalXP = parseInt(data.totalXP, 10) || 0;
 
     data.unlockedLevels = this._cleanList(data.unlockedLevels);
     if (data.unlockedLevels.indexOf(1) === -1) data.unlockedLevels.unshift(1);
@@ -324,6 +345,7 @@ const SaveSystem = {
     if (!data.achievements[key]) {
       data.achievements[key] = true;
       this.save(data);
+      if (window.RewardSystem) RewardSystem.onAchievement(key);
       return true;
     }
     return false;
@@ -343,16 +365,25 @@ const SaveSystem = {
 
   checkAchievements(data) {
     data = data || this.load();
-    const a = data.achievements;
-    const s = data.stats;
+    const s = data.stats || {};
     const completed = data.completedLevels || [];
-    if (s.guardiansDefeated >= 5) a.guardianDefeater = true;
-    if (s.faithShieldUses >= 3) a.shieldOfFaith = true;
-    if (s.criticalHits >= 1) a.bullseye = true;
-    if (completed.length >= 1) a.firstVictory = true;
-    if (completed.indexOf(1) !== -1) a.adventureExplorer = true;
-    if (completed.indexOf(10) !== -1) a.bibleHeroMaster = true;
-    this.save(data);
+    if (s.guardiansDefeated >= 1) this.setAchievement('firstVictory');
+    if (s.guardiansDefeated >= 5) this.setAchievement('guardianDefeater');
+    if (s.guardiansDefeated >= 100) this.setAchievement('guardianHunter');
+    if ((s.eliteDefeated || 0) >= 25) this.setAchievement('eliteHunter');
+    if (s.faithShieldUses >= 3) this.setAchievement('shieldOfFaith');
+    if (s.criticalHits >= 1) this.setAchievement('bullseye');
+    if (completed.length >= 1) this.setAchievement('firstVictory');
+    if (completed.length >= 5) this.setAchievement('braveWarrior');
+    if (completed.length >= 10) this.setAchievement('champion');
+    if (completed.indexOf(1) !== -1) this.setAchievement('adventureExplorer');
+    if (completed.indexOf(20) !== -1) this.setAchievement('davidsChampion');
+    if (completed.indexOf(40) !== -1) this.setAchievement('goliathSlayer');
+    if ((s.bossesDefeated || 0) >= 1) this.setAchievement('bossConqueror');
+    if ((s.bossesDefeated || 0) >= 10) this.setAchievement('bossSlayer');
+    if ((s.secretsDiscovered || 0) >= 10) this.setAchievement('explorer');
+    if ((s.quizzesCompleted || 0) >= 10) this.setAchievement('bibleScholar');
+    if ((s.scrollsCollected || 0) >= 10) this.setAchievement('bibleScholar');
   },
 
   resetProgress() {
@@ -364,3 +395,140 @@ const SaveSystem = {
 };
 
 window.SaveSystem = SaveSystem;
+
+const RewardSystem = {
+  VALUES: {
+    guardian: { xp: 25, gems: 5 },
+    elite: { xp: 50, gems: 10 },
+    heavy: { xp: 75, gems: 15 },
+    commander: { xp: 100, gems: 20 },
+    boss: { xp: 500, gems: 100 },
+    goliath: { xp: 2000, gems: 500 },
+    objective: { xp: 100, gems: 20 },
+    majorObjective: { xp: 200, gems: 40 },
+    scroll: { xp: 50, gems: 10 },
+    secret: { xp: 100, gems: 50 },
+    world: { xp: 500, gems: 100 },
+    perfect: { xp: 250, gems: 50 }
+  },
+  ACHIEVEMENTS: {
+    firstVictory: { title: 'First Victory', desc: 'Defeat your first Guardian.', icon: '🏆', xp: 100, gems: 25, badge: 'Guardian Hunter' },
+    guardianHunter: { title: 'Guardian Hunter', desc: 'Defeat 100 Guardians.', icon: '⚔', xp: 500, gems: 100, badge: 'Guardian Hunter' },
+    eliteHunter: { title: 'Elite Hunter', desc: 'Defeat 25 Elite Guardians.', icon: '🛡', xp: 750, gems: 150, badge: 'Elite Hunter' },
+    braveWarrior: { title: 'Brave Warrior', desc: 'Complete 5 worlds.', icon: '🎖', xp: 500, gems: 100, badge: 'Brave Warrior' },
+    champion: { title: 'Champion', desc: 'Complete 10 worlds.', icon: '🏅', xp: 1000, gems: 250, badge: 'Champion' },
+    explorer: { title: 'Explorer', desc: 'Discover 10 secret areas.', icon: '🔎', xp: 500, gems: 150, badge: 'Explorer' },
+    bibleScholar: { title: 'Bible Scholar', desc: 'Collect 10 Bible scrolls.', icon: '📜', xp: 750, gems: 200, badge: 'Bible Scholar' },
+    bossSlayer: { title: 'Boss Slayer', desc: 'Defeat 10 bosses.', icon: '⚔', xp: 1000, gems: 250, badge: 'Boss Slayer' },
+    davidsChampion: { title: "David's Champion", desc: 'Complete World 20.', icon: '🌟', xp: 2000, gems: 500, badge: "David's Champion" },
+    goliathSlayer: { title: 'Goliath Slayer', desc: 'Defeat Goliath in World 40.', icon: '🗿', xp: 5000, gems: 1000, badge: 'Goliath Slayer' },
+    guardianDefeater: { title: 'Guardian Defeater', desc: 'Defeat 5 Guardians.', icon: '⚔', xp: 100, gems: 20 },
+    bossConqueror: { title: 'Boss Conqueror', desc: 'Defeat a world boss.', icon: '🏆', xp: 250, gems: 50 }
+  },
+
+  claimed(id) {
+    const data = SaveSystem.load();
+    return !!(data.claimedRewards && data.claimedRewards[id]);
+  },
+
+  grant(id, xp, gems, toast) {
+    if (!id || this.claimed(id)) return false;
+    const data = SaveSystem.load();
+    data.claimedRewards = data.claimedRewards || {};
+    data.claimedRewards[id] = true;
+    data.gems = (data.gems || 0) + (gems || 0);
+    data.totalXP = (data.totalXP || 0) + (xp || 0);
+    data.totalScore = (data.totalScore || 0) + (xp || 0);
+    SaveSystem.save(data);
+    if (window.Game && window.Game.player && xp) window.Game.player.addScore(xp);
+    if (window.UI) {
+      if (UI.updateGems) UI.updateGems(data.gems);
+      if (toast && UI.showRewardToast) UI.showRewardToast(toast);
+    }
+    if (window.Game && window.Game.updateHUD) window.Game.updateHUD();
+    return true;
+  },
+
+  onGuardian(kind, uniqueId) {
+    const key = kind === 'commander' || kind === 'heavy' || kind === 'elite' ? kind : 'guardian';
+    const v = this.VALUES[key];
+    const id = uniqueId || ('guardian-' + Date.now() + '-' + Math.random().toFixed(4));
+    this.grant(id, v.xp, v.gems, '+' + v.xp + ' XP   💎 +' + v.gems);
+    if (key !== 'guardian') SaveSystem.bumpStat('eliteDefeated', 1);
+    SaveSystem.checkAchievements();
+  },
+
+  onBoss(isGoliath, worldId) {
+    const v = isGoliath ? this.VALUES.goliath : this.VALUES.boss;
+    const id = isGoliath ? 'boss-goliath-40' : ('boss-world-' + (worldId || 0));
+    const title = isGoliath ? '🏆 GOLIATH DEFEATED!' : '🏆 BOSS DEFEATED!';
+    this.grant(id, v.xp, v.gems, title + '  +' + v.xp + ' XP  💎 +' + v.gems);
+    SaveSystem.checkAchievements();
+  },
+
+  onScroll(worldId, index) {
+    const id = 'scroll-w' + worldId + '-' + index;
+    const v = this.VALUES.scroll;
+    if (this.grant(id, v.xp, v.gems, '📜 BIBLE SCROLL FOUND!  +' + v.xp + ' XP  💎 +' + v.gems)) {
+      SaveSystem.bumpStat('scrollsCollected', 1);
+    }
+  },
+
+  onSecret(worldId, key) {
+    const id = 'secret-w' + worldId + '-' + key;
+    const v = this.VALUES.secret;
+    if (this.grant(id, v.xp, v.gems, '🔎 SECRET DISCOVERED!  +' + v.xp + ' XP  💎 +' + v.gems)) {
+      SaveSystem.bumpStat('secretsDiscovered', 1);
+    }
+  },
+
+  onObjective(worldId, objId, major) {
+    const v = major ? this.VALUES.majorObjective : this.VALUES.objective;
+    this.grant('obj-w' + worldId + '-' + objId, v.xp, v.gems, '+' + v.xp + ' XP   💎 +' + v.gems);
+  },
+
+  onWorldComplete(worldId, stars) {
+    const v = this.VALUES.world;
+    const id = 'world-complete-' + worldId;
+    this.grant(id, v.xp, v.gems, '⭐ WORLD COMPLETE  +' + v.xp + ' XP  💎 +' + v.gems);
+    if (stars >= 3) {
+      const p = this.VALUES.perfect;
+      this.grant('world-perfect-' + worldId, p.xp, p.gems, '🌟 PERFECT MISSION!  +' + p.xp + ' XP  💎 +' + p.gems);
+    }
+    SaveSystem.checkAchievements();
+  },
+
+  onAchievement(key) {
+    const def = this.ACHIEVEMENTS[key];
+    if (!def) return;
+    const id = 'achievement-' + key;
+    const ok = this.grant(id, def.xp || 0, def.gems || 0, '🏆 ACHIEVEMENT UNLOCKED!  ' + def.title + '  +' + (def.xp || 0) + ' XP  💎 +' + (def.gems || 0));
+    if (ok && def.badge) {
+      const data = SaveSystem.load();
+      data.badges = data.badges || {};
+      data.badges[key] = def.badge;
+      SaveSystem.save(data);
+    }
+    if (window.AudioSystem && AudioSystem.levelComplete) AudioSystem.levelComplete();
+  },
+
+  summary() {
+    const d = SaveSystem.load();
+    const ach = d.achievements || {};
+    const unlocked = Object.keys(this.ACHIEVEMENTS).filter(k => ach[k]).length;
+    const totalA = Object.keys(this.ACHIEVEMENTS).length;
+    const badges = Object.keys(d.badges || {}).length;
+    return {
+      gems: d.gems || 0,
+      xp: d.totalXP || 0,
+      worlds: (d.completedLevels || []).length,
+      maxWorlds: SaveSystem.MAX_LEVEL,
+      achievements: unlocked,
+      maxAchievements: totalA,
+      badges: badges,
+      maxBadges: totalA
+    };
+  }
+};
+
+window.RewardSystem = RewardSystem;
