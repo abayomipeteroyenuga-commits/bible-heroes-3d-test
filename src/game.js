@@ -72,6 +72,13 @@ const Game = {
       UI.populateAchievements(SaveSystem.load().achievements);
       UI.show('achievements');
     });
+    document.querySelectorAll('[data-emote]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (this.player && this.player.playEmote) this.player.playEmote(btn.getAttribute('data-emote'));
+        const panel = document.getElementById('emote-panel');
+        if (panel) panel.classList.add('hidden');
+      });
+    });
     click('btn-hud-map', () => this.toggleGameMap());
     click('btn-hud-jaruscope', () => this.useJaruscope());
     click('btn-map-close', () => { this.mapOpen = false; const el = document.getElementById('game-map-overlay'); if (el) el.classList.add('hidden'); });
@@ -418,7 +425,7 @@ const Game = {
     const stats = { health: theme.enemyHp || 30, damage: theme.enemyDmg || 5, speed: theme.enemySpd || 3.2, detect: theme.enemyDetect || 12 };
     this._enemyStats = stats;
     spots.forEach((s, i) => {
-      this.enemies.push(new ShadowGuardian(this.scene, new THREE.Vector3(s.x, s.y, s.z), i % 3, stats));
+      this.enemies.push(new ShadowGuardian(this.scene, new THREE.Vector3(s.x, s.y, s.z), i % 6, stats));
     });
 
     this.goliath = null;
@@ -542,6 +549,7 @@ const Game = {
     this.enemies.forEach(e => {
       e.update(dt, playerPos);
     });
+    if (this.player && this.player.updateEmotion) this.player.updateEmotion(this);
     this.enemiesDefeated = this.enemies.filter(e => !e.alive).length;
     this.trySpawnNextWave();
 
@@ -733,7 +741,7 @@ const Game = {
     const next = theme.waves[this._waveIndex] || [];
     const stats = this._enemyStats || {};
     next.forEach((p, i) => {
-      this.enemies.push(new ShadowGuardian(this.scene, new THREE.Vector3(p[0], p[1], p[2]), i % 3, stats));
+      this.enemies.push(new ShadowGuardian(this.scene, new THREE.Vector3(p[0], p[1], p[2]), i % 6, stats));
     });
     this.wavesComplete = false;
     this._spawningWave = false;

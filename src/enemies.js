@@ -2,37 +2,40 @@
 
 const GUARDIAN_VARIANTS = [
   {
-    name: 'Shade Scout',
-    body: 0x3a2450,
-    armor: 0x5a3a7a,
-    accent: 0x8b5cf6,
-    skin: 0x6b5a7a,
-    eye: 0xc4b5fd,
-    scale: 0.88,
-    headScale: 1.05,
-    bodyWide: 0.92
+    name: 'Valley Guard',
+    body: 0x5a4634, armor: 0x8a6a48, accent: 0xc4a06a,
+    skin: 0xe0b08a, hair: 0x2a1a10, eye: 0x3a4a2a,
+    scale: 0.94, headScale: 0.92, bodyWide: 0.95, helm: 'band'
   },
   {
-    name: 'Night Brute',
-    body: 0x2a2035,
-    armor: 0x4a5568,
-    accent: 0x63b3ed,
-    skin: 0x5a5068,
-    eye: 0x90cdf4,
-    scale: 0.95,
-    headScale: 0.92,
-    bodyWide: 1.12
+    name: 'Ridge Soldier',
+    body: 0x4a4038, armor: 0x6a6860, accent: 0xb0a090,
+    skin: 0xc99670, hair: 0x1a120c, eye: 0x4a3020,
+    scale: 1.02, headScale: 0.88, bodyWide: 1.12, helm: 'cap'
   },
   {
-    name: 'Ember Warden',
-    body: 0x3d2a28,
-    armor: 0x744210,
-    accent: 0xf6ad55,
-    skin: 0x7a5a50,
-    eye: 0xfbd38d,
-    scale: 0.90,
-    headScale: 1.0,
-    bodyWide: 1.0
+    name: 'Camp Watchman',
+    body: 0x3a4a38, armor: 0x6a5a38, accent: 0xd0b060,
+    skin: 0xd2a07a, hair: 0x3a2414, eye: 0x2a3a5a,
+    scale: 0.96, headScale: 0.9, bodyWide: 1.0, helm: 'wrap'
+  },
+  {
+    name: 'Brook Sentinel',
+    body: 0x3a4a50, armor: 0x5a6a68, accent: 0x88b0b8,
+    skin: 0xf0c4a0, hair: 0x4a3020, eye: 0x2a5080,
+    scale: 0.93, headScale: 0.91, bodyWide: 0.92, helm: 'band'
+  },
+  {
+    name: 'Iron Levy',
+    body: 0x3a3a40, armor: 0x6a6a72, accent: 0xc0c4c8,
+    skin: 0xb88860, hair: 0x120c08, eye: 0x2a2018,
+    scale: 1.05, headScale: 0.86, bodyWide: 1.16, helm: 'cap'
+  },
+  {
+    name: 'Desert Scout',
+    body: 0x8a6a40, armor: 0xa08050, accent: 0xe8c070,
+    skin: 0xc08050, hair: 0x201408, eye: 0x3a2818,
+    scale: 0.95, headScale: 0.9, bodyWide: 0.98, helm: 'wrap'
   }
 ];
 
@@ -55,7 +58,8 @@ class ShadowGuardian {
     this.hitTimer = 0;
     this.attackProgress = 0;
     this.walkCycle = 0;
-    this.variant = GUARDIAN_VARIANTS[(variantIndex != null ? variantIndex : Math.floor(Math.random() * 3)) % 3];
+    this.variant = GUARDIAN_VARIANTS[(variantIndex != null ? variantIndex : Math.floor(Math.random() * GUARDIAN_VARIANTS.length)) % GUARDIAN_VARIANTS.length];
+    this.emotion = 'idle';
     this.buildModel();
     this.group.position.copy(position);
     this.group.scale.setScalar(this.variant.scale);
@@ -143,41 +147,51 @@ class ShadowGuardian {
     head.scale.set(1, 1.05, 0.95);
     this.headGroup.add(head);
 
-    // Helmet / hood variation by type
-    if (v.name === 'Shade Scout') {
-      const hood = new THREE.Mesh(new THREE.ConeGeometry(0.26, 0.35, 7), bodyMat);
-      hood.position.y = 0.2;
-      this.headGroup.add(hood);
-    } else if (v.name === 'Night Brute') {
-      const helm = new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.26, 0.22, 8), armorMat);
-      helm.position.y = 0.12;
+    const hairMat = new THREE.MeshLambertMaterial({ color: v.hair || 0x2a1a10 });
+    const hair = new THREE.Mesh(new THREE.SphereGeometry(0.2 * v.headScale, 8, 7), hairMat);
+    hair.position.set(0, 0.08, -0.02);
+    hair.scale.set(1.05, 0.7, 1.05);
+    this.headGroup.add(hair);
+    if (v.helm === 'cap') {
+      const helm = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.22, 0.12, 8), armorMat);
+      helm.position.y = 0.14;
       this.headGroup.add(helm);
-      const crest = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.2, 0.12), accentMat);
-      crest.position.y = 0.28;
-      this.headGroup.add(crest);
+    } else if (v.helm === 'wrap') {
+      const wrap = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.03, 6, 10), accentMat);
+      wrap.position.y = 0.1;
+      wrap.rotation.x = Math.PI / 2;
+      this.headGroup.add(wrap);
     } else {
-      // Ember Warden mask
-      const mask = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.18, 0.12), armorMat);
-      mask.position.set(0, 0.02, 0.16);
-      this.headGroup.add(mask);
-      const hornL = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.18, 5), accentMat);
-      hornL.position.set(-0.14, 0.22, 0);
-      hornL.rotation.z = 0.4;
-      this.headGroup.add(hornL);
-      const hornR = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.18, 5), accentMat);
-      hornR.position.set(0.14, 0.22, 0);
-      hornR.rotation.z = -0.4;
-      this.headGroup.add(hornR);
+      const band = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.02, 6, 12), accentMat);
+      band.position.y = 0.08;
+      band.rotation.x = Math.PI / 2;
+      this.headGroup.add(band);
     }
 
-    // Glowing eyes
-    const eyeGeo = new THREE.SphereGeometry(0.045, 6, 5);
-    const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
-    eyeL.position.set(-0.08, 0.04, 0.18 * v.headScale);
+    const eyeWhite = new THREE.MeshLambertMaterial({ color: 0xf4efe6 });
+    const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.035, 6, 5), eyeWhite);
+    eyeL.position.set(-0.07, 0.03, 0.18 * v.headScale);
+    eyeL.scale.set(1, 1.05, 0.55);
     this.headGroup.add(eyeL);
-    const eyeR = new THREE.Mesh(eyeGeo, eyeMat);
-    eyeR.position.set(0.08, 0.04, 0.18 * v.headScale);
+    const eyeR = new THREE.Mesh(new THREE.SphereGeometry(0.035, 6, 5), eyeWhite);
+    eyeR.position.set(0.07, 0.03, 0.18 * v.headScale);
+    eyeR.scale.set(1, 1.05, 0.55);
     this.headGroup.add(eyeR);
+    const irisL = new THREE.Mesh(new THREE.SphereGeometry(0.018, 6, 5), eyeMat);
+    irisL.position.set(-0.07, 0.03, 0.2 * v.headScale);
+    this.headGroup.add(irisL);
+    const irisR = new THREE.Mesh(new THREE.SphereGeometry(0.018, 6, 5), eyeMat);
+    irisR.position.set(0.07, 0.03, 0.2 * v.headScale);
+    this.headGroup.add(irisR);
+    this.eyeL = eyeL;
+    this.eyeR = eyeR;
+    const brow = new THREE.MeshLambertMaterial({ color: v.hair || 0x2a1a10 });
+    this.browL = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.012, 0.02), brow);
+    this.browL.position.set(-0.07, 0.09, 0.17 * v.headScale);
+    this.headGroup.add(this.browL);
+    this.browR = this.browL.clone();
+    this.browR.position.x = 0.07;
+    this.headGroup.add(this.browR);
 
     // --- Arms ---
     this.leftArmGroup = new THREE.Group();
@@ -236,6 +250,17 @@ class ShadowGuardian {
     this.hpBarBaseWidth = 0.66;
   }
 
+  _updateHumanFace() {
+    if (!this.browL) return;
+    let z = 0.08;
+    if (this.state === 'ATTACK') z = -0.12;
+    else if (this.state === 'HIT') z = 0.28;
+    else if (this.state === 'CHASE') z = -0.06;
+    else if (this.health < this.maxHealth * 0.35) z = 0.18;
+    this.browL.rotation.z = z;
+    if (this.browR) this.browR.rotation.z = -z;
+  }
+
   updateHealthBar() {
     const ratio = Math.max(0, this.health / this.maxHealth);
     this.hpBar.scale.x = Math.max(0.01, ratio);
@@ -253,6 +278,7 @@ class ShadowGuardian {
     this.headGroup.rotation.set(0, 0, 0);
     this.root.position.y = 0;
 
+    this._updateHumanFace();
     if (this.state === 'HIT') {
       this.hitTimer += dt;
       const t = this.hitTimer;
@@ -309,11 +335,15 @@ class ShadowGuardian {
       const s = Math.sin(this.walkCycle);
       this.leftLegGroup.rotation.x = s * amp;
       this.rightLegGroup.rotation.x = -s * amp;
-      this.leftArmGroup.rotation.x = -s * amp * 0.9;
-      this.rightArmGroup.rotation.x = s * amp * 0.9;
-      this.torsoGroup.rotation.z = Math.cos(this.walkCycle) * 0.04;
-      this.root.position.y = Math.abs(s) * (this.state === 'CHASE' ? 0.06 : 0.03);
-      this.headGroup.rotation.x = -0.05;
+      this.leftArmGroup.rotation.x = -s * amp * 1.05;
+      this.rightArmGroup.rotation.x = s * amp * 1.05;
+      this.torsoGroup.rotation.z = Math.cos(this.walkCycle) * 0.05;
+      this.torsoGroup.rotation.x = this.state === 'CHASE' ? 0.08 : 0.03;
+      this.root.position.y = Math.abs(s) * (this.state === 'CHASE' ? 0.07 : 0.03);
+      this.headGroup.rotation.x = this.state === 'CHASE' ? -0.08 : -0.03;
+      if (this.state === 'CHASE' && window.Game && window.Game.player) {
+        this.group.lookAt(window.Game.player.getPosition().x, this.group.position.y, window.Game.player.getPosition().z);
+      }
       return;
     }
 
@@ -389,6 +419,11 @@ class ShadowGuardian {
     this.health -= amount;
     this.state = 'HIT';
     this.hitTimer = 0;
+    if (window.Game && window.Game.player) {
+      const away = this.group.position.clone().sub(window.Game.player.getPosition());
+      away.y = 0;
+      if (away.lengthSq() > 0.01) this.group.position.addScaledVector(away.normalize(), 0.35);
+    }
     this.updateHealthBar();
     if (window.Game && window.Game.addCameraShake) window.Game.addCameraShake(0.07, 0.12);
 
@@ -1090,9 +1125,23 @@ class WorldBoss {
     const chest = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.28, 0.5), accent);
     chest.position.set(0, 1.35, 0.08);
     this.root.add(chest);
-    this.head = new THREE.Mesh(new THREE.SphereGeometry(0.32, 10, 8), skin);
+    this.head = new THREE.Mesh(new THREE.SphereGeometry(0.32, 12, 10), skin);
     this.head.position.y = 1.85;
     this.root.add(this.head);
+    const bEye = new THREE.MeshLambertMaterial({ color: 0xf2ebe0 });
+    const eL = new THREE.Mesh(new THREE.SphereGeometry(0.05, 6, 5), bEye);
+    eL.position.set(-0.1, 1.9, 0.26);
+    this.root.add(eL);
+    const eR = eL.clone();
+    eR.position.x = 0.1;
+    this.root.add(eR);
+    const iris = new THREE.MeshLambertMaterial({ color: 0x2a2018 });
+    const iL = new THREE.Mesh(new THREE.SphereGeometry(0.022, 6, 5), iris);
+    iL.position.set(-0.1, 1.9, 0.3);
+    this.root.add(iL);
+    const iR = iL.clone();
+    iR.position.x = 0.1;
+    this.root.add(iR);
     const helm = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.34, 0.28, 8), accent);
     helm.position.y = 2.08;
     this.root.add(helm);

@@ -508,6 +508,33 @@ html, body {
   font-size: 0.85rem;
   color: #d0d8e0;
 }
+#emote-panel {
+  position: absolute;
+  right: 12px;
+  bottom: 150px;
+  z-index: 35;
+  pointer-events: auto;
+  background: rgba(10, 22, 40, 0.92);
+  border: 2px solid rgba(240, 193, 75, 0.6);
+  border-radius: 12px;
+  padding: 10px;
+  width: min(280px, 70vw);
+}
+#emote-panel.hidden { display: none !important; }
+.emote-title { color: #f0c14b; font-weight: 800; margin-bottom: 6px; }
+.emote-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.emote-grid button {
+  pointer-events: auto;
+  background: #1e3a2a;
+  color: #fff;
+  border: 1px solid rgba(240,193,75,0.4);
+  border-radius: 8px;
+  padding: 6px 4px;
+  font-family: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+.emote-hint { font-size: 0.7rem; color: #a0b0c0; margin-top: 6px; }
 #btn-map-close {
   pointer-events: auto;
   background: #3a2030;
