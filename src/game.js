@@ -907,7 +907,15 @@ const Game = {
     const spec = window.getWorldBoss ? window.getWorldBoss(id) : { name: 'World Boss', hp: 200 };
     const theme = window.getWorldTheme ? window.getWorldTheme(id) : {};
     const gp = theme.goliathPos || [0, 0, -55];
-    this.goliath = new WorldBoss(this.scene, new THREE.Vector3(gp[0], gp[1], gp[2]), id);
+    if (id === 40 && window.Goliath) {
+      this.goliath = new Goliath(this.scene, new THREE.Vector3(gp[0], gp[1], gp[2]));
+      if (spec.hp) {
+        this.goliath.health = spec.hp;
+        this.goliath.maxHealth = spec.hp;
+      }
+    } else {
+      this.goliath = new WorldBoss(this.scene, new THREE.Vector3(gp[0], gp[1], gp[2]), id);
+    }
     UI.showBoss(this.goliath.health, this.goliath.maxHealth);
     const title = document.querySelector('#boss-hud .boss-name');
     if (title) title.textContent = (spec.name || 'BOSS').toUpperCase();
@@ -916,7 +924,8 @@ const Game = {
     UI.showMessage((spec.name || 'BOSS') + ' APPEARS!', 2800);
     this.addCameraShake(0.32, 0.55);
     if (window.AudioSystem) {
-      AudioSystem.goliathAppear();
+      if (AudioSystem.bossAppear) AudioSystem.bossAppear();
+      else AudioSystem.goliathAppear();
       AudioSystem.battleMusic();
     }
   },
@@ -982,7 +991,8 @@ const Game = {
     UI.showMessage('GOLIATH — THE PHILISTINE GIANT!', 3000);
     this.addCameraShake(0.4, 0.7);
     if (window.AudioSystem) {
-      AudioSystem.goliathAppear();
+      if (AudioSystem.bossAppear) AudioSystem.bossAppear();
+      else AudioSystem.goliathAppear();
       AudioSystem.battleMusic();
     }
     // Brief camera emphasis on boss entrance
@@ -1023,7 +1033,7 @@ const Game = {
       if (lv.achievement) SaveSystem.setAchievement(lv.achievement);
       if (this.enemiesDefeated >= 5) SaveSystem.setAchievement('guardianDefeater');
       if (this.goliathDefeated) SaveSystem.setAchievement('bossConqueror');
-      if (worldId === 20 && this.goliathDefeated) {
+      if (worldId === 40 && this.goliathDefeated) {
         SaveSystem.setAchievement('giantSlayer');
         SaveSystem.setAchievement('davidTheBrave');
       }

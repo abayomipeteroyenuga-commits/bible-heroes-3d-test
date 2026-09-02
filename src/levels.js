@@ -252,9 +252,9 @@ class MissionSystem {
       fight,
       {
         id: 'boss',
-        text: id === 20 ? 'Defeat Goliath' : ('Defeat ' + ((window.getWorldBoss && getWorldBoss(id).name) || 'the World Boss')),
+        text: id === 40 ? 'Defeat Goliath' : ('Defeat ' + ((window.getWorldBoss && getWorldBoss(id).name) || 'the World Boss')),
         check: g => !!g.goliathDefeated,
-        onComplete: g => this.finishWorld(g, id === 20 ? 'GIANT SLAYER!' : doneName)
+        onComplete: g => this.finishWorld(g, id === 40 ? 'GIANT SLAYER!' : doneName)
       }
     ];
   }
@@ -342,7 +342,25 @@ const WORLD_BOSSES = {
 
 function getWorldBoss(id) {
   const n = parseInt(id, 10) || 1;
-  return WORLD_BOSSES[n] || WORLD_BOSSES[1];
+  const base = WORLD_BOSSES[n] || WORLD_BOSSES[1];
+  const weapons = ['club', 'spear', 'staff', 'club'];
+  const skins = [0xc4a07a, 0xe0b08a, 0xb88860, 0xd2a07a, 0xf0c4a0, 0xc08050];
+  const hairs = [0x1a100c, 0x3a2414, 0x4a3020, 0x201408, 0x2a1a10, 0x120c08];
+  let attacks = ['swing'];
+  if (n >= 4) attacks = ['swing', 'charge'];
+  if (n >= 10) attacks = ['swing', 'charge', 'slam'];
+  if (n >= 20) attacks = ['swing', 'charge', 'slam', 'throw'];
+  if (n === 40) attacks = ['swing', 'charge', 'slam', 'throw', 'shock'];
+  return Object.assign({
+    weapon: weapons[n % weapons.length],
+    skin: skins[n % skins.length],
+    hair: hairs[n % hairs.length],
+    detect: 16 + Math.min(12, n * 0.25),
+    range: 3.1 + Math.min(1.4, n * 0.03),
+    cooldown: Math.max(0.7, 1.7 - n * 0.02),
+    attacks: attacks,
+    phases: n < 8 ? 2 : 3
+  }, base);
 }
 
 window.BIBLE_WORLD_DATA = BIBLE_WORLD_DATA;

@@ -69,166 +69,32 @@ class ShadowGuardian {
 
   buildModel() {
     const v = this.variant;
-    const bodyMat = new THREE.MeshLambertMaterial({ color: v.body });
-    const armorMat = new THREE.MeshLambertMaterial({ color: v.armor });
-    const accentMat = new THREE.MeshLambertMaterial({ color: v.accent });
-    const skinMat = new THREE.MeshLambertMaterial({ color: v.skin });
-    const eyeMat = new THREE.MeshBasicMaterial({ color: v.eye });
-    const darkMat = new THREE.MeshLambertMaterial({ color: 0x1a1228 });
-
-    this.root = new THREE.Group();
-    this.group.add(this.root);
-
-    // --- Legs ---
-    this.leftLegGroup = new THREE.Group();
-    this.leftLegGroup.position.set(-0.14, 0.55, 0);
-    this.root.add(this.leftLegGroup);
-    const thighL = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.08, 0.28, 7), bodyMat);
-    thighL.position.y = -0.12;
-    this.leftLegGroup.add(thighL);
-    const shinL = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.06, 0.26, 7), skinMat);
-    shinL.position.y = -0.36;
-    this.leftLegGroup.add(shinL);
-    const bootL = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.08, 0.2), darkMat);
-    bootL.position.set(0, -0.52, 0.02);
-    this.leftLegGroup.add(bootL);
-
-    this.rightLegGroup = new THREE.Group();
-    this.rightLegGroup.position.set(0.14, 0.55, 0);
-    this.root.add(this.rightLegGroup);
-    const thighR = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.08, 0.28, 7), bodyMat);
-    thighR.position.y = -0.12;
-    this.rightLegGroup.add(thighR);
-    const shinR = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.06, 0.26, 7), skinMat);
-    shinR.position.y = -0.36;
-    this.rightLegGroup.add(shinR);
-    const bootR = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.08, 0.2), darkMat);
-    bootR.position.set(0, -0.52, 0.02);
-    this.rightLegGroup.add(bootR);
-
-    // --- Torso ---
-    this.torsoGroup = new THREE.Group();
-    this.torsoGroup.position.y = 0.55;
-    this.root.add(this.torsoGroup);
-
-    const torso = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.22 * v.bodyWide, 0.26 * v.bodyWide, 0.5, 8),
-      armorMat
-    );
-    torso.position.y = 0.28;
-    this.torsoGroup.add(torso);
-    this.bodyMesh = torso;
-
-    // Shoulder pads
-    const padGeo = new THREE.SphereGeometry(0.12, 6, 5);
-    const padL = new THREE.Mesh(padGeo, accentMat);
-    padL.position.set(-0.28 * v.bodyWide, 0.48, 0);
-    padL.scale.set(1.2, 0.7, 1);
-    this.torsoGroup.add(padL);
-    const padR = new THREE.Mesh(padGeo, accentMat);
-    padR.position.set(0.28 * v.bodyWide, 0.48, 0);
-    padR.scale.set(1.2, 0.7, 1);
-    this.torsoGroup.add(padR);
-
-    // Belt
-    const belt = new THREE.Mesh(new THREE.CylinderGeometry(0.27 * v.bodyWide, 0.27 * v.bodyWide, 0.06, 8), darkMat);
-    belt.position.y = 0.08;
-    this.torsoGroup.add(belt);
-
-    // --- Head ---
-    this.headGroup = new THREE.Group();
-    this.headGroup.position.y = 0.62;
-    this.torsoGroup.add(this.headGroup);
-
-    const head = new THREE.Mesh(
-      new THREE.SphereGeometry(0.22 * v.headScale, 10, 8),
-      skinMat
-    );
-    head.scale.set(1, 1.05, 0.95);
-    this.headGroup.add(head);
-
-    const hairMat = new THREE.MeshLambertMaterial({ color: v.hair || 0x2a1a10 });
-    const hair = new THREE.Mesh(new THREE.SphereGeometry(0.2 * v.headScale, 8, 7), hairMat);
-    hair.position.set(0, 0.08, -0.02);
-    hair.scale.set(1.05, 0.7, 1.05);
-    this.headGroup.add(hair);
-    if (v.helm === 'cap') {
-      const helm = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.22, 0.12, 8), armorMat);
-      helm.position.y = 0.14;
-      this.headGroup.add(helm);
-    } else if (v.helm === 'wrap') {
-      const wrap = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.03, 6, 10), accentMat);
-      wrap.position.y = 0.1;
-      wrap.rotation.x = Math.PI / 2;
-      this.headGroup.add(wrap);
-    } else {
-      const band = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.02, 6, 12), accentMat);
-      band.position.y = 0.08;
-      band.rotation.x = Math.PI / 2;
-      this.headGroup.add(band);
-    }
-
-    const eyeWhite = new THREE.MeshLambertMaterial({ color: 0xf4efe6 });
-    const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.035, 6, 5), eyeWhite);
-    eyeL.position.set(-0.07, 0.03, 0.18 * v.headScale);
-    eyeL.scale.set(1, 1.05, 0.55);
-    this.headGroup.add(eyeL);
-    const eyeR = new THREE.Mesh(new THREE.SphereGeometry(0.035, 6, 5), eyeWhite);
-    eyeR.position.set(0.07, 0.03, 0.18 * v.headScale);
-    eyeR.scale.set(1, 1.05, 0.55);
-    this.headGroup.add(eyeR);
-    const irisL = new THREE.Mesh(new THREE.SphereGeometry(0.018, 6, 5), eyeMat);
-    irisL.position.set(-0.07, 0.03, 0.2 * v.headScale);
-    this.headGroup.add(irisL);
-    const irisR = new THREE.Mesh(new THREE.SphereGeometry(0.018, 6, 5), eyeMat);
-    irisR.position.set(0.07, 0.03, 0.2 * v.headScale);
-    this.headGroup.add(irisR);
-    this.eyeL = eyeL;
-    this.eyeR = eyeR;
-    const brow = new THREE.MeshLambertMaterial({ color: v.hair || 0x2a1a10 });
-    this.browL = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.012, 0.02), brow);
-    this.browL.position.set(-0.07, 0.09, 0.17 * v.headScale);
-    this.headGroup.add(this.browL);
-    this.browR = this.browL.clone();
-    this.browR.position.x = 0.07;
-    this.headGroup.add(this.browR);
-
-    // --- Arms ---
-    this.leftArmGroup = new THREE.Group();
-    this.leftArmGroup.position.set(-0.32 * v.bodyWide, 0.48, 0);
-    this.torsoGroup.add(this.leftArmGroup);
-    const upperL = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.06, 0.28, 6), skinMat);
-    upperL.position.y = -0.12;
-    this.leftArmGroup.add(upperL);
-    const lowerL = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.05, 0.24, 6), bodyMat);
-    lowerL.position.y = -0.36;
-    this.leftArmGroup.add(lowerL);
-    const handL = new THREE.Mesh(new THREE.SphereGeometry(0.06, 6, 5), skinMat);
-    handL.position.y = -0.5;
-    this.leftArmGroup.add(handL);
-
-    this.rightArmGroup = new THREE.Group();
-    this.rightArmGroup.position.set(0.32 * v.bodyWide, 0.48, 0);
-    this.torsoGroup.add(this.rightArmGroup);
-    const upperR = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.06, 0.28, 6), skinMat);
-    upperR.position.y = -0.12;
-    this.rightArmGroup.add(upperR);
-    const lowerR = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.05, 0.24, 6), bodyMat);
-    lowerR.position.y = -0.36;
-    this.rightArmGroup.add(lowerR);
-    const handR = new THREE.Mesh(new THREE.SphereGeometry(0.06, 6, 5), skinMat);
-    handR.position.y = -0.5;
-    this.rightArmGroup.add(handR);
-
-    // Weapon / claw on right hand (child-friendly)
-    const claw = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.22, 5), accentMat);
-    claw.position.set(0, -0.62, 0.05);
-    claw.rotation.x = Math.PI;
-    this.rightArmGroup.add(claw);
-
-    // Compatibility refs for any external code
+    this.humanoid = new Humanoid(this.group, {
+      skin: v.skin || 0xe0b08a,
+      shirt: v.body || 0x5a4634,
+      pants: v.armor || 0x4a4038,
+      pantsDark: 0x2a2420,
+      boot: 0x3a2a1c,
+      hair: v.hair || 0x2a1a10,
+      leather: v.armor || 0x6a5a48,
+      armor: v.armor || 0x6a5a48,
+      accent: v.accent || 0xc4a06a,
+      eye: v.eye || 0x3a4a2a,
+      pads: true,
+      armorChest: true,
+      weapon: 'club'
+    });
+    this.root = this.humanoid.root;
+    this.torsoGroup = this.humanoid.torsoGroup;
+    this.headGroup = this.humanoid.headGroup;
+    this.leftArmGroup = this.humanoid.leftArmGroup;
+    this.rightArmGroup = this.humanoid.rightArmGroup;
+    this.leftLegGroup = this.humanoid.leftLegGroup;
+    this.rightLegGroup = this.humanoid.rightLegGroup;
     this.leftArm = this.leftArmGroup;
     this.rightArm = this.rightArmGroup;
+    this.browL = this.humanoid.browL;
+    this.browR = this.humanoid.browR;
 
     // --- Health bar (billboard) ---
     this.hpGroup = new THREE.Group();
@@ -269,25 +135,14 @@ class ShadowGuardian {
   }
 
   animate(dt) {
-    // Reset joint rotations
-    this.leftArmGroup.rotation.set(0, 0, 0.12);
-    this.rightArmGroup.rotation.set(0, 0, -0.12);
-    this.leftLegGroup.rotation.set(0, 0, 0);
-    this.rightLegGroup.rotation.set(0, 0, 0);
-    this.torsoGroup.rotation.set(0, 0, 0);
-    this.headGroup.rotation.set(0, 0, 0);
-    this.root.position.y = 0;
+    let clip = this.state === 'PATROL' ? 'WALK' : this.state;
+    if (clip === 'CHASE') clip = 'RUN';
+    const mood = this.state === 'ATTACK' ? 'determined' : this.state === 'HIT' ? 'pain' : this.state === 'CHASE' ? 'alert' : (this.health < this.maxHealth * 0.35 ? 'worried' : 'calm');
+    if (this.humanoid) this.humanoid.update(dt, clip, { mood: mood });
 
-    this._updateHumanFace();
     if (this.state === 'HIT') {
       this.hitTimer += dt;
-      const t = this.hitTimer;
-      this.torsoGroup.rotation.x = -0.25;
-      this.headGroup.rotation.x = 0.2;
-      this.leftArmGroup.rotation.x = 0.5;
-      this.rightArmGroup.rotation.x = 0.5;
-      this.group.rotation.z = Math.sin(t * 30) * 0.12;
-      if (t > 0.35) {
+      if (this.hitTimer > 0.35) {
         this.hitTimer = 0;
         this.group.rotation.z = 0;
         this.state = 'CHASE';
@@ -298,29 +153,16 @@ class ShadowGuardian {
     if (this.state === 'ATTACK') {
       this.attackProgress += dt * 2.8;
       const p = Math.min(1, this.attackProgress);
-      if (p < 0.45) {
-        const w = p / 0.45;
-        this.rightArmGroup.rotation.x = -0.4 - w * 1.2;
-        this.torsoGroup.rotation.y = w * 0.25;
-      } else {
-        const r = (p - 0.45) / 0.55;
-        this.rightArmGroup.rotation.x = -1.6 + r * 1.8;
-        this.torsoGroup.rotation.y = 0.25 - r * 0.35;
-        // Impact frame
-        if (!this.attackHitDone && p >= 0.5) {
-          this.attackHitDone = true;
-          if (window.Game && window.Game.player) {
-            const d = this.group.position.distanceTo(window.Game.player.getPosition());
-            if (d < this.attackRange + 0.5) {
-              window.Game.player.takeDamage(this.damage);
-              if (window.UI) window.UI.showMessage('HIT!', 800);
-            }
+      if (!this.attackHitDone && p >= 0.5) {
+        this.attackHitDone = true;
+        if (window.Game && window.Game.player) {
+          const d = this.group.position.distanceTo(window.Game.player.getPosition());
+          if (d < this.attackRange + 0.5) {
+            window.Game.player.takeDamage(this.damage);
+            if (window.UI) window.UI.showMessage('HIT!', 800);
           }
         }
       }
-      this.leftArmGroup.rotation.x = -0.3;
-      this.leftLegGroup.rotation.x = 0.2;
-      this.rightLegGroup.rotation.x = 0.15;
       if (p >= 1) {
         this.attackProgress = 0;
         this.state = 'CHASE';
@@ -328,32 +170,9 @@ class ShadowGuardian {
       return;
     }
 
-    if (this.state === 'CHASE' || this.state === 'PATROL') {
-      const speed = this.state === 'CHASE' ? 10 : 6;
-      const amp = this.state === 'CHASE' ? 0.55 : 0.35;
-      this.walkCycle += dt * speed;
-      const s = Math.sin(this.walkCycle);
-      this.leftLegGroup.rotation.x = s * amp;
-      this.rightLegGroup.rotation.x = -s * amp;
-      this.leftArmGroup.rotation.x = -s * amp * 1.05;
-      this.rightArmGroup.rotation.x = s * amp * 1.05;
-      this.torsoGroup.rotation.z = Math.cos(this.walkCycle) * 0.05;
-      this.torsoGroup.rotation.x = this.state === 'CHASE' ? 0.08 : 0.03;
-      this.root.position.y = Math.abs(s) * (this.state === 'CHASE' ? 0.07 : 0.03);
-      this.headGroup.rotation.x = this.state === 'CHASE' ? -0.08 : -0.03;
-      if (this.state === 'CHASE' && window.Game && window.Game.player) {
-        this.group.lookAt(window.Game.player.getPosition().x, this.group.position.y, window.Game.player.getPosition().z);
-      }
-      return;
+    if (this.state === 'CHASE' && window.Game && window.Game.player) {
+      this.group.lookAt(window.Game.player.getPosition().x, this.group.position.y, window.Game.player.getPosition().z);
     }
-
-    // IDLE breathing
-    const breath = Math.sin(this.animTime * 2.2) * 0.03;
-    this.torsoGroup.position.y = 0.55 + breath;
-    this.headGroup.rotation.y = Math.sin(this.animTime * 0.8) * 0.12;
-    this.headGroup.rotation.x = Math.sin(this.animTime * 1.1) * 0.04;
-    this.leftArmGroup.rotation.z = 0.12 + Math.sin(this.animTime * 1.5) * 0.05;
-    this.rightArmGroup.rotation.z = -0.12 + Math.sin(this.animTime * 1.5 + 1) * 0.05;
   }
 
   update(dt, playerPos) {
@@ -500,6 +319,7 @@ class Goliath {
     this.speed = 2.4;
     this.state = 'ENTRANCE';
     this.phase = 1;
+    this._announcedPhase = 1;
     this.attackCooldown = 1.5;
     this.animTime = 0;
     this.alive = true;
@@ -881,9 +701,9 @@ class Goliath {
     this.vulnerableTimer -= dt;
 
     const hpRatio = Math.max(0, this.health / this.maxHealth);
-    if (hpRatio < 0.3) this.phase = 3;
-    else if (hpRatio < 0.6) this.phase = 2;
-    else this.phase = 1;
+    const nextPhase = hpRatio < 0.3 ? 3 : hpRatio < 0.6 ? 2 : 1;
+    if (nextPhase > this.phase) this.enterPhase(nextPhase);
+    else this.phase = nextPhase;
 
     // Busy / reaction states — no new decisions
     if (this.state === 'ENTRANCE' || this.state === 'HIT' || this.state === 'STUN') {
@@ -947,6 +767,28 @@ class Goliath {
     this.animate(dt);
   }
 
+  enterPhase(n) {
+    this.phase = n;
+    this._announcedPhase = n;
+    this.state = 'ROAR';
+    this.roarTimer = 1.1;
+    this.attackCooldown = 0.4;
+    if (window.UI) {
+      UI.showMessage(n === 3 ? 'GOLIATH ENRAGED!' : 'GOLIATH GROWS STRONGER!', 2200);
+      if (UI.updateBoss) UI.updateBoss(this.health, this.maxHealth);
+    }
+    if (window.Game && window.Game.addCameraShake) window.Game.addCameraShake(0.35, 0.45);
+    if (window.Game && window.Game.spawnParticles) {
+      window.Game.spawnParticles(this.group.position.clone().add(new THREE.Vector3(0, 2.2, 0)), 0xe06030, 14);
+    }
+    if (window.AudioSystem) {
+      if (n === 3 && AudioSystem.bossEnrage) AudioSystem.bossEnrage();
+      else if (AudioSystem.bossPhase) AudioSystem.bossPhase();
+      else if (AudioSystem.goliathAppear) AudioSystem.goliathAppear();
+    }
+    this.group.scale.multiplyScalar(n === 3 ? 1.08 : 1.04);
+  }
+
   chooseAttack(dist, playerPos) {
     this.attackProgress = 0;
     // Prefer strike up close, charge at mid range, roar when farther or in late phase
@@ -988,6 +830,10 @@ class Goliath {
     this.state = 'ROAR';
     this.attackProgress = 0;
     if (window.UI) window.UI.showMessage('GOLIATH ROARS!', 1200);
+    if (window.AudioSystem) {
+      if (AudioSystem.bossRoar) AudioSystem.bossRoar();
+      else AudioSystem.goliathAppear();
+    }
     if (window.Game && window.Game.player) {
       window.Game.player.speed = 3;
       setTimeout(() => { if (window.Game && window.Game.player) window.Game.player.speed = 6; }, 2000);
@@ -998,7 +844,10 @@ class Goliath {
     this.state = 'CHARGE';
     this.attackProgress = 0;
     this.attackHitDone = false;
-    if (window.AudioSystem) AudioSystem.bossSwing();
+    if (window.AudioSystem) {
+      if (AudioSystem.bossCharge) AudioSystem.bossCharge();
+      else AudioSystem.bossSwing();
+    }
     this._pendingAttackDamage = this.damage * (this.phase === 3 ? 1.4 : 1.2);
     this._pendingAttackMsg = 'CHARGE!';
     this._pendingAttackRange = 6;
@@ -1029,6 +878,7 @@ class Goliath {
       window.UI.showMessage(hitZone + ' HIT', 700);
     }
     this.health = Math.max(0, this.health - dmg);
+    if (window.AudioSystem && AudioSystem.bossHit) AudioSystem.bossHit();
     if (window.UI) window.UI.updateBoss(this.health, this.maxHealth);
     this.state = 'HIT';
     this.hitTimer = 0;
@@ -1100,9 +950,17 @@ class WorldBoss {
     this.baseSpeed = this.speed;
     this.state = 'IDLE';
     this.phase = 1;
-    this.detectRange = 20;
-    this.attackCooldown = 1.6;
+    this.detectRange = spec.detect || 20;
+    this.attackRange = spec.range || 3.3;
+    this.attacks = spec.attacks || ['swing'];
+    this.attackKind = 'swing';
+    this.attackCooldown = spec.cooldown || 1.6;
+    this.baseCooldown = this.attackCooldown;
     this.windup = 0;
+    this.recover = 0;
+    this.chargeT = 0;
+    this.chargeDir = new THREE.Vector3();
+    this._announcedPhase = 1;
     this.animTime = 0;
     this.alive = true;
     this.hitTimer = 0;
@@ -1114,107 +972,139 @@ class WorldBoss {
   }
 
   buildModel(spec) {
-    const body = new THREE.MeshLambertMaterial({ color: spec.color });
-    const accent = new THREE.MeshLambertMaterial({ color: spec.accent });
-    const skin = new THREE.MeshLambertMaterial({ color: 0xc4a07a });
-    this.root = new THREE.Group();
-    this.group.add(this.root);
-    const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.46, 1.05, 8), body);
-    torso.position.y = 1.15;
-    this.root.add(torso);
-    const chest = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.28, 0.5), accent);
-    chest.position.set(0, 1.35, 0.08);
-    this.root.add(chest);
-    this.head = new THREE.Mesh(new THREE.SphereGeometry(0.32, 12, 10), skin);
-    this.head.position.y = 1.85;
-    this.root.add(this.head);
-    const bEye = new THREE.MeshLambertMaterial({ color: 0xf2ebe0 });
-    const eL = new THREE.Mesh(new THREE.SphereGeometry(0.05, 6, 5), bEye);
-    eL.position.set(-0.1, 1.9, 0.26);
-    this.root.add(eL);
-    const eR = eL.clone();
-    eR.position.x = 0.1;
-    this.root.add(eR);
-    const iris = new THREE.MeshLambertMaterial({ color: 0x2a2018 });
-    const iL = new THREE.Mesh(new THREE.SphereGeometry(0.022, 6, 5), iris);
-    iL.position.set(-0.1, 1.9, 0.3);
-    this.root.add(iL);
-    const iR = iL.clone();
-    iR.position.x = 0.1;
-    this.root.add(iR);
-    const helm = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.34, 0.28, 8), accent);
-    helm.position.y = 2.08;
-    this.root.add(helm);
-    this.leftArm = new THREE.Group();
-    this.leftArm.position.set(-0.48, 1.4, 0);
-    this.root.add(this.leftArm);
-    this.leftArm.add(new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.12, 0.8, 6), skin));
-    this.rightArm = new THREE.Group();
-    this.rightArm.position.set(0.48, 1.4, 0);
-    this.root.add(this.rightArm);
-    const club = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.16, 1.1, 6), accent);
-    club.position.set(0, -0.55, 0.1);
-    this.rightArm.add(club);
-    this.leftLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.16, 0.8, 6), body);
-    this.leftLeg.position.set(-0.2, 0.4, 0);
-    this.root.add(this.leftLeg);
-    this.rightLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.16, 0.8, 6), body);
-    this.rightLeg.position.set(0.2, 0.4, 0);
-    this.root.add(this.rightLeg);
+    this.humanoid = new Humanoid(this.group, {
+      skin: spec.skin || 0xc4a07a,
+      shirt: spec.color || 0x5a3a7a,
+      pants: spec.color || 0x4a3040,
+      boot: 0x2a1a14,
+      hair: spec.hair || 0x1a100c,
+      leather: spec.accent || 0xc4a06a,
+      armor: spec.accent || 0xc4a06a,
+      accent: spec.accent || 0xc4a06a,
+      pads: true,
+      armorChest: true,
+      weapon: spec.weapon || 'club'
+    });
+    this.root = this.humanoid.root;
+    this.leftArm = this.humanoid.armL.root;
+    this.rightArm = this.humanoid.armR.root;
+    this.leftLeg = this.humanoid.thighL;
+    this.rightLeg = this.humanoid.thighR;
+    this.head = this.humanoid.head;
   }
 
   update(dt, playerPos) {
     if (!this.alive) return;
     this.animTime += dt;
     if (this.attackCooldown > 0) this.attackCooldown -= dt;
-    if (this.hitTimer > 0) {
-      this.hitTimer -= dt;
-      return;
-    }
+    if (this.hitTimer > 0) this.hitTimer -= dt;
+    if (this.recover > 0) this.recover -= dt;
+
     const ratio = this.health / Math.max(1, this.maxHealth);
-    if (ratio <= 0.3) {
-      this.phase = 3;
-      this.speed = this.baseSpeed * 1.35;
-    } else if (ratio <= 0.6) {
-      this.phase = 2;
-      this.speed = this.baseSpeed * 1.18;
-    } else {
-      this.phase = 1;
-      this.speed = this.baseSpeed;
-    }
+    const nextPhase = ratio <= 0.3 ? 3 : ratio <= 0.6 ? 2 : 1;
+    if (nextPhase > this.phase) this.enterPhase(nextPhase);
+
     const to = playerPos.clone().sub(this.group.position);
     to.y = 0;
     const dist = to.length();
-    if (dist > this.detectRange && this.state !== 'ATTACK') {
+
+    if (this.hitTimer > 0) {
+      this.state = 'HIT';
+    } else if (this.windup > 0) {
+      this.state = 'ATTACK';
+      this.windup -= dt;
+      if (this.attackKind === 'charge') {
+        this.group.position.addScaledVector(this.chargeDir, this.speed * 2.2 * dt);
+      }
+      if (this.windup <= 0) {
+        this.resolveAttack(dist, playerPos);
+        this.recover = this.phase === 3 ? 0.22 : 0.38;
+        this.state = 'RECOVER';
+      }
+    } else if (this.recover > 0) {
+      this.state = 'RECOVER';
+    } else if (dist > this.detectRange) {
       this.state = 'IDLE';
-      return;
-    }
-    this.state = dist < 3.4 ? 'ATTACK' : 'CHASE';
-    if (dist > 0.25) {
+    } else if (dist > this.attackRange) {
+      this.state = 'CHASE';
       const dir = to.normalize();
       this.group.position.addScaledVector(dir, this.speed * dt);
       this.group.lookAt(playerPos.x, this.group.position.y, playerPos.z);
+    } else {
+      this.group.lookAt(playerPos.x, this.group.position.y, playerPos.z);
+      if (this.attackCooldown <= 0) this.beginAttack(dist, to);
+      else this.state = 'CHASE';
     }
-    const walk = Math.sin(this.animTime * (5 + this.phase)) * 0.35;
-    if (this.leftLeg) this.leftLeg.rotation.x = walk;
-    if (this.rightLeg) this.rightLeg.rotation.x = -walk;
-    if (this.leftArm) this.leftArm.rotation.x = -walk * 0.6;
-    if (this.rightArm) this.rightArm.rotation.x = walk * 0.6;
-    if (this.windup > 0) {
-      this.windup -= dt;
-      if (this.rightArm) this.rightArm.rotation.x = -1.35;
-      if (this.windup <= 0 && dist < 3.6) {
-        if (window.Game && window.Game.player) window.Game.player.takeDamage(this.damage);
-        if (window.Game && window.Game.addCameraShake) window.Game.addCameraShake(0.2, 0.2);
+
+    if (this.humanoid) {
+      const clip = this.state === 'ATTACK' ? 'ATTACK' : this.state === 'HIT' ? 'HIT' : this.state === 'CHASE' ? 'RUN' : 'IDLE';
+      this.humanoid.update(dt, clip, { mood: this.phase >= 3 ? 'determined' : 'alert', fire: this.state === 'ATTACK' });
+    }
+  }
+
+  enterPhase(n) {
+    this.phase = n;
+    this._announcedPhase = n;
+    this.speed = this.baseSpeed * (n === 3 ? 1.38 : n === 2 ? 1.2 : 1);
+    this.attackCooldown = 0.35;
+    this.recover = 0.2;
+    if (n >= 2 && this.attacks.indexOf('charge') === -1) this.attacks.push('charge');
+    if (n >= 3 && this.attacks.indexOf('slam') === -1) this.attacks.push('slam');
+    if (window.UI) UI.showMessage(n === 3 ? this.name.toUpperCase() + ' ENRAGED!' : this.name.toUpperCase() + ' — PHASE ' + n + '!', 1800);
+    if (window.Game && window.Game.addCameraShake) window.Game.addCameraShake(0.28, 0.35);
+    if (window.Game && window.Game.spawnParticles) {
+      window.Game.spawnParticles(this.group.position.clone().add(new THREE.Vector3(0, 1.6, 0)), this.spec.accent || 0xe06030, 12);
+    }
+    if (window.AudioSystem) {
+      if (n === 3 && AudioSystem.bossEnrage) AudioSystem.bossEnrage();
+      else if (AudioSystem.bossPhase) AudioSystem.bossPhase();
+      else if (AudioSystem.bossSwing) AudioSystem.bossSwing();
+    }
+  }
+
+  beginAttack(dist, to) {
+    const list = this.attacks && this.attacks.length ? this.attacks : ['swing'];
+    this.attackKind = list[Math.floor(Math.random() * list.length)];
+    const cd = this.phase === 3 ? this.baseCooldown * 0.62 : this.phase === 2 ? this.baseCooldown * 0.8 : this.baseCooldown;
+    this.attackCooldown = cd;
+    this.windup = this.attackKind === 'charge' ? 0.55 : this.attackKind === 'slam' ? 0.48 : 0.34;
+    this.chargeDir.copy(to).setY(0);
+    if (this.chargeDir.lengthSq() > 0) this.chargeDir.normalize();
+    this.state = 'ATTACK';
+    if (window.AudioSystem) {
+      if (this.attackKind === 'charge' && AudioSystem.bossCharge) AudioSystem.bossCharge();
+      else if (this.attackKind === 'slam' && AudioSystem.bossWindup) AudioSystem.bossWindup();
+      else if (AudioSystem.bossSwing) AudioSystem.bossSwing();
+    }
+    if (window.UI) {
+      const label = this.attackKind === 'charge' ? 'CHARGE!' : this.attackKind === 'slam' ? 'SLAM!' : this.attackKind === 'throw' ? 'THROW!' : this.attackKind === 'shock' ? 'SHOCKWAVE!' : 'STRIKE!';
+      UI.showMessage(label, 700);
+    }
+  }
+
+  resolveAttack(dist, playerPos) {
+    if (!window.Game || !window.Game.player) return;
+    let hit = false;
+    let dmg = this.damage;
+    if (this.attackKind === 'throw' || this.attackKind === 'shock') {
+      hit = dist < (this.attackKind === 'shock' ? 7 : 12);
+      dmg = Math.round(this.damage * (this.attackKind === 'shock' ? 1.15 : 0.85));
+    } else if (this.attackKind === 'charge') {
+      hit = dist < this.attackRange + 1.8;
+      dmg = Math.round(this.damage * 1.2);
+    } else if (this.attackKind === 'slam') {
+      hit = dist < this.attackRange + 0.8;
+      dmg = Math.round(this.damage * 1.3);
+    } else {
+      hit = dist < this.attackRange + 0.4;
+    }
+    if (hit) {
+      window.Game.player.takeDamage(dmg);
+      if (window.Game.addCameraShake) window.Game.addCameraShake(this.attackKind === 'slam' || this.attackKind === 'shock' ? 0.28 : 0.18, 0.2);
+      if (window.AudioSystem) {
+        if ((this.attackKind === 'slam' || this.attackKind === 'shock') && AudioSystem.bossSlam) AudioSystem.bossSlam();
+        else if (AudioSystem.impact) AudioSystem.impact();
       }
-      return;
-    }
-    const cd = this.phase === 3 ? 1.05 : this.phase === 2 ? 1.35 : 1.7;
-    if (dist < 3.3 && this.attackCooldown <= 0) {
-      this.attackCooldown = cd;
-      this.windup = this.phase === 3 ? 0.22 : 0.38;
-      if (window.AudioSystem) AudioSystem.bossSwing();
-      if (window.UI) window.UI.showMessage(this.phase === 3 ? 'FINAL STRIKE!' : 'BOSS ATTACK!', 700);
     }
   }
 
@@ -1222,6 +1112,7 @@ class WorldBoss {
     if (!this.alive) return;
     this.health = Math.max(0, this.health - amount);
     this.hitTimer = 0.25;
+    if (window.AudioSystem && AudioSystem.bossHit) AudioSystem.bossHit();
     if (window.Game && window.Game.addCameraShake) window.Game.addCameraShake(0.18, 0.22);
     if (window.UI) window.UI.updateBoss(this.health, this.maxHealth);
     if (window.Game) {
@@ -1241,7 +1132,10 @@ class WorldBoss {
       if (window.Game.player) window.Game.player.addScore(250);
     }
     if (window.SaveSystem) SaveSystem.bumpStat('bossesDefeated', 1);
-    if (window.AudioSystem) AudioSystem.enemyDefeat();
+    if (window.AudioSystem) {
+      if (AudioSystem.bossDefeat) AudioSystem.bossDefeat();
+      else AudioSystem.enemyDefeat();
+    }
     let t = 0;
     const fall = setInterval(() => {
       t += 0.05;

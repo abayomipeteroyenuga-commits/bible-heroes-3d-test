@@ -35,6 +35,8 @@ class Player {
     this.attackCooldown = 0;
     this.pendingProjectile = false;
     this.state = 'IDLE';
+    this.action = 'NONE';
+    this.actionTime = 0;
     this.emote = null;
     this.emoteTime = 0;
     this.emotion = 'calm';
@@ -64,440 +66,30 @@ class Player {
   }
 
   buildModel() {
-    const skinMat = new THREE.MeshPhongMaterial({ color: 0xf3c7a6, shininess: 36, specular: 0x553322 });
-    const skinShadowMat = new THREE.MeshPhongMaterial({ color: 0xd9a07c, shininess: 20 });
-    const shirtMat = new THREE.MeshPhongMaterial({ color: 0x4a7c59, shininess: 18 });
-    const shirtDarkMat = new THREE.MeshLambertMaterial({ color: 0x355a42 });
-    const pantsMat = new THREE.MeshLambertMaterial({ color: 0x4a3a2c });
-    const pantsDarkMat = new THREE.MeshLambertMaterial({ color: 0x33261c });
-    const beltMat = new THREE.MeshLambertMaterial({ color: 0x7a4a28 });
-    const beltDarkMat = new THREE.MeshLambertMaterial({ color: 0x5a3218 });
-    const hairMat = new THREE.MeshLambertMaterial({ color: 0x2c1a0e });
-    const hairLightMat = new THREE.MeshLambertMaterial({ color: 0x4a2e16 });
-    const bootMat = new THREE.MeshLambertMaterial({ color: 0x5c3a22 });
-    const bootDarkMat = new THREE.MeshLambertMaterial({ color: 0x3a2416 });
-    const staffMat = new THREE.MeshLambertMaterial({ color: 0xb07a48 });
-    const clothAccentMat = new THREE.MeshLambertMaterial({ color: 0xc9a15b });
-    const leatherMat = new THREE.MeshLambertMaterial({ color: 0x8a5a32 });
-    const eyeWhiteMat = new THREE.MeshLambertMaterial({ color: 0xfffdf6 });
-    const eyeIrisMat = new THREE.MeshLambertMaterial({ color: 0x2e5a7a });
-    const eyePupilMat = new THREE.MeshBasicMaterial({ color: 0x140e08 });
-    const cheekMat = new THREE.MeshLambertMaterial({ color: 0xef9a88 });
-    const lipMat = new THREE.MeshLambertMaterial({ color: 0xc86868 });
-    const pouchMat = new THREE.MeshLambertMaterial({ color: 0x8a6034 });
-    const tunicMat = shirtMat;
-    const tunicMidMat = shirtDarkMat;
-    const tunicDarkMat = pantsMat;
-    const sandalMat = bootMat;
-
-    // ── Root (vertical bob) ──
-    this.root = new THREE.Group();
-    this.group.add(this.root);
-
-    // ── Torso (hip pivot) ──
-    this.torsoGroup = new THREE.Group();
-    this.torsoGroup.position.y = 0.72;
-    this.root.add(this.torsoGroup);
-
-    // Soft rounded torso (higher segs)
-    const torso = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.27, 0.30, 0.68, 16),
-      shirtMat
-    );
-    torso.position.y = 0.36;
-    this.torsoGroup.add(torso);
-    this.torso = torso;
-
-    const chest = new THREE.Mesh(
-      new THREE.SphereGeometry(0.26, 14, 12),
-      shirtMat
-    );
-    chest.position.y = 0.52;
-    chest.scale.set(1.12, 0.72, 0.95);
-    this.torsoGroup.add(chest);
-
-    const collar = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.025, 8, 16), shirtDarkMat);
-    collar.position.y = 0.74;
-    collar.rotation.x = Math.PI / 2;
-    this.torsoGroup.add(collar);
-
-    const shirtV = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.22, 0.02), clothAccentMat);
-    shirtV.position.set(0, 0.58, 0.27);
-    this.torsoGroup.add(shirtV);
-
-    const shoulderL = new THREE.Mesh(new THREE.SphereGeometry(0.13, 10, 8), leatherMat);
-    shoulderL.position.set(-0.28, 0.68, 0);
-    shoulderL.scale.set(1.1, 0.55, 0.9);
-    this.torsoGroup.add(shoulderL);
-    const shoulderR = new THREE.Mesh(new THREE.SphereGeometry(0.11, 10, 8), leatherMat);
-    shoulderR.position.set(0.28, 0.68, 0);
-    shoulderR.scale.set(1.0, 0.5, 0.85);
-    this.torsoGroup.add(shoulderR);
-
-    // Belt + buckle
-    const belt = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.33, 0.33, 0.09, 12),
-      beltMat
-    );
-    belt.position.y = 0.20;
-    this.torsoGroup.add(belt);
-    const buckle = new THREE.Mesh(
-      new THREE.BoxGeometry(0.14, 0.1, 0.05),
-      clothAccentMat
-    );
-    buckle.position.set(0, 0.20, 0.34);
-    this.torsoGroup.add(buckle);
-    // Belt ends
-    const beltEnd = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.18, 0.03), beltDarkMat);
-    beltEnd.position.set(0.12, 0.08, 0.32);
-    this.torsoGroup.add(beltEnd);
-
-    // Stone pouch on hip
-    const pouch = new THREE.Mesh(
-      new THREE.SphereGeometry(0.1, 8, 6),
-      pouchMat
-    );
-    pouch.position.set(0.32, 0.14, 0.1);
-    pouch.scale.set(0.9, 1.1, 0.7);
-    this.torsoGroup.add(pouch);
-    const pouchStrap = new THREE.Mesh(
-      new THREE.BoxGeometry(0.04, 0.12, 0.02),
-      beltMat
-    );
-    pouchStrap.position.set(0.28, 0.22, 0.12);
-    this.torsoGroup.add(pouchStrap);
-
-    // Neck
-    const neck = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.09, 0.11, 0.14, 10),
-      skinMat
-    );
-    neck.position.y = 0.78;
-    this.torsoGroup.add(neck);
-
-    // ── Head ──
-    this.headGroup = new THREE.Group();
-    this.headGroup.position.y = 0.98;
-    this.torsoGroup.add(this.headGroup);
-
-    // Smooth head
-    const head = new THREE.Mesh(
-      new THREE.SphereGeometry(0.29, 18, 16),
-      skinMat
-    );
-    head.scale.set(0.98, 1.12, 0.94);
-    this.headGroup.add(head);
-    this.head = head;
-
-    const chin = new THREE.Mesh(
-      new THREE.SphereGeometry(0.13, 12, 10),
-      skinShadowMat
-    );
-    chin.position.set(0, -0.16, 0.07);
-    chin.scale.set(1.05, 0.68, 0.88);
-    this.headGroup.add(chin);
-
-    const hairCap = new THREE.Mesh(
-      new THREE.SphereGeometry(0.31, 16, 12),
-      hairMat
-    );
-    hairCap.position.set(0, 0.12, -0.02);
-    hairCap.scale.set(1.08, 0.78, 1.08);
-    this.headGroup.add(hairCap);
-
-    const bangs = new THREE.Mesh(new THREE.SphereGeometry(0.13, 10, 8), hairLightMat);
-    bangs.position.set(-0.04, 0.18, 0.22);
-    bangs.scale.set(1.5, 0.48, 0.55);
-    this.headGroup.add(bangs);
-    const bangs2 = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6), hairMat);
-    bangs2.position.set(0.1, 0.16, 0.21);
-    bangs2.scale.set(1.1, 0.42, 0.5);
-    this.headGroup.add(bangs2);
-
-    [[-0.24, 0.08, 0.04], [0.24, 0.08, 0.04], [-0.18, 0.02, -0.18], [0.18, 0.02, -0.18], [0, 0.16, -0.22]].forEach((p, i) => {
-      const lock = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 6), i % 2 ? hairLightMat : hairMat);
-      lock.position.set(p[0], p[1], p[2]);
-      lock.scale.set(0.85, 1.15, 0.8);
-      this.headGroup.add(lock);
+    this.humanoid = new Humanoid(this.group, {
+      skin: 0xf3c7a6, shirt: 0x4a7c59, pants: 0x4a3a2c, boot: 0x5c3a22,
+      hair: 0x2c1a0e, leather: 0x8a5a32, accent: 0xc9a15b, pads: true,
+      sling: true, staff: true, eye: 0x2e5a7a
     });
+    this.root = this.humanoid.root;
+    this.torsoGroup = this.humanoid.torsoGroup;
+    this.headGroup = this.humanoid.headGroup;
+    this.leftArmGroup = this.humanoid.leftArmGroup;
+    this.rightArmGroup = this.humanoid.rightArmGroup;
+    this.leftLegGroup = this.humanoid.leftLegGroup;
+    this.rightLegGroup = this.humanoid.rightLegGroup;
+    this.slingMesh = this.humanoid.slingMesh;
+    if (this.slingMesh) this.slingMesh.visible = true;
+    this.browL = this.humanoid.browL;
+    this.browR = this.humanoid.browR;
+    this.smileMesh = this.humanoid.smile;
+    this.eyeL = this.humanoid.eyeL;
+    this.eyeR = this.humanoid.eyeR;
 
-    // Large cartoon eyes
-    const eyeWhiteGeo = new THREE.SphereGeometry(0.085, 10, 8);
-    const eyeL = new THREE.Mesh(eyeWhiteGeo, eyeWhiteMat);
-    eyeL.position.set(-0.11, 0.05, 0.25);
-    eyeL.scale.set(1.05, 1.2, 0.55);
-    this.headGroup.add(eyeL);
-    const eyeR = new THREE.Mesh(eyeWhiteGeo, eyeWhiteMat);
-    eyeR.position.set(0.11, 0.05, 0.25);
-    eyeR.scale.set(1.05, 1.2, 0.55);
-    this.headGroup.add(eyeR);
-
-    // Iris
-    const irisGeo = new THREE.SphereGeometry(0.045, 8, 6);
-    const irisL = new THREE.Mesh(irisGeo, eyeIrisMat);
-    irisL.position.set(-0.11, 0.04, 0.29);
-    this.headGroup.add(irisL);
-    const irisR = new THREE.Mesh(irisGeo, eyeIrisMat);
-    irisR.position.set(0.11, 0.04, 0.29);
-    this.headGroup.add(irisR);
-
-    // Pupils + shine
-    const pupilGeo = new THREE.SphereGeometry(0.025, 6, 5);
-    const pupilL = new THREE.Mesh(pupilGeo, eyePupilMat);
-    pupilL.position.set(-0.11, 0.04, 0.32);
-    this.headGroup.add(pupilL);
-    const pupilR = new THREE.Mesh(pupilGeo, eyePupilMat);
-    pupilR.position.set(0.11, 0.04, 0.32);
-    this.headGroup.add(pupilR);
-    const shineGeo = new THREE.SphereGeometry(0.012, 5, 4);
-    const shineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-    const shineL = new THREE.Mesh(shineGeo, shineMat);
-    shineL.position.set(-0.09, 0.06, 0.33);
-    this.headGroup.add(shineL);
-    const shineR = new THREE.Mesh(shineGeo, shineMat);
-    shineR.position.set(0.13, 0.06, 0.33);
-    this.headGroup.add(shineR);
-
-    // Eyebrows
-    const browGeo = new THREE.BoxGeometry(0.11, 0.022, 0.025);
-    const browL = new THREE.Mesh(browGeo, hairMat);
-    browL.position.set(-0.11, 0.15, 0.27);
-    browL.rotation.z = 0.12;
-    this.headGroup.add(browL);
-    const browR = new THREE.Mesh(browGeo, hairMat);
-    browR.position.set(0.11, 0.15, 0.27);
-    browR.rotation.z = -0.12;
-    this.headGroup.add(browR);
-    this.browL = browL;
-    this.browR = browR;
-
-    // Cheeks
-    const cheekGeo = new THREE.SphereGeometry(0.055, 8, 6);
-    const cheekL = new THREE.Mesh(cheekGeo, cheekMat);
-    cheekL.position.set(-0.22, -0.02, 0.18);
-    cheekL.scale.set(1, 0.7, 0.5);
-    this.headGroup.add(cheekL);
-    const cheekR = new THREE.Mesh(cheekGeo, cheekMat);
-    cheekR.position.set(0.22, -0.02, 0.18);
-    cheekR.scale.set(1, 0.7, 0.5);
-    this.headGroup.add(cheekR);
-
-    // Nose
-    const nose = new THREE.Mesh(
-      new THREE.SphereGeometry(0.04, 8, 6),
-      skinShadowMat
-    );
-    nose.position.set(0, 0.0, 0.30);
-    nose.scale.set(0.75, 1.0, 1.15);
-    this.headGroup.add(nose);
-
-    // Smile
-    const smile = new THREE.Mesh(
-      new THREE.TorusGeometry(0.07, 0.012, 6, 12, Math.PI),
-      lipMat
-    );
-    smile.position.set(0, -0.1, 0.27);
-    smile.rotation.set(Math.PI, 0, Math.PI);
-    this.headGroup.add(smile);
-    this.smileMesh = smile;
-    this.eyeL = eyeL;
-    this.eyeR = eyeR;
-
-    // Ears
-    const earGeo = new THREE.SphereGeometry(0.06, 8, 6);
-    const earL = new THREE.Mesh(earGeo, skinMat);
-    earL.position.set(-0.28, 0.02, 0);
-    earL.scale.set(0.5, 1, 0.7);
-    this.headGroup.add(earL);
-    const earR = new THREE.Mesh(earGeo, skinMat);
-    earR.position.set(0.28, 0.02, 0);
-    earR.scale.set(0.5, 1, 0.7);
-    this.headGroup.add(earR);
-
-    // ── Left arm ──
-    this.leftArmGroup = new THREE.Group();
-    this.leftArmGroup.position.set(-0.40, 0.58, 0);
-    this.torsoGroup.add(this.leftArmGroup);
-
-    const sleeveL = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.11, 0.10, 0.22, 10),
-      shirtMat
-    );
-    sleeveL.position.y = -0.02;
-    this.leftArmGroup.add(sleeveL);
-
-    const upperArmL = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.085, 0.075, 0.30, 10),
-      skinMat
-    );
-    upperArmL.position.y = -0.18;
-    this.leftArmGroup.add(upperArmL);
-
-    const forearmL = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.07, 0.065, 0.28, 10),
-      skinMat
-    );
-    forearmL.position.y = -0.44;
-    this.leftArmGroup.add(forearmL);
-
-    const handL = new THREE.Mesh(
-      new THREE.SphereGeometry(0.075, 10, 8),
-      skinMat
-    );
-    handL.position.y = -0.60;
-    handL.scale.set(1.05, 0.85, 1.15);
-    this.leftArmGroup.add(handL);
-    this.leftArm = upperArmL;
-
-    // Staff (parented to left hand)
-    this.staff = new THREE.Group();
-    const pole = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.028, 0.032, 1.7, 8),
-      staffMat
-    );
-    pole.position.y = 0.35;
-    this.staff.add(pole);
-    const knob = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), staffMat);
-    knob.position.y = 1.22;
-    this.staff.add(knob);
-    const base = new THREE.Mesh(new THREE.SphereGeometry(0.035, 6, 5), beltDarkMat);
-    base.position.y = -0.5;
-    this.staff.add(base);
-    this.staff.position.set(-0.05, -0.52, 0.04);
-    this.staff.rotation.z = 0.08;
-    this.leftArmGroup.add(this.staff);
-
-    // ── Right arm ──
-    this.rightArmGroup = new THREE.Group();
-    this.rightArmGroup.position.set(0.40, 0.58, 0);
-    this.torsoGroup.add(this.rightArmGroup);
-
-    const sleeveR = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.11, 0.10, 0.22, 10),
-      shirtMat
-    );
-    sleeveR.position.y = -0.02;
-    this.rightArmGroup.add(sleeveR);
-
-    const upperArmR = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.085, 0.075, 0.30, 10),
-      skinMat
-    );
-    upperArmR.position.y = -0.18;
-    this.rightArmGroup.add(upperArmR);
-
-    const forearmR = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.07, 0.065, 0.28, 10),
-      skinMat
-    );
-    forearmR.position.y = -0.44;
-    this.rightArmGroup.add(forearmR);
-    const bracer = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.08, 0.12, 10), leatherMat);
-    bracer.position.y = -0.38;
-    this.rightArmGroup.add(bracer);
-
-    const handR = new THREE.Mesh(
-      new THREE.SphereGeometry(0.075, 10, 8),
-      skinMat
-    );
-    handR.position.y = -0.60;
-    handR.scale.set(1.05, 0.85, 1.15);
-    this.rightArmGroup.add(handR);
-    this.rightArm = upperArmR;
-
-    // Sling (parented to right hand) — visible once collected
-    this.slingMesh = new THREE.Group();
-    const loop = new THREE.Mesh(
-      new THREE.TorusGeometry(0.13, 0.022, 8, 16),
-      leatherMat
-    );
-    loop.rotation.x = Math.PI / 2;
-    this.slingMesh.add(loop);
-    const cord = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.01, 0.01, 0.32, 5),
-      beltDarkMat
-    );
-    cord.position.y = -0.18;
-    this.slingMesh.add(cord);
-    const pouchS = new THREE.Mesh(
-      new THREE.SphereGeometry(0.045, 8, 6),
-      clothAccentMat
-    );
-    pouchS.position.y = -0.34;
-    pouchS.scale.set(1.3, 0.7, 0.9);
-    this.slingMesh.add(pouchS);
-    this.slingMesh.position.set(0.04, -0.52, 0.1);
-    this.slingMesh.visible = true;
-    this.rightArmGroup.add(this.slingMesh);
-
-    // ── Left leg ──
-    this.leftLegGroup = new THREE.Group();
-    this.leftLegGroup.position.set(-0.14, 0.72, 0);
-    this.root.add(this.leftLegGroup);
-
-    const thighL = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.12, 0.1, 0.34, 12),
-      pantsMat
-    );
-    thighL.position.y = -0.14;
-    this.leftLegGroup.add(thighL);
-
-    const shinL = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.09, 0.08, 0.28, 12),
-      pantsDarkMat
-    );
-    shinL.position.y = -0.42;
-    this.leftLegGroup.add(shinL);
-    this.leftLeg = thighL;
-
-    const bootL = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.1, 0.22, 10), bootMat);
-    bootL.position.set(0, -0.54, 0.02);
-    this.leftLegGroup.add(bootL);
-    const soleL = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.05, 0.28), bootDarkMat);
-    soleL.position.set(0, -0.64, 0.04);
-    this.leftLegGroup.add(soleL);
-    const strapL = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.03, 0.04), clothAccentMat);
-    strapL.position.set(0, -0.48, 0.08);
-    this.leftLegGroup.add(strapL);
-
-    // ── Right leg ──
-    this.rightLegGroup = new THREE.Group();
-    this.rightLegGroup.position.set(0.14, 0.72, 0);
-    this.root.add(this.rightLegGroup);
-
-    const thighR = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.12, 0.1, 0.34, 12),
-      pantsMat
-    );
-    thighR.position.y = -0.14;
-    this.rightLegGroup.add(thighR);
-
-    const shinR = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.09, 0.08, 0.28, 12),
-      pantsDarkMat
-    );
-    shinR.position.y = -0.42;
-    this.rightLegGroup.add(shinR);
-    this.rightLeg = thighR;
-
-    const bootR = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.1, 0.22, 10), bootMat);
-    bootR.position.set(0, -0.54, 0.02);
-    this.rightLegGroup.add(bootR);
-    const soleR = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.05, 0.28), bootDarkMat);
-    soleR.position.set(0, -0.64, 0.04);
-    this.rightLegGroup.add(soleR);
-    const strapR = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.03, 0.04), clothAccentMat);
-    strapR.position.set(0, -0.48, 0.08);
-    this.rightLegGroup.add(strapR);
-
-    // ── Faith Shield ──
     this.shieldMesh = new THREE.Mesh(
       new THREE.SphereGeometry(1.3, 16, 12),
       new THREE.MeshBasicMaterial({
-        color: 0xf1c40f,
-        transparent: true,
-        opacity: 0.2,
-        side: THREE.DoubleSide
+        color: 0xf1c40f, transparent: true, opacity: 0.2, side: THREE.DoubleSide
       })
     );
     this.shieldMesh.visible = false;
@@ -535,6 +127,8 @@ class Player {
       rightArm: { x: 0, y: 0, z: 0 },
       leftLeg: { x: 0, y: 0, z: 0 },
       rightLeg: { x: 0, y: 0, z: 0 },
+      leftShin: { x: 0.12 },
+      rightShin: { x: 0.12 },
       torso: { x: 0, y: 0, z: 0, py: 0.72 },
       head: { x: 0, y: 0, z: 0 },
       rootY: 0,
@@ -821,7 +415,7 @@ class Player {
   tryJump() {}
 
   playEmote(name) {
-    if (this.state === 'ATTACK' || this.state === 'HIT' || this.state === 'VICTORY') return;
+    if (this.action === 'HIT' || this.state === 'HIT' || this.state === 'VICTORY') return;
     const list = ['wave','thumbsup','celebrate','clap','happy','sad','worried','surprised','angry','thinking','prayer','victory'];
     if (list.indexOf(name) === -1) return;
     this.emote = name;
@@ -864,10 +458,12 @@ class Player {
     this.hasSling = true;
     if (this.slingMesh) this.slingMesh.visible = true;
     if (this.attackCooldown > 0) return;
-    if (this.state === 'HIT' || this.state === 'VICTORY') return;
-    this.attackCooldown = 0.7;
-    this.state = 'ATTACK';
-    this.anim.attackProgress = 0;
+    if (this.action === 'HIT' || this.state === 'VICTORY' || this.action === 'VICTORY') return;
+    this.attackCooldown = 0.55;
+    // Combat is an overlay. Never replace locomotion with ATTACK.
+    this.action = 'FIRE';
+    this.actionTime = 0.45;
+    if (this.anim) this.anim.attackProgress = 0;
     this.pendingProjectile = false;
     if (window.Game && typeof window.Game.spawnProjectile === 'function') {
       window.Game.spawnProjectile();
@@ -951,6 +547,10 @@ class Player {
   update(dt, worldBounds) {
     this.animTime += dt;
     if (this.attackCooldown > 0) this.attackCooldown -= dt;
+    if (this.actionTime > 0) {
+      this.actionTime -= dt;
+      if (this.actionTime <= 0 && this.action === 'FIRE') this.action = 'NONE';
+    }
     if (this.invincible > 0) this.invincible -= dt;
     if (this.shieldActive > 0) {
       this.shieldActive -= dt;
@@ -994,9 +594,10 @@ class Player {
       this.state = 'WALK';
     }
 
-    const busy = this.state === 'ATTACK' || this.state === 'HIT' || this.state === 'VICTORY';
+    // HIT / VICTORY can slow the body. FIRE must never freeze locomotion.
+    const lockMove = this.state === 'HIT' || this.state === 'VICTORY' || this.action === 'HIT' || this.action === 'VICTORY';
 
-    if (busy) {
+    if (lockMove) {
       this.velocity.x *= 0.55;
       this.velocity.z *= 0.55;
       if (Math.abs(this.velocity.x) < 0.05) this.velocity.x = 0;
@@ -1042,8 +643,7 @@ class Player {
 
     this.animate(dt);
 
-    // Launch sling stone at release frame (~45% through ATTACK)
-    if (this.state === 'ATTACK' && this.pendingProjectile && this.anim.attackProgress >= 0.45) {
+    if (this.action === 'FIRE' && this.pendingProjectile) {
       this.pendingProjectile = false;
       if (window.Game) window.Game.spawnProjectile();
     }
@@ -1067,29 +667,18 @@ class Player {
       this.state = isMoving ? (isRunningKey ? 'RUN' : 'WALK') : 'IDLE';
     }
 
-    // Build target pose for current state
-    const target = this._emptyPose();
-    this._computeTargetPose(target, dt, isMoving, isRunningKey);
-
-    // Blend speed depends on state (attack/hit snap faster)
-    const speed = a.blendSpeed[this.state] || 10;
-    const k = 1 - Math.exp(-speed * dt); // frame-rate independent lerp factor
-
-    this._lerpPose(a.pose, target, k);
-
-    // Apply blended pose to skeleton
-    const p = a.pose;
-    this.leftArmGroup.rotation.set(p.leftArm.x, p.leftArm.y, p.leftArm.z);
-    this.rightArmGroup.rotation.set(p.rightArm.x, p.rightArm.y, p.rightArm.z);
-    this.leftLegGroup.rotation.set(p.leftLeg.x, p.leftLeg.y, p.leftLeg.z);
-    this.rightLegGroup.rotation.set(p.rightLeg.x, p.rightLeg.y, p.rightLeg.z);
-    this.torsoGroup.rotation.set(p.torso.x, p.torso.y, p.torso.z);
-    this.torsoGroup.position.y = p.torso.py;
-    this.headGroup.rotation.set(p.head.x, p.head.y, p.head.z);
-    this.root.position.y = p.rootY;
-    this.group.rotation.z = p.bodyZ;
-
-    a.bob = p.rootY;
+    if (this.humanoid) {
+      this.humanoid.update(dt, this.state, {
+        emote: this.emote,
+        mood: this.emotion,
+        fire: this.action === 'FIRE'
+      });
+      a.bob = this.humanoid.root.position.y || 0;
+      a.walkCycle = this.humanoid.cycle;
+      a.attackProgress = this.humanoid.attackT;
+    } else {
+      a.bob = 0;
+    }
 
     // Invincibility blink
     this.group.visible = this.invincible <= 0 || Math.floor(t * 12) % 2 === 0;
@@ -1109,6 +698,12 @@ class Player {
     lerp3(cur.rightArm, tgt.rightArm);
     lerp3(cur.leftLeg, tgt.leftLeg);
     lerp3(cur.rightLeg, tgt.rightLeg);
+    if (!cur.leftShin) cur.leftShin = { x: 0.12 };
+    if (!cur.rightShin) cur.rightShin = { x: 0.12 };
+    if (!tgt.leftShin) tgt.leftShin = { x: 0.12 };
+    if (!tgt.rightShin) tgt.rightShin = { x: 0.12 };
+    cur.leftShin.x += (tgt.leftShin.x - cur.leftShin.x) * k;
+    cur.rightShin.x += (tgt.rightShin.x - cur.rightShin.x) * k;
     lerp3(cur.torso, tgt.torso);
     cur.torso.py += (tgt.torso.py - cur.torso.py) * k;
     lerp3(cur.head, tgt.head);
@@ -1194,8 +789,10 @@ class Player {
       const s = Math.sin(a.walkCycle);
       const c = Math.cos(a.walkCycle);
 
-      target.leftLeg.x = s * legAmp;
-      target.rightLeg.x = -s * legAmp;
+      target.leftLeg.x = s * legAmp * 0.72;
+      target.rightLeg.x = -s * legAmp * 0.72;
+      target.leftShin = { x: 0.18 + Math.max(0, -s) * 0.55 };
+      target.rightShin = { x: 0.18 + Math.max(0, s) * 0.55 };
       target.leftArm.x = -s * armAmp;
       target.rightArm.x = s * armAmp;
       target.leftArm.z = 0.14;
@@ -1366,6 +963,50 @@ class Player {
       target.rightLeg.x = 0.1;
       target.rootY = Math.abs(Math.sin(v * 4.5)) * 0.1;
     }
+  }
+
+  _solvePlanarLeg(hipGroup, shinGroup, footY, footZ) {
+    const L1 = 0.32;
+    const L2 = 0.38;
+    const hipY = (this.group.position.y || 0) + (this.root.position.y || 0) + hipGroup.position.y;
+    const localY = footY - hipY;
+    const localZ = footZ;
+    let dist = Math.sqrt(localY * localY + localZ * localZ);
+    const maxD = L1 + L2 - 0.02;
+    const minD = 0.08;
+    if (dist < minD) dist = minD;
+    if (dist > maxD) dist = maxD;
+    const cosKnee = (L1 * L1 + L2 * L2 - dist * dist) / (2 * L1 * L2);
+    const knee = Math.PI - Math.acos(Math.max(-1, Math.min(1, cosKnee)));
+    const cosHip = (L1 * L1 + dist * dist - L2 * L2) / (2 * L1 * dist);
+    const reach = Math.atan2(localZ, -localY);
+    const hip = reach - Math.acos(Math.max(-1, Math.min(1, cosHip)));
+    hipGroup.rotation.x = hip;
+    shinGroup.rotation.x = knee;
+  }
+
+  _applyFootIK() {
+    if (!this.leftShinGroup || !this.rightShinGroup) return;
+    const moving = this.state === 'WALK' || this.state === 'RUN' || this.state === 'SPRINT';
+    const cycle = this.anim.walkCycle || 0;
+    const s = Math.sin(cycle);
+    const stride = this.state === 'SPRINT' ? 0.28 : this.state === 'RUN' ? 0.22 : 0.16;
+    const ground = 0.03;
+    if (moving) {
+      const leftSwing = s > 0;
+      const rightSwing = s < 0;
+      const leftY = leftSwing ? ground + 0.1 * s : ground;
+      const rightY = rightSwing ? ground + 0.1 * -s : ground;
+      const leftZ = s * stride;
+      const rightZ = -s * stride;
+      this._solvePlanarLeg(this.leftLegGroup, this.leftShinGroup, leftY, leftZ);
+      this._solvePlanarLeg(this.rightLegGroup, this.rightShinGroup, rightY, rightZ);
+    } else {
+      this._solvePlanarLeg(this.leftLegGroup, this.leftShinGroup, ground, 0.02);
+      this._solvePlanarLeg(this.rightLegGroup, this.rightShinGroup, ground, -0.02);
+    }
+    if (this.leftFoot) this.leftShinGroup.rotation.x += 0.08;
+    if (this.rightFoot) this.rightShinGroup.rotation.x += 0.08;
   }
 
   updateCamera(snap) {
