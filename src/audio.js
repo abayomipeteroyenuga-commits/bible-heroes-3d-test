@@ -12,6 +12,8 @@ const AudioSystem = {
   musicGain: null,
   masterGain: null,
   musicName: null,
+  musicTrackId: 0,
+  soundMasterTarget: 0.7,
 
   FILES: {
     sling_fire: 'assets/audio/sling_fire.wav',
@@ -61,15 +63,14 @@ const AudioSystem = {
 
   async unlock() {
     if (this.unlocked) return;
-    this.unlocked = true;
     try {
       const AC = window.AudioContext || window.webkitAudioContext;
       this.ctx = new AC();
       this.masterGain = this.ctx.createGain();
-      this.masterGain.gain.value = this.volume;
+      this.masterGain.gain.value = this.enabled ? this.volume : 0;
       this.masterGain.connect(this.ctx.destination);
       this.musicGain = this.ctx.createGain();
-      this.musicGain.gain.value = this.musicVolume;
+      this.musicGain.gain.value = this.musicEnabled ? this.musicVolume : 0;
       this.musicGain.connect(this.ctx.destination);
 
       // Decode all buffers
@@ -84,6 +85,7 @@ const AudioSystem = {
       }));
 
       if (this.ctx.state === 'suspended') await this.ctx.resume();
+      this.unlocked = true;
     } catch (e) {
       console.warn('AudioContext failed, using HTMLAudio fallback', e);
     }
@@ -123,10 +125,12 @@ const AudioSystem = {
 
   playMusic(name, loop = true) {
     if (!this.musicEnabled) return;
+    if (!this.FILES[name]) return;
     if (this.musicName === name && this.musicSource) return;
 
     this.stopMusic();
     this.musicName = name;
+    const trackId = ++this.musicTrackId;
 
     if (this.ctx && this.buffers[name]) {
       try {
@@ -137,6 +141,7 @@ const AudioSystem = {
         src.connect(this.musicGain);
         src.start(0);
         this.musicSource = src;
+        src.onended = () => { if (this.musicTrackId === trackId && !loop) this.musicSource = null; };
         return;
       } catch (e) {}
     }
@@ -169,15 +174,22 @@ const AudioSystem = {
   },
 
   setSoundEnabled(on) {
-    // Sound effects and music are independent settings. Turning SFX off
-    // must never stop the background music.
+    // SFX and music are independent. Also mute/unmute sounds already playing.
     this.enabled = !!on;
+    if (this.masterGain && this.ctx) {
+      const target = this.enabled ? this.volume : 0;
+      try { this.masterGain.gain.setTargetAtTime(target, this.ctx.currentTime, 0.025); } catch (e) { this.masterGain.gain.value = target; }
+    }
   },
 
   setMusicEnabled(on) {
     const next = !!on;
     if (next === this.musicEnabled) return;
     this.musicEnabled = next;
+    if (this.musicGain && this.ctx) {
+      const target = next ? this.musicVolume : 0;
+      try { this.musicGain.gain.setTargetAtTime(target, this.ctx.currentTime, 0.06); } catch (e) { this.musicGain.gain.value = target; }
+    }
     if (!next) {
       // Preserve the selected track so music can resume when re-enabled.
       const current = this.musicName;

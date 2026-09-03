@@ -97,6 +97,7 @@ class World {
     this.createLandmark();
     this.createUniqueSetpieces();
     this.createIndividualWorldDressing();
+    this.createOrganicEnvironment();
   }
 
   createLighting() {
@@ -149,7 +150,12 @@ class World {
     for (let i = 0; i < pos.count; i++) {
       const x = pos.getX(i);
       const z = pos.getY(i); // plane is XY before rotation
-      const h = Math.sin(x * 0.08) * 0.6 + Math.cos(z * 0.06) * 0.5 + Math.sin(x * 0.2 + z * 0.15) * 0.3;
+      // Layered, low-amplitude terrain noise: broad hills + smaller natural undulation.
+      const broad = Math.sin(x * 0.075 + this.worldId * 0.31) * 1.05 + Math.cos(z * 0.055 - this.worldId * 0.17) * 0.75;
+      const detail = Math.sin(x * 0.19 + z * 0.11) * 0.28 + Math.cos(x * 0.31 - z * 0.17) * 0.16;
+      let h = broad + detail;
+      // Keep the central playable route comparatively gentle for readable movement.
+      h *= Math.min(1, Math.abs(x) / 9);
       pos.setZ(i, h);
     }
     groundGeo.computeVertexNormals();
@@ -984,6 +990,125 @@ class World {
       if(type===0) addRock(x,z,.18+random()*.3);
       else if(type===1) addTree(x,z,.45+random()*.35);
       else addTorch(x,z);
+    }
+  }
+
+  // Organic environment pass: natural terrain silhouettes, varied vegetation,
+  // geological forms, water and atmospheric depth. Decorative only; gameplay
+  // colliders remain separate so the world stays predictable.
+  createOrganicEnvironment() {
+    const id = this.worldId;
+    let seed = 9187 * id + 13331;
+    const rand = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+    const has = n => this.hasFeature(n);
+    const ground = this.theme.ground || 0x5a8f4a;
+    const foliage = this.theme.dark ? 0x26382d : 0x3f7138;
+    const foliage2 = this.theme.dark ? 0x334a3a : 0x5d8b45;
+    const rock = this.theme.dark ? 0x403b48 : 0x777064;
+    const sand = [14,26,29,38].includes(id) || has('dunes') ? 0xc69b57 : ground;
+    const organicMat = c => new THREE.MeshStandardMaterial({color:c, roughness:0.96, metalness:0});
+
+    // Soft biome-specific ground accents instead of square/pixel tiles.
+    for (let i = 0; i < 95; i++) {
+      const side = rand() > 0.5 ? 1 : -1;
+      const x = side * (7.5 + rand() * 34);
+      const z = 18 - rand() * 112;
+      const s = 0.25 + rand() * 1.25;
+      const geo = new THREE.SphereGeometry(s, 7, 5);
+      const c = (has('forest') || has('trees')) ? (rand() > 0.55 ? foliage2 : foliage) : sand;
+      const m = new THREE.Mesh(geo, organicMat(c));
+      m.scale.y = 0.10 + rand() * 0.18;
+      m.position.set(x, 0.03 + rand() * 0.06, z);
+      m.rotation.y = rand() * Math.PI * 2;
+      m.receiveShadow = true;
+      this.scene.add(m);
+    }
+
+    // Natural shrubs and grasses in forest/valley biomes.
+    if (has('forest') || has('trees') || [1,3,13,21,22,31].includes(id)) {
+      for (let i = 0; i < 32; i++) {
+        const side = i % 2 ? 1 : -1;
+        const x = side * (8 + rand() * 31), z = 16 - rand() * 108;
+        const g = new THREE.Group();
+        const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.045,0.07,0.45+rand()*0.35,6), organicMat(0x5b442f));
+        stem.position.y = 0.25;
+        const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.32+rand()*0.2,8,6), organicMat(rand()>0.5?foliage:foliage2));
+        leaf.scale.y = 0.7;
+        leaf.position.y = 0.62;
+        g.add(stem, leaf); g.position.set(x,0,z); g.rotation.y=rand()*Math.PI*2;
+        g.castShadow = true; this.scene.add(g);
+      }
+    }
+
+    // Organic rock clusters and boulders for mountains, deserts and rocky worlds.
+    if (has('rocks') || has('cliffs') || has('mountains') || [2,12,14,19,26,29,35].includes(id)) {
+      for (let i = 0; i < 24; i++) {
+        const side = i % 2 ? 1 : -1;
+        const x = side * (9 + rand() * 30), z = 12 - rand() * 105;
+        const r = 0.45 + rand() * 1.25;
+        const m = new THREE.Mesh(new THREE.DodecahedronGeometry(r, 1), organicMat(rock));
+        m.scale.set(1 + rand()*0.7, 0.65 + rand()*0.7, 0.8 + rand()*0.55);
+        m.position.set(x, r*0.45, z); m.rotation.set(rand(),rand(),rand());
+        m.castShadow=true; m.receiveShadow=true; this.scene.add(m);
+      }
+    }
+
+    // Layered distant mountain silhouettes make open areas feel geographically deep.
+    if (has('mountains') || has('cliffs') || [2,5,12,15,20,26,35,40].includes(id)) {
+      for (let i=0;i<9;i++) {
+        const h=8+rand()*16, w=7+rand()*9;
+        const m=new THREE.Mesh(new THREE.ConeGeometry(w,h,9), organicMat(rock));
+        m.position.set(-48+i*12+(rand()-.5)*5,h*0.45-0.4,-108-rand()*12);
+        m.rotation.y=rand()*Math.PI; this.scene.add(m);
+      }
+    }
+
+    // Desert dune ridges: smooth overlapping forms rather than blocky tiles.
+    if ([14,26,29,38].includes(id)) {
+      const duneMat=organicMat(0xc79a55);
+      for(let i=0;i<10;i++){
+        const side=i%2?1:-1, x=side*(12+rand()*28), z=10-rand()*108;
+        const m=new THREE.Mesh(new THREE.SphereGeometry(4+rand()*4,12,8),duneMat);
+        m.scale.set(1.8,0.35+rand()*0.18,0.8); m.position.set(x,-0.05,z); this.scene.add(m);
+      }
+    }
+
+    // Cave atmosphere: dark rock masses, mineral accents and low mist.
+    if (has('cave')) {
+      const caveMat=organicMat(this.theme.dark?0x29252f:0x4b454d);
+      for(let i=0;i<12;i++){
+        const side=i%2?1:-1, x=side*(8+rand()*29), z=5-rand()*100;
+        const m=new THREE.Mesh(new THREE.DodecahedronGeometry(1+rand()*2,1),caveMat);
+        m.scale.y=1.3+rand()*1.2; m.position.set(x,0.9,z); m.rotation.set(rand(),rand(),rand()); m.castShadow=true; this.scene.add(m);
+      }
+      const mistMat=new THREE.MeshBasicMaterial({color:this.theme.fog||0x332b40,transparent:true,opacity:0.12,depthWrite:false});
+      for(let i=0;i<5;i++){const m=new THREE.Mesh(new THREE.SphereGeometry(4+rand()*4,12,8),mistMat);m.scale.y=.35;m.position.set((rand()-.5)*30,1+rand()*1.5,-15-rand()*70);this.scene.add(m);}
+    }
+
+    // Ocean/shore treatment for water-oriented worlds. Kept outside the playable corridor.
+    if ([30,32].includes(id) || has('ocean')) {
+      const waterMat=new THREE.MeshStandardMaterial({color:0x3d91b0,transparent:true,opacity:0.72,roughness:0.18,metalness:0.05});
+      const water=new THREE.Mesh(new THREE.PlaneGeometry(34,118,24,48),waterMat);
+      water.rotation.x=-Math.PI/2; water.position.set(27, -0.28, -42); this.scene.add(water);
+      for(let i=0;i<18;i++){
+        const foam=new THREE.Mesh(new THREE.TorusGeometry(0.35+rand()*0.5,0.035,5,12),new THREE.MeshBasicMaterial({color:0xc8eef4,transparent:true,opacity:0.45}));
+        foam.rotation.x=Math.PI/2; foam.position.set(10+rand()*28,-0.08,15-rand()*110); this.scene.add(foam);
+      }
+    }
+
+    // Atmospheric depth: stronger haze in dark/cave worlds, softer horizon elsewhere.
+    const fogColor = this.theme.fog || this.theme.sky || 0x87b8e0;
+    const near = this.theme.dark ? 22 : 48;
+    const far = this.theme.dark ? 105 : 185;
+    this.scene.fog = new THREE.Fog(fogColor, near, far);
+
+    // Tiny ambient fireflies/dust in selected natural worlds.
+    if (has('forest') || has('stream') || id===23 || id===27) {
+      const dustMat=new THREE.MeshBasicMaterial({color:0xe7d79b,transparent:true,opacity:0.38});
+      for(let i=0;i<28;i++){
+        const d=new THREE.Mesh(new THREE.SphereGeometry(0.035+rand()*0.035,5,4),dustMat);
+        d.position.set((rand()-.5)*55,0.7+rand()*3,18-rand()*110); this.scene.add(d);
+      }
     }
   }
 

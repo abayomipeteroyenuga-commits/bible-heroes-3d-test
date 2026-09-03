@@ -40,19 +40,10 @@ const Game = {
   },
 
   bindSlingKeys() {
-    if (this._slingKeysBound) return;
+    // Input ownership lives in Player.setupControls().  The old global listener
+    // duplicated F/G/T/K input and could trigger the sling twice in fast clicks.
+    // Keep this method as a compatibility no-op for older callers.
     this._slingKeysBound = true;
-    window.addEventListener('keydown', (e) => {
-      if (e.repeat) return;
-      const code = e.code || '';
-      const key = String(e.key || '').toLowerCase();
-      const fire =
-        code === 'KeyF' || code === 'KeyG' || code === 'KeyT' || code === 'KeyK' ||
-        key === 'f' || key === 'g' || key === 't' || key === 'k';
-      if (!fire) return;
-      e.preventDefault();
-      this.fireSling();
-    }, true);
   },
 
   setupMenuButtons() {
@@ -358,7 +349,14 @@ const Game = {
     const data = SaveSystem.load();
     const g = (data.settings && data.settings.graphics) || 'medium';
     const cap = g === 'low' ? 1 : g === 'medium' ? 1.5 : g === 'ultra' ? 2 : 1.75;
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, cap));
+    // Natural/organic presentation: keep the 3D render at a real display resolution.
+    // The previous pixel-world render deliberately rendered below native resolution
+    // and upscaled it, which made terrain, characters and foliage look blurry.
+    const dpr = Math.min(window.devicePixelRatio || 1, cap);
+    this.renderer.setPixelRatio(dpr);
+    this.renderer.userData = this.renderer.userData || {};
+    this.renderer.userData.pixelWorld = false;
+    this.renderer.userData.pixelScale = 1;
     this.renderer.shadowMap.enabled = g !== 'low';
     if (THREE.PCFSoftShadowMap) this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     if (THREE.ACESFilmicToneMapping) {
@@ -390,9 +388,15 @@ const Game = {
         this.renderer.toneMappingExposure = 1.08;
       }
     }
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    this.renderer.setPixelRatio(1);
     if ('outputEncoding' in this.renderer && THREE.sRGBEncoding) this.renderer.outputEncoding = THREE.sRGBEncoding;
-    this.renderer.setSize(w, h, true);
+    const initialGraphics = (SaveSystem.load().settings && SaveSystem.load().settings.graphics) || 'medium';
+    const initialCap = initialGraphics === 'low' ? 1 : initialGraphics === 'medium' ? 1.5 : initialGraphics === 'ultra' ? 2 : 1.75;
+    this.renderer.userData = this.renderer.userData || {};
+    this.renderer.userData.pixelWorld = false;
+    this.renderer.userData.pixelScale = 1;
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, initialCap));
+    this.renderer.setSize(Math.max(320, w), Math.max(240, h), false);
     this.renderer.setClearColor(0x7ec8e8, 1);
     this.renderer.autoClear = true;
     canvas.style.display = 'block';
@@ -401,6 +405,7 @@ const Game = {
     canvas.style.top = '0';
     canvas.style.width = '100%';
     canvas.style.height = '100%';
+    canvas.style.imageRendering = 'auto';
     canvas.style.zIndex = '2';
     canvas.style.background = '#7ec8e8';
 
@@ -497,7 +502,7 @@ const Game = {
     this.camera.aspect = w / h;
     this.camera.fov = this.getFov();
     this.camera.updateProjectionMatrix();
-    this.renderer.setSize(w, h, true);
+    this.renderer.setSize(Math.max(320, w), Math.max(240, h), false);
   },
 
   loop() {
@@ -702,6 +707,13 @@ const Game = {
   spawnProjectile() {
     if (!this.player) return;
     this.player.hasSling = true;
+    // Validate ammunition before playing the fire sound or creating a projectile.
+    // This prevents an irritating sling sound when the Hunter Bow is empty.
+    const weapon = this.player.equippedWeapon || 'sling';
+    if (weapon === 'hunterBow' && (this.player.arrows || 0) <= 0) {
+      UI.showMessage('NO ARROWS — BUY OR CRAFT MORE', 1400);
+      return;
+    }
     if (window.AudioSystem) AudioSystem.sling();
     const origin = this.player.getPosition().clone();
     const dir = new THREE.Vector3(
@@ -730,13 +742,11 @@ const Game = {
     if (nearest) {
       targetDir = new THREE.Vector3().subVectors(nearest, origin).normalize();
     }
-    const weapon = this.player.equippedWeapon || 'sling';
     const isFaith = weapon === 'faithBlade';
     let extraDmg = 0;
     let projectileType = 'stone';
     if (weapon === 'bronzeSword') { extraDmg = 28; projectileType = 'blade'; }
     else if (weapon === 'hunterBow') {
-      if ((this.player.arrows || 0) <= 0) { UI.showMessage('NO ARROWS — BUY OR CRAFT MORE', 1400); return; }
       this.player.arrows -= 1; extraDmg = 22; projectileType = 'arrow';
       if (window.SaveSystem) SaveSystem.setInventoryField('arrows', this.player.arrows);
     } else if (weapon === 'flameSling') { extraDmg = 35; projectileType = 'flame'; }

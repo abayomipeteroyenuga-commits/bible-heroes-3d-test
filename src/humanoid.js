@@ -52,9 +52,18 @@ Humanoid.prototype.build = function (opt) {
   this.chest.name = 'Chest';
   this.chest.position.y = 0.22;
   this.spine.add(this.chest);
-  const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 0.42, 14), shirt);
-  torso.position.y = 0.08;
+  const torso = opt.isDavid
+    ? new THREE.Mesh(new THREE.SphereGeometry(0.245, 20, 14), shirt)
+    : new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 0.42, 14), shirt);
+  torso.position.y = opt.isDavid ? 0.075 : 0.08;
+  if (opt.isDavid) torso.scale.set(0.96, 1.18, 0.72);
   this.chest.add(torso);
+  if (opt.isDavid) {
+    const chestPanel = new THREE.Mesh(new THREE.SphereGeometry(0.19, 16, 10), std(opt.shirt || 0x4a7c59, 0.76, 0));
+    chestPanel.scale.set(0.92, 0.72, 0.22);
+    chestPanel.position.set(0, 0.12, 0.17);
+    this.chest.add(chestPanel);
+  }
 
   // Layered biblical clothing: tunic hem, belt and optional sash/cloak make David
   // read as a dressed human character rather than a primitive mannequin.
@@ -100,7 +109,7 @@ Humanoid.prototype.build = function (opt) {
   this.neck.add(this.head);
   const faceMat = new THREE.MeshLambertMaterial({ color: opt.skin || 0xf0c4a0 });
   const skull = new THREE.Mesh(new THREE.SphereGeometry(0.16, 24, 16), faceMat);
-  skull.scale.set(0.92, 1.02, 0.88);
+  skull.scale.set(opt.isDavid ? 1.00 : 0.92, opt.isDavid ? 1.08 : 1.02, opt.isDavid ? 0.92 : 0.88);
   this.head.add(skull);
   const hairMat = std(opt.hair || 0x2c1a0e, 0.86, 0);
   const hair = new THREE.Mesh(
@@ -142,29 +151,41 @@ Humanoid.prototype.build = function (opt) {
   this.smile.position.set(0, -0.048, 0.128);
   this.smile.scale.set(1.6, 0.55, 0.45);
   this.head.add(this.smile);
+  if (opt.isDavid) {
+    const cheekMat = new THREE.MeshLambertMaterial({ color: 0xe7a58f, transparent: true, opacity: 0.22 });
+    const cheekL = new THREE.Mesh(new THREE.SphereGeometry(0.028, 10, 8), cheekMat);
+    cheekL.position.set(-0.075, -0.018, 0.124); cheekL.scale.set(1.2, 0.65, 0.35);
+    const cheekR = cheekL.clone(); cheekR.position.x = 0.075;
+    this.head.add(cheekL, cheekR);
+    const eyeGlintMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const glL = new THREE.Mesh(new THREE.SphereGeometry(0.006, 6, 6), eyeGlintMat);
+    glL.position.set(-0.052, 0.025, 0.151);
+    const glR = glL.clone(); glR.position.x = 0.052;
+    this.head.add(glL, glR);
+  }
   if (opt.helmet) {
     if (hair) hair.visible = false;
     this.addHelmet(opt.helmet, armor, accent, leather);
   }
 
   this.shoulderL = new THREE.Group();
-  this.shoulderL.position.set(-0.22, 0.24, 0);
+  this.shoulderL.position.set(opt.isDavid ? -0.245 : -0.22, 0.24, 0);
   this.chest.add(this.shoulderL);
   this.shoulderR = new THREE.Group();
-  this.shoulderR.position.set(0.22, 0.24, 0);
+  this.shoulderR.position.set(opt.isDavid ? 0.245 : 0.22, 0.24, 0);
   this.chest.add(this.shoulderR);
   if (opt.pads) {
     this.shoulderL.add(mesh(new THREE.SphereGeometry(0.08, 8, 6), leather, 0, 0, 0));
     this.shoulderR.add(mesh(new THREE.SphereGeometry(0.08, 8, 6), leather, 0, 0, 0));
   }
 
-  this.armL = this.makeArm(-1, skin, shirt, leather);
+  this.armL = this.makeArm(-1, skin, shirt, leather, opt.isDavid);
   this.shoulderL.add(this.armL.root);
-  this.armR = this.makeArm(1, skin, shirt, leather);
+  this.armR = this.makeArm(1, skin, shirt, leather, opt.isDavid);
   this.shoulderR.add(this.armR.root);
 
   this.thighL = new THREE.Group();
-  this.thighL.position.set(-0.09, 0, 0);
+  this.thighL.position.set(opt.isDavid ? -0.105 : -0.09, 0, 0);
   this.hips.add(this.thighL);
   this.thighL.add(mesh(new THREE.CylinderGeometry(0.075, 0.065, 0.36, 8), pants, 0, -0.18, 0));
   this.shinL = new THREE.Group();
@@ -175,10 +196,11 @@ Humanoid.prototype.build = function (opt) {
   this.footL.position.set(0, -0.34, 0.04);
   this.shinL.add(this.footL);
   this.footL.add(mesh(new THREE.BoxGeometry(0.11, 0.055, 0.20), boot, 0, 0, 0.045));
+  if (opt.isDavid) { this.thighL.scale.set(1.08, 1.04, 1.05); this.shinL.scale.set(1.04, 1.03, 1.04); this.footL.scale.set(1.08, 1.08, 1.12); }
   if (opt.isDavid) this.addDavidFootwear(this.footL, opt.shoeStyle || 1, boot, leather, accent);
 
   this.thighR = new THREE.Group();
-  this.thighR.position.set(0.09, 0, 0);
+  this.thighR.position.set(opt.isDavid ? 0.105 : 0.09, 0, 0);
   this.hips.add(this.thighR);
   this.thighR.add(mesh(new THREE.CylinderGeometry(0.075, 0.065, 0.36, 8), pants, 0, -0.18, 0));
   this.shinR = new THREE.Group();
@@ -189,6 +211,7 @@ Humanoid.prototype.build = function (opt) {
   this.footR.position.set(0, -0.34, 0.04);
   this.shinR.add(this.footR);
   this.footR.add(mesh(new THREE.BoxGeometry(0.11, 0.055, 0.20), boot, 0, 0, 0.045));
+  if (opt.isDavid) { this.thighR.scale.set(1.08, 1.04, 1.05); this.shinR.scale.set(1.04, 1.03, 1.04); this.footR.scale.set(1.08, 1.08, 1.12); }
   if (opt.isDavid) this.addDavidFootwear(this.footR, opt.shoeStyle || 1, boot, leather, accent);
 
   if (opt.sling) {
@@ -240,9 +263,9 @@ Humanoid.prototype.build = function (opt) {
 };
 
 Humanoid.createSling = function (style, leather, accent) {
-  // 40 handcrafted sling silhouettes: each world gets a distinct shape, wrap,
-  // accent and glowing/fire treatment while staying small enough to read as a
-  // real hand-held shepherd sling.
+  // 40 handcrafted sling silhouettes. A larger set of worlds now has a
+  // distinct FIRE treatment inspired by readable fantasy-weapon language:
+  // flame crowns, molten cores, runes, halos, ember rings and layered tongues.
   const i = Math.max(1, Math.min(40, Number(style) || 1));
   const palettes = [
     [0x7a4a28,0xc89b52],[0x315f7a,0x72c7e8],[0x6b3b2f,0xe09a58],[0x4b3f72,0xb7a3f5],
@@ -261,6 +284,7 @@ Humanoid.createSling = function (style, leather, accent) {
   const trimMat = new THREE.MeshStandardMaterial({ color: pal[1], roughness: 0.4, metalness: 0.35 });
   const g = new THREE.Group();
   g.name = 'DavidSling_World_' + i;
+
   const left = new THREE.Mesh(new THREE.CylinderGeometry(0.012,0.016,0.19,7), wrapMat);
   left.position.set(-0.045,0.005,0.015); left.rotation.z=-0.30; g.add(left);
   const right = left.clone(); right.position.x=0.045; right.rotation.z=0.30; g.add(right);
@@ -268,6 +292,7 @@ Humanoid.createSling = function (style, leather, accent) {
   pouch.scale.set(1.15,0.7,0.55); pouch.position.set(0,-0.075,0.02); g.add(pouch);
   const bead = new THREE.Mesh(new THREE.SphereGeometry(0.016,8,6), trimMat);
   bead.position.set(0,0.035,0.02); g.add(bead);
+
   // Distinct architectural accents by world group.
   if (i % 4 === 0) {
     const ring = new THREE.Mesh(new THREE.TorusGeometry(0.052,0.009,6,12), trimMat);
@@ -282,17 +307,96 @@ Humanoid.createSling = function (style, leather, accent) {
     const crest = new THREE.Mesh(new THREE.ConeGeometry(0.025,0.06,5), trimMat);
     crest.position.set(0,-0.075,0.045); crest.rotation.x=Math.PI/2; g.add(crest);
   }
-  // Every 5th world gains a subtle ember core; this is decorative only.
-  if (i % 5 === 0 || i === 40) {
-    const ember = new THREE.Mesh(new THREE.SphereGeometry(0.013,8,6), new THREE.MeshBasicMaterial({color:0xff6a00}));
-    ember.position.set(0,-0.075,0.055); g.add(ember);
+
+  // Fire designs: deliberately varied rather than a single repeated ember.
+  // Each entry maps a world to a different fire silhouette/effect.
+  const fireDesigns = {
+    5:'ember', 7:'crown', 9:'lava', 10:'twinfire', 12:'halo', 14:'magma',
+    16:'sun', 18:'wings', 20:'rune', 22:'phoenix', 24:'petals', 26:'eye',
+    28:'inferno', 30:'sacred', 32:'spiral', 35:'triple', 37:'flare', 39:'dragon', 40:'eternal'
+  };
+  const fireType = fireDesigns[i];
+  if (fireType) {
+    const fireMat = new THREE.MeshBasicMaterial({ color:0xff6a00, transparent:true, opacity:0.96 });
+    const hotMat = new THREE.MeshBasicMaterial({ color:0xffdf66, transparent:true, opacity:0.98 });
+    const emberMat = new THREE.MeshBasicMaterial({ color:0xff2a00, transparent:true, opacity:0.9 });
+    g.userData.fireParts = [];
+    const addFlame = (x,y,z,sx,sy,sz,rot=0,mat=fireMat) => {
+      const m = new THREE.Mesh(new THREE.ConeGeometry(0.015,0.075,5), mat);
+      m.position.set(x,y,z); m.scale.set(sx,sy,sz); m.rotation.z=rot; g.add(m);
+      g.userData.fireParts.push(m); return m;
+    };
+    const addEmber = (x,y,z,size=0.012,mat=hotMat) => {
+      const m = new THREE.Mesh(new THREE.SphereGeometry(size,6,5), mat);
+      m.position.set(x,y,z); g.add(m); g.userData.fireParts.push(m); return m;
+    };
+    const core = new THREE.Mesh(new THREE.SphereGeometry(0.019,8,6), hotMat);
+    core.position.set(0,-0.075,0.055); g.add(core); g.userData.fireParts.push(core);
     g.userData.fireSling = true;
+    g.userData.fireType = fireType;
+    g.userData.fireParts.forEach(m => { m.userData.baseScale = m.scale.clone(); m.userData.basePos = m.position.clone(); });
+    g.userData.firePhase = i * 0.37;
+
+    if (fireType === 'ember') {
+      addEmber(0,-0.075,0.075,0.018,hotMat); addFlame(0,-0.025,0.055,0.8,0.9,0.8);
+    } else if (fireType === 'crown') {
+      for (let k=-2;k<=2;k++) addFlame(k*0.025,-0.028,0.055,0.7+(2-Math.abs(k))*0.15,1.1+(k===0?0.3:0),0.8,k*0.22,k===0?hotMat:fireMat);
+    } else if (fireType === 'lava') {
+      for (let k=0;k<5;k++) addEmber(-0.032+k*0.016,-0.078+(k%2)*0.008,0.058,0.009+(k%2)*0.004,k%2?fireMat:hotMat);
+    } else if (fireType === 'twinfire') {
+      addFlame(-0.027,-0.03,0.06,0.85,1.2,0.8,-0.18,fireMat); addFlame(0.027,-0.03,0.06,0.85,1.2,0.8,0.18,fireMat);
+    } else if (fireType === 'halo') {
+      const halo = new THREE.Mesh(new THREE.TorusGeometry(0.055,0.007,5,14), fireMat);
+      halo.rotation.x=Math.PI/2; halo.position.set(0,-0.075,0.055); g.add(halo); g.userData.fireParts.push(halo);
+    } else if (fireType === 'magma') {
+      const core2 = new THREE.Mesh(new THREE.OctahedronGeometry(0.028,0), emberMat);
+      core2.position.set(0,-0.075,0.055); g.add(core2); g.userData.fireParts.push(core2);
+      addFlame(-0.02,-0.03,0.05,0.6,1.0,0.7,-0.2,hotMat); addFlame(0.02,-0.03,0.05,0.6,1.0,0.7,0.2,fireMat);
+    } else if (fireType === 'sun') {
+      for (let k=0;k<6;k++) { const a=k*Math.PI/3; addEmber(Math.cos(a)*0.048,-0.075+Math.sin(a)*0.048,0.055,0.008,hotMat); }
+    } else if (fireType === 'wings') {
+      addFlame(-0.045,-0.035,0.05,0.7,1.3,0.7,-0.48,fireMat); addFlame(0.045,-0.035,0.05,0.7,1.3,0.7,0.48,fireMat);
+    } else if (fireType === 'rune') {
+      const rune = new THREE.Mesh(new THREE.TorusGeometry(0.033,0.006,5,8), hotMat);
+      rune.rotation.x=Math.PI/2; rune.rotation.z=Math.PI/8; rune.position.set(0,-0.075,0.057); g.add(rune); g.userData.fireParts.push(rune);
+    } else if (fireType === 'phoenix') {
+      addFlame(0,-0.025,0.055,0.8,1.6,0.7,0,hotMat);
+      addFlame(-0.038,-0.035,0.05,0.55,1.0,0.7,-0.4,fireMat); addFlame(0.038,-0.035,0.05,0.55,1.0,0.7,0.4,fireMat);
+    } else if (fireType === 'petals') {
+      for (let k=0;k<4;k++) { const a=k*Math.PI/2; addFlame(Math.cos(a)*0.03,-0.075+Math.sin(a)*0.03,0.055,0.55,0.9,0.65,a,fireMat); }
+    } else if (fireType === 'eye') {
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.034,8,6), emberMat); eye.scale.set(1.35,0.55,0.7); eye.position.set(0,-0.075,0.058); g.add(eye); g.userData.fireParts.push(eye);
+      addEmber(0,-0.075,0.084,0.009,hotMat);
+    } else if (fireType === 'inferno') {
+      for (let k=-2;k<=2;k++) addFlame(k*0.022,-0.026,0.05,0.65,1.0+Math.abs(k)*0.12,0.7,k*0.28,k===0?hotMat:fireMat);
+      addEmber(0,-0.075,0.09,0.014,emberMat);
+    } else if (fireType === 'sacred') {
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.043,0.006,5,12), hotMat);
+      ring.rotation.x=Math.PI/2; ring.position.set(0,-0.075,0.055); g.add(ring); g.userData.fireParts.push(ring);
+      addFlame(0,-0.02,0.058,0.55,1.5,0.65,0,hotMat);
+    } else if (fireType === 'spiral') {
+      for (let k=0;k<5;k++) { const a=k*0.75; addEmber(Math.cos(a)*0.038,-0.075+Math.sin(a)*0.028,0.055+0.006*k,0.009, k%2?fireMat:hotMat); }
+    } else if (fireType === 'triple') {
+      addFlame(-0.032,-0.03,0.05,0.55,1.1,0.65,-0.22,fireMat); addFlame(0,-0.018,0.055,0.65,1.45,0.7,0,hotMat); addFlame(0.032,-0.03,0.05,0.55,1.1,0.65,0.22,fireMat);
+    } else if (fireType === 'flare') {
+      const flare = new THREE.Mesh(new THREE.TorusGeometry(0.04,0.009,5,10), fireMat);
+      flare.rotation.x=Math.PI/2; flare.position.set(0,-0.075,0.055); g.add(flare); g.userData.fireParts.push(flare);
+      for (let k=0;k<4;k++) { const a=k*Math.PI/2; addFlame(Math.cos(a)*0.03,-0.075+Math.sin(a)*0.03,0.055,0.45,0.85,0.6,a,hotMat); }
+    } else if (fireType === 'dragon') {
+      addFlame(0,-0.018,0.055,0.75,1.6,0.7,0,hotMat);
+      addFlame(-0.035,-0.035,0.05,0.5,1.1,0.65,-0.5,fireMat); addFlame(0.035,-0.035,0.05,0.5,1.1,0.65,0.5,fireMat);
+      addEmber(0,-0.075,0.09,0.012,emberMat);
+    } else if (fireType === 'eternal') {
+      for (let k=0;k<7;k++) { const a=(k/7)*Math.PI*2; addEmber(Math.cos(a)*0.048,-0.075+Math.sin(a)*0.048,0.055,0.008, k%2?fireMat:hotMat); }
+      addFlame(0,-0.018,0.058,0.8,1.8,0.7,0,hotMat);
+      const halo = new THREE.Mesh(new THREE.TorusGeometry(0.065,0.006,5,16), emberMat);
+      halo.rotation.x=Math.PI/2; halo.position.set(0,-0.075,0.055); g.add(halo); g.userData.fireParts.push(halo);
+    }
   }
   g.userData.world = i;
   g.userData.palette = pal;
   return g;
 };
-
 
 Humanoid.prototype.addDavidHair = function (style, hairMat, faceMat) {
   const g = new THREE.Group();
@@ -408,15 +512,15 @@ Humanoid.prototype.addHelmet = function (style, armor, accent, leather) {
   }
 };
 
-Humanoid.prototype.makeArm = function (side, skin, shirt, leather) {
+Humanoid.prototype.makeArm = function (side, skin, shirt, leather, isDavid) {
   const root = new THREE.Group();
   const upper = new THREE.Group();
   root.add(upper);
-  upper.add(mesh(new THREE.CylinderGeometry(0.055, 0.048, 0.28, 8), shirt, 0, -0.14, 0));
+  upper.add(mesh(new THREE.CylinderGeometry(isDavid ? 0.062 : 0.055, isDavid ? 0.054 : 0.048, 0.28, 10), shirt, 0, -0.14, 0));
   const elbow = new THREE.Group();
   elbow.position.y = -0.28;
   upper.add(elbow);
-  elbow.add(mesh(new THREE.CylinderGeometry(0.045, 0.04, 0.26, 8), skin, 0, -0.13, 0));
+  elbow.add(mesh(new THREE.CylinderGeometry(isDavid ? 0.05 : 0.045, isDavid ? 0.044 : 0.04, 0.26, 10), skin, 0, -0.13, 0));
   const hand = new THREE.Group();
   hand.position.y = -0.26;
   elbow.add(hand);
@@ -644,6 +748,21 @@ Humanoid.prototype.setState = function (state, extra) {
 Humanoid.prototype.update = function (dt, state, extra) {
   extra = extra || {};
   this.time = (this.time || 0) + dt;
+  if (this.sling && this.sling.userData && this.sling.userData.fireSling) {
+    const fu = this.sling.userData;
+    fu.firePhase = (fu.firePhase || 0) + dt * 3.8;
+    const pulse = 0.92 + Math.sin(fu.firePhase) * 0.10;
+    (fu.fireParts || []).forEach((m, idx) => {
+      const wobble = Math.sin(fu.firePhase * 1.7 + idx * 0.85) * 0.10;
+      const bs = m.userData.baseScale || new THREE.Vector3(1,1,1);
+      const bp = m.userData.basePos || m.position;
+      m.scale.set(bs.x * (0.94 + pulse * 0.06), bs.y * (0.90 + pulse * 0.10), bs.z * (0.94 + pulse * 0.06));
+      m.rotation.y += dt * (0.6 + idx * 0.025);
+      if (fu.fireType === 'halo' || fu.fireType === 'sacred' || fu.fireType === 'flare' || fu.fireType === 'eternal') m.rotation.z += dt * 0.35;
+      m.position.y = bp.y + wobble * 0.018;
+      if (m.material && m.material.opacity !== undefined) m.material.opacity = 0.78 + Math.sin(fu.firePhase * 2 + idx) * 0.16;
+    });
+  }
   if (extra.fire) this.attackT = (this.attackT || 0) + dt * 3.6;
   else this.attackT = 0;
   const clip = this.clipFor(state, extra);
