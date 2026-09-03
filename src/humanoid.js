@@ -214,6 +214,39 @@ Humanoid.prototype.build = function (opt) {
   if (opt.isDavid) { this.thighR.scale.set(1.08, 1.04, 1.05); this.shinR.scale.set(1.04, 1.03, 1.04); this.footR.scale.set(1.08, 1.08, 1.12); }
   if (opt.isDavid) this.addDavidFootwear(this.footR, opt.shoeStyle || 1, boot, leather, accent);
 
+  // Character identity details: small silhouette pieces make David and guardians
+  // read as authored characters even at gameplay camera distance.
+  if (opt.isDavid) {
+    const pouchMat = std(opt.pouch || 0x6f4728, 0.78, 0.02);
+    const pouch = new THREE.Mesh(new THREE.BoxGeometry(0.095, 0.12, 0.055), pouchMat);
+    pouch.position.set(opt.pouchSide === 'right' ? 0.19 : -0.19, -0.08, 0.055);
+    pouch.rotation.z = opt.pouchSide === 'right' ? -0.08 : 0.08;
+    this.hips.add(pouch);
+    const flap = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.025, 0.06), accent);
+    flap.position.set(pouch.position.x, pouch.position.y + 0.052, pouch.position.z + 0.004);
+    this.hips.add(flap);
+
+    const wrapMat = std(opt.wrap || 0x9a6a3c, 0.86, 0);
+    [-1, 1].forEach(side => {
+      const wrap = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.045, 0.045), wrapMat);
+      wrap.position.set(side * 0.012, -0.30, 0.055);
+      wrap.rotation.z = side * 0.10;
+      this[side < 0 ? 'armL' : 'armR'].hand.add(wrap);
+    });
+  } else {
+    // Guardian waist guard: gives armored enemies a stronger, readable silhouette.
+    const skirt = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.23, 0.27, 0.16, 12, 1, false),
+      armor
+    );
+    skirt.position.y = -0.16;
+    this.hips.add(skirt);
+    const crest = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.018, 8), accent);
+    crest.rotation.x = Math.PI / 2;
+    crest.position.set(0, 0.11, 0.165);
+    this.chest.add(crest);
+  }
+
   if (opt.sling) {
     this.sling = Humanoid.createSling(opt.slingStyle || 1, leather, accent);
     this.sling.position.set(0.015, -0.015, 0.045);

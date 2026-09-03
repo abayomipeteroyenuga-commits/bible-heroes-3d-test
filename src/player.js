@@ -103,7 +103,7 @@ class Player {
       hair: [0x24160e,0x321b12,0x3a2115,0x1f1510,0x4a2b18][(world-1)%5],
       hairStyle: world, isDavid: true, leather: 0x754522, accent: accent, pads: false,
       tunic: true, belt: true, sash: sash, sashSide: world % 2 ? 'left' : 'right', cloak: cloak,
-      shoeStyle: world, sling: true, slingStyle: world, staff: false, helmet: false, eye: world % 3 === 0 ? 0x4b7d72 : 0x31577d
+      shoeStyle: world, pouchSide: world % 2 ? 'right' : 'left', pouch: 0x6f4728, wrap: 0x9a6a3c, sling: true, slingStyle: world, staff: false, helmet: false, eye: world % 3 === 0 ? 0x4b7d72 : 0x31577d
     });
     this.root = this.humanoid.root;
     this.torsoGroup = this.humanoid.torsoGroup;

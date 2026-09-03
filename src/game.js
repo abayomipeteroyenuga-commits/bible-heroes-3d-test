@@ -1113,12 +1113,13 @@ const Game = {
     const stars = (this._pendingVictory && this._pendingVictory.stars) || 1;
     const result = (this._pendingVictory && this._pendingVictory.result) || {};
     const lv = (window.LEVELS && window.LEVELS[worldId - 1]) || { name: 'World ' + worldId };
-    const nextId = result.nextLevel || (worldId < (SaveSystem.MAX_LEVEL || 20) ? worldId + 1 : null);
+    const maxLevel = SaveSystem.MAX_LEVEL || (window.LEVELS ? window.LEVELS.length : 1);
+    const nextId = result.nextLevel || (worldId < maxLevel ? worldId + 1 : null);
     const nextLv = nextId && window.LEVELS ? window.LEVELS[nextId - 1] : null;
 
     const setTxt = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
     setTxt('victory-title', 'WORLD ' + worldId + ' COMPLETE!');
-    if (worldId >= (SaveSystem.MAX_LEVEL || 20)) {
+    if (worldId >= maxLevel) {
       setTxt('victory-subtitle', 'THE BIBLE HEROES ADVENTURE IS COMPLETE!');
       setTxt('victory-reward', 'GIANT SLAYER!');
       setTxt('victory-badge', '🏅 GIANT SLAYER');
