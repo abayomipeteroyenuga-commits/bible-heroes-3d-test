@@ -491,7 +491,7 @@ Humanoid.prototype.addModernDavidOutfit = function (opt, leather, accent, shirt,
   ['belt','sash','cloak'].forEach(k => { if (this[k]) this[k].visible = false; });
 
   // T-shirt is the visible base under the open jacket.
-  this.chest.traverse(o => {
+  if (this.chest && typeof this.chest.traverse === 'function') this.chest.traverse(o => {
     if (o.isMesh && o.position && o.position.z < 0.1) o.material = inner;
   });
   const tee = new THREE.Mesh(new THREE.SphereGeometry(0.205, 18, 12), inner);
@@ -524,13 +524,13 @@ Humanoid.prototype.addModernDavidOutfit = function (opt, leather, accent, shirt,
   this.chest.add(hem);
   // Brown sleeves with visible skin forearms.
   [this.armL, this.armR].forEach(a => {
-    a.upper.traverse(o => { if (o.isMesh) o.material = jacket; });
-    a.lower.traverse(o => { if (o.isMesh) o.material = skinMaterialFrom(opt); });
+    if (a && a.upper && typeof a.upper.traverse === 'function') a.upper.traverse(o => { if (o.isMesh) o.material = jacket; });
+    if (a && a.lower && typeof a.lower.traverse === 'function') a.lower.traverse(o => { if (o.isMesh) o.material = skinMaterialFrom(opt); });
   });
 
   // Knee-length navy shorts; lower legs stay skin colored.
   [this.thighL, this.thighR].forEach(th => {
-    th.traverse(o => { if (o.isMesh) o.material = shorts; });
+    if (th && typeof th.traverse === 'function') th.traverse(o => { if (o.isMesh) o.material = shorts; });
   });
   [this.shinL, this.shinR].forEach(sh => {
     sh.traverse(o => { if (o.isMesh) o.material = skinMaterialFrom(opt); });
@@ -549,7 +549,7 @@ Humanoid.prototype.addModernDavidOutfit = function (opt, leather, accent, shirt,
 
   // Chunky white/gray sneakers, dark sole and clearly readable laces.
   [this.footL, this.footR].forEach(foot => {
-    foot.traverse(o => { if (o.isMesh) o.material = sneaker; });
+    if (foot && typeof foot.traverse === 'function') foot.traverse(o => { if (o.isMesh) o.material = sneaker; });
     // High-top shoe collar rises slightly onto the lower leg so the footwear reads
     // clearly as a shoe/ankle boot rather than a detached foot piece.
     const ankle = new THREE.Mesh(new THREE.BoxGeometry(0.108, 0.085, 0.095), sneaker);

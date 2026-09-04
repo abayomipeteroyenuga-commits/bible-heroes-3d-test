@@ -349,7 +349,7 @@ class ShadowGuardian {
     if (window.Game && window.Game.addCameraShake) window.Game.addCameraShake(0.07, 0.12);
 
     // Flash materials
-    this.group.traverse(c => {
+    if (this.group && typeof this.group.traverse === 'function') this.group.traverse(c => {
       if (c.isMesh && c.material && c.material.emissive) {
         const prev = c.material.emissive.getHex();
         c.material.emissive.setHex(0xffffff);
@@ -402,7 +402,7 @@ class ShadowGuardian {
       t += 0.05;
       this.group.rotation.x = Math.min(1.2, t * 2);
       this.group.position.y = startY - t * 0.3;
-      this.group.traverse(c => {
+      if (this.group && typeof this.group.traverse === 'function') this.group.traverse(c => {
         if (c.material) {
           c.material.transparent = true;
           c.material.opacity = Math.max(0, 1 - t);
@@ -991,7 +991,7 @@ class Goliath {
     this.state = 'HIT';
     this.hitTimer = 0;
     // Flash
-    this.group.traverse(c => {
+    if (this.group && typeof this.group.traverse === 'function') this.group.traverse(c => {
       if (c.isMesh && c.material && c.material.emissive) {
         const prev = c.material.emissive.getHex();
         c.material.emissive.setHex(0xff6666);
@@ -1028,7 +1028,7 @@ class Goliath {
       t += 0.04;
       this.group.rotation.x = Math.min(1.3, t * 1.5);
       this.group.position.y -= 0.08;
-      this.group.traverse(c => {
+      if (this.group && typeof this.group.traverse === 'function') this.group.traverse(c => {
         if (c.material) {
           c.material.transparent = true;
           c.material.opacity = Math.max(0, 1 - t);
@@ -1278,7 +1278,7 @@ class WorldBoss {
       t += 0.05;
       this.group.rotation.x = Math.min(1.2, t * 1.6);
       this.group.position.y -= 0.06;
-      this.group.traverse(c => {
+      if (this.group && typeof this.group.traverse === 'function') this.group.traverse(c => {
         if (c.material) {
           c.material.transparent = true;
           c.material.opacity = Math.max(0, 1 - t);
