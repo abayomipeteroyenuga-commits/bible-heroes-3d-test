@@ -80,7 +80,13 @@ const SaveSystem = {
         weaponLevels: {},
         sticks: 0,
         feathers: 0,
-        flint: 0
+        flint: 0,
+        healthPotions: 0,
+        armorCores: 0,
+        faithCrystals: 0,
+        speedCharms: 0,
+        coinCharms: 0,
+        xpScrolls: 0
       }
     };
   },
@@ -208,7 +214,7 @@ const SaveSystem = {
     const data = this.load();
     const inv = data.inventory || this.defaultData().inventory;
     data.inventory = inv;
-    const prices = { armor: 40, shield: 35, bow: 80, arrows: 20, bronzeSword: 120, hunterBow: 180, flameSling: 220, faithBlade: 350 };
+    const prices = { armor: 40, shield: 35, bow: 80, arrows: 20, healthPotion: 30, armorCore: 55, faithCrystal: 45, speedCharm: 90, coinCharm: 100, xpScroll: 75, bronzeSword: 120, hunterBow: 180, flameSling: 220, faithBlade: 350 };
     const weaponNames = { bronzeSword: 'Bronze Sword', hunterBow: 'Hunter Bow', flameSling: 'Flame Sling', faithBlade: 'Faith Blade' };
     const price = prices[item];
     if (!price) return { ok: false, message: 'Unknown item' };
@@ -224,6 +230,12 @@ const SaveSystem = {
       inv.arrows = (inv.arrows || 0) + 8;
     }
     if (item === 'arrows') inv.arrows = (inv.arrows || 0) + 10;
+    if (item === 'healthPotion') inv.healthPotions = (inv.healthPotions || 0) + 1;
+    if (item === 'armorCore') inv.armorCores = (inv.armorCores || 0) + 1;
+    if (item === 'faithCrystal') inv.faithCrystals = (inv.faithCrystals || 0) + 1;
+    if (item === 'speedCharm') inv.speedCharms = (inv.speedCharms || 0) + 1;
+    if (item === 'coinCharm') inv.coinCharms = (inv.coinCharms || 0) + 1;
+    if (item === 'xpScroll') inv.xpScrolls = (inv.xpScrolls || 0) + 1;
     if (weaponNames[item]) {
       inv.ownedWeapons = Array.isArray(inv.ownedWeapons) ? inv.ownedWeapons : ['sling'];
       inv.ownedWeapons.push(item);
@@ -236,6 +248,12 @@ const SaveSystem = {
       shield: 'Faith shield strengthened!',
       bow: 'Bow unlocked!',
       arrows: '+10 arrows',
+      healthPotion: 'Health Potion purchased!',
+      armorCore: 'Armor Core purchased!',
+      faithCrystal: 'Faith Crystal purchased!',
+      speedCharm: 'Swift Sandals purchased!',
+      coinCharm: 'Treasure Charm purchased!',
+      xpScroll: 'XP Scroll purchased!',
       bronzeSword: 'Bronze Sword purchased!',
       hunterBow: 'Hunter Bow purchased!',
       flameSling: 'Flame Sling purchased!',

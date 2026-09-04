@@ -5,6 +5,8 @@ function safeHumanoidTraverse(obj, fn) {
 // Shared low-poly humanoid rig + animation clips for David, guardians and bosses.
 function Humanoid(parent, opt) {
   opt = opt || {};
+  // David is permanently locked to the biblical shepherd design.
+  if (opt && opt.isDavid) opt.modernDavid = false;
   this.opt = opt;
   this.parent = parent;
   this.time = 0;
@@ -60,7 +62,7 @@ Humanoid.prototype.build = function (opt) {
     ? new THREE.Mesh(new THREE.SphereGeometry(0.245, 20, 14), shirt)
     : new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 0.42, 14), shirt);
   torso.position.y = opt.isDavid ? 0.075 : 0.08;
-  if (opt.isDavid) torso.scale.set(0.96, 1.16, 0.72);
+  if (opt.isDavid) torso.scale.set(0.91, 1.24, 0.67);
   this.chest.add(torso);
   if (opt.isDavid) {
     const bodyMat = std(opt.shirt || 0x4a7c59, 0.78, 0);
@@ -94,9 +96,21 @@ Humanoid.prototype.build = function (opt) {
   // Layered biblical clothing: tunic hem, belt and optional sash/cloak make David
   // read as a dressed human character rather than a primitive mannequin.
   if (opt.tunic !== false && !opt.modernDavid) {
-    const hem = new THREE.Mesh(new THREE.CylinderGeometry(0.225, 0.24, 0.11, 14), shirt);
+    const hem = new THREE.Mesh(new THREE.CylinderGeometry(0.225, 0.255, 0.14, 20), shirt);
     hem.position.y = -0.12;
     this.chest.add(hem);
+    // Soft front/back drape panels give the tunic a cloth silhouette instead of a boxy shirt.
+    const tunicFront = new THREE.Mesh(new THREE.SphereGeometry(0.205, 20, 14), shirt);
+    tunicFront.scale.set(0.88, 1.10, 0.20);
+    tunicFront.position.set(0, 0.015, 0.18);
+    this.chest.add(tunicFront);
+    const foldMat = std(opt.shirtDark || 0x66543a, 0.92, 0);
+    for (const x of [-0.075, 0, 0.075]) {
+      const fold = new THREE.Mesh(new THREE.BoxGeometry(0.018, 0.30, 0.012), foldMat);
+      fold.position.set(x, -0.005, 0.372);
+      fold.rotation.z = x * 0.7;
+      this.chest.add(fold);
+    }
   }
   if (opt.belt !== false && !opt.modernDavid) {
     const belt = new THREE.Mesh(new THREE.CylinderGeometry(0.215, 0.215, 0.055, 14), leather);
@@ -140,7 +154,7 @@ Humanoid.prototype.build = function (opt) {
   if (opt.isDavid) {
     // More lifelike adult/teen human proportions: slightly smaller head,
     // broader shoulders and a tapered torso rather than a toy-like shape.
-    this.head.scale.set(0.90, 0.92, 0.90);
+    this.head.scale.set(0.82, 0.84, 0.82);
   }
   const hairMat = std(opt.hair || 0x2c1a0e, 0.86, 0);
   const hair = new THREE.Mesh(
@@ -161,15 +175,15 @@ Humanoid.prototype.build = function (opt) {
   const eyeW = new THREE.MeshLambertMaterial({ color: 0xfffdf6 });
   const iris = new THREE.MeshLambertMaterial({ color: opt.eye || 0x2e5a7a });
   this.eyeL = mesh(new THREE.SphereGeometry(0.024, 10, 8), eyeW, -0.046, 0.018, 0.132);
-  this.eyeL.scale.set(1.1, 1.05, 0.42);
+  this.eyeL.scale.set(opt.isDavid ? 0.92 : 1.1, opt.isDavid ? 0.88 : 1.05, 0.42);
   this.head.add(this.eyeL);
   this.eyeR = this.eyeL.clone();
   this.eyeR.position.x = 0.046;
   this.head.add(this.eyeR);
   this.head.add(mesh(new THREE.SphereGeometry(0.012, 8, 6), iris, -0.046, 0.018, 0.145));
   this.head.add(mesh(new THREE.SphereGeometry(0.012, 8, 6), iris, 0.046, 0.018, 0.145));
-  this.browL = mesh(new THREE.BoxGeometry(0.04, 0.008, 0.01), hairMat, -0.046, 0.058, 0.128);
-  this.browR = mesh(new THREE.BoxGeometry(0.04, 0.008, 0.01), hairMat, 0.046, 0.058, 0.128);
+  this.browL = mesh(new THREE.BoxGeometry(0.042, 0.007, 0.012), hairMat, -0.046, 0.058, 0.128);
+  this.browR = mesh(new THREE.BoxGeometry(0.042, 0.007, 0.012), hairMat, 0.046, 0.058, 0.128);
   this.head.add(this.browL);
   this.head.add(this.browR);
   const nose = mesh(new THREE.SphereGeometry(0.018, 12, 8), faceMat, 0, -0.008, 0.138);
@@ -219,11 +233,29 @@ Humanoid.prototype.build = function (opt) {
     this.addHelmet(opt.helmet, armor, accent, leather);
   }
 
+  if (opt.isDavid && !opt.modernDavid) {
+    // Asymmetrical shepherd shoulder cloth: clearly biblical and useful for the hero silhouette.
+    const shoulderCloth = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.205, 0.235, 0.34, 16, 1, true),
+      std(opt.wrap || 0x9a6a3c, 0.9, 0)
+    );
+    shoulderCloth.scale.set(0.78, 1.0, 0.28);
+    shoulderCloth.position.set(-0.12, 0.10, -0.015);
+    shoulderCloth.rotation.z = -0.16;
+    this.chest.add(shoulderCloth);
+    // Narrow hanging edge of the shepherd cloth gives a natural layered drape.
+    const clothEdge = new THREE.Mesh(new THREE.SphereGeometry(0.075, 14, 10), std(opt.wrap || 0x9a6a3c, 0.92, 0));
+    clothEdge.scale.set(0.42, 1.75, 0.20);
+    clothEdge.position.set(-0.255, -0.045, 0.015);
+    clothEdge.rotation.z = -0.10;
+    this.chest.add(clothEdge);
+  }
+
   this.shoulderL = new THREE.Group();
-  this.shoulderL.position.set(opt.isDavid ? -0.265 : -0.22, 0.24, 0);
+  this.shoulderL.position.set(opt.isDavid ? -0.285 : -0.22, 0.24, 0);
   this.chest.add(this.shoulderL);
   this.shoulderR = new THREE.Group();
-  this.shoulderR.position.set(opt.isDavid ? 0.265 : 0.22, 0.24, 0);
+  this.shoulderR.position.set(opt.isDavid ? 0.285 : 0.22, 0.24, 0);
   this.chest.add(this.shoulderR);
   if (opt.pads) {
     this.shoulderL.add(mesh(new THREE.SphereGeometry(0.08, 8, 6), leather, 0, 0, 0));
@@ -234,32 +266,33 @@ Humanoid.prototype.build = function (opt) {
   this.shoulderL.add(this.armL.root);
   this.armR = this.makeArm(1, skin, shirt, leather, opt.isDavid);
   this.shoulderR.add(this.armR.root);
+  if (opt.isDavid && !opt.modernDavid) this.addDavidHeroDetails(skin, skinDark, shirt, leather, hairMat);
 
   this.thighL = new THREE.Group();
-  this.thighL.position.set(opt.isDavid ? -0.112 : -0.09, 0, 0);
+  this.thighL.position.set(opt.isDavid ? -0.118 : -0.09, 0, 0);
   this.hips.add(this.thighL);
-  this.thighL.add(mesh(new THREE.CylinderGeometry(0.078, 0.067, 0.36, 12), pants, 0, -0.18, 0));
+  this.thighL.add(mesh(new THREE.CylinderGeometry(0.078, 0.067, 0.39, 12), pants, 0, -0.18, 0));
   this.shinL = new THREE.Group();
-  this.shinL.position.y = -0.36;
+  this.shinL.position.y = -0.39;
   this.thighL.add(this.shinL);
-  this.shinL.add(mesh(new THREE.CylinderGeometry(0.061, 0.051, 0.34, 12), pantsDark, 0, -0.17, 0));
+  this.shinL.add(mesh(new THREE.CylinderGeometry(0.061, 0.051, 0.37, 12), pantsDark, 0, -0.17, 0));
   this.footL = new THREE.Group();
-  this.footL.position.set(0, -0.34, 0.04);
+  this.footL.position.set(0, -0.37, 0.04);
   this.shinL.add(this.footL);
   this.footL.add(mesh(new THREE.BoxGeometry(0.11, 0.055, 0.20), boot, 0, 0, 0.045));
   if (opt.isDavid) { this.thighL.scale.set(1.08, 1.04, 1.05); this.shinL.scale.set(1.04, 1.03, 1.04); this.footL.scale.set(1.08, 1.08, 1.12); }
   if (opt.isDavid) this.addDavidFootwear(this.footL, opt.shoeStyle || 1, boot, leather, accent);
 
   this.thighR = new THREE.Group();
-  this.thighR.position.set(opt.isDavid ? 0.112 : 0.09, 0, 0);
+  this.thighR.position.set(opt.isDavid ? 0.118 : 0.09, 0, 0);
   this.hips.add(this.thighR);
-  this.thighR.add(mesh(new THREE.CylinderGeometry(0.078, 0.067, 0.36, 12), pants, 0, -0.18, 0));
+  this.thighR.add(mesh(new THREE.CylinderGeometry(0.078, 0.067, 0.39, 12), pants, 0, -0.18, 0));
   this.shinR = new THREE.Group();
-  this.shinR.position.y = -0.36;
+  this.shinR.position.y = -0.39;
   this.thighR.add(this.shinR);
-  this.shinR.add(mesh(new THREE.CylinderGeometry(0.061, 0.051, 0.34, 12), pantsDark, 0, -0.17, 0));
+  this.shinR.add(mesh(new THREE.CylinderGeometry(0.061, 0.051, 0.37, 12), pantsDark, 0, -0.17, 0));
   this.footR = new THREE.Group();
-  this.footR.position.set(0, -0.34, 0.04);
+  this.footR.position.set(0, -0.37, 0.04);
   this.shinR.add(this.footR);
   this.footR.add(mesh(new THREE.BoxGeometry(0.11, 0.055, 0.20), boot, 0, 0, 0.045));
   if (opt.isDavid) { this.thighR.scale.set(1.08, 1.04, 1.05); this.shinR.scale.set(1.04, 1.03, 1.04); this.footR.scale.set(1.08, 1.08, 1.12); }
@@ -277,13 +310,6 @@ Humanoid.prototype.build = function (opt) {
     flap.position.set(pouch.position.x, pouch.position.y + 0.052, pouch.position.z + 0.004);
     this.hips.add(flap);
 
-    const wrapMat = std(opt.wrap || 0x9a6a3c, 0.86, 0);
-    [-1, 1].forEach(side => {
-      const wrap = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.045, 0.045), wrapMat);
-      wrap.position.set(side * 0.012, -0.30, 0.055);
-      wrap.rotation.z = side * 0.10;
-      this[side < 0 ? 'armL' : 'armR'].hand.add(wrap);
-    });
   } else {
     // Guardian waist guard: gives armored enemies a stronger, readable silhouette.
     const skirt = new THREE.Mesh(
@@ -298,21 +324,11 @@ Humanoid.prototype.build = function (opt) {
     this.chest.add(crest);
   }
 
-  if (opt.modernDavid) {
-    this.addModernDavidOutfit(opt, leather, accent, shirt, pants, boot);
-  }
+  // David's hands are intentionally empty. His combat/projectile system is
+  // gameplay-only and no weapon, sling, staff, or hand-held prop is attached.
+  this.sling = null;
+  this.staff = null;
 
-  if (opt.sling) {
-    this.sling = Humanoid.createSling(opt.slingStyle || 1, leather, accent);
-    this.sling.position.set(0.015, -0.015, 0.045);
-    this.armR.hand.add(this.sling);
-  }
-  if (opt.staff) {
-    this.staff = new THREE.Group();
-    this.staff.add(mesh(new THREE.CylinderGeometry(0.018, 0.022, 1.35, 6), new THREE.MeshLambertMaterial({ color: 0xb07a48 }), 0, 0.3, 0));
-    this.staff.position.set(-0.02, -0.02, 0.03);
-    this.armL.hand.add(this.staff);
-  }
   if (opt.weapon === 'club') {
     const club = mesh(new THREE.CylinderGeometry(0.04, 0.08, 0.7, 6), armor, 0, -0.28, 0.04);
     this.armR.hand.add(club);
@@ -487,13 +503,9 @@ Humanoid.createSling = function (style, leather, accent) {
 };
 
 Humanoid.prototype.setSlingStyle = function (style) {
-  if (!this.sling || !this.armR || !this.armR.hand) return;
-  const parent = this.armR.hand;
-  parent.remove(this.sling);
-  this.sling = Humanoid.createSling(style || 1, new THREE.MeshStandardMaterial({color:0x754522,roughness:0.72}), new THREE.MeshStandardMaterial({color:0xd7b56d,roughness:0.4,metalness:0.35}));
-  this.sling.position.set(0.015,-0.015,0.045);
-  parent.add(this.sling);
-  this.slingMesh = this.sling;
+  // David no longer carries a sling. Keep this method for legacy game calls.
+  this.sling = null;
+  this.slingMesh = null;
 };
 
 Humanoid.prototype.addDavidHair = function (style, hairMat, faceMat) {
@@ -532,206 +544,38 @@ Humanoid.prototype.addDavidHair = function (style, hairMat, faceMat) {
   }
 };
 
-Humanoid.prototype.addModernDavidOutfit = function (opt, leather, accent, shirt, pants, boot) {
-  // Modern cartoon-boy David: deliberately matched to the supplied reference.
-  // The biblical equipment/wardrobe is removed elsewhere when modernDavid=true;
-  // this layer supplies the complete modern silhouette while preserving the
-  // existing rig, combat and animation API.
-  const jacket = new THREE.MeshStandardMaterial({ color: 0x9b5638, roughness: 0.78 });
-  const jacketDark = new THREE.MeshStandardMaterial({ color: 0x693a2a, roughness: 0.84 });
-  const inner = new THREE.MeshStandardMaterial({ color: 0x3d6579, roughness: 0.82 });
-  const trousers = new THREE.MeshStandardMaterial({ color: 0x26334a, roughness: 0.88 });
-  const trousersDark = new THREE.MeshStandardMaterial({ color: 0x1b2538, roughness: 0.91 });
-  const sneaker = new THREE.MeshStandardMaterial({ color: 0xdfe3e7, roughness: 0.72 });
-  const sole = new THREE.MeshStandardMaterial({ color: 0x414852, roughness: 0.9 });
-  const lace = new THREE.MeshStandardMaterial({ color: 0xf8f5ee, roughness: 0.7 });
-  const pack = new THREE.MeshStandardMaterial({ color: 0x526a7b, roughness: 0.86 });
-  const packDark = new THREE.MeshStandardMaterial({ color: 0x344958, roughness: 0.9 });
-  const hairMat = new THREE.MeshStandardMaterial({ color: 0x2a1710, roughness: 0.82 });
-
-  // Hide any legacy clothing/accessories that could change the reference silhouette.
-  ['belt','sash','cloak'].forEach(k => { if (this[k]) this[k].visible = false; });
-
-  // T-shirt is the visible base under the open jacket.
-  safeHumanoidTraverse(this.chest, o => {
-    if (o.isMesh && o.position && o.position.z < 0.1) o.material = inner;
-  });
-  const tee = new THREE.Mesh(new THREE.SphereGeometry(0.205, 18, 12), inner);
-  tee.scale.set(0.90, 1.08, 0.60);
-  tee.position.set(0, 0.075, 0.18);
-  this.chest.add(tee);
-
-  // Open brown jacket: two distinct front panels and a raised collar.
-  const leftPanel = new THREE.Mesh(new THREE.BoxGeometry(0.105, 0.35, 0.075), jacket);
-  leftPanel.position.set(-0.115, 0.085, 0.19);
-  leftPanel.rotation.z = -0.04;
-  this.chest.add(leftPanel);
-  const rightPanel = leftPanel.clone();
-  rightPanel.position.x = 0.115;
-  rightPanel.rotation.z = 0.04;
-  this.chest.add(rightPanel);
-  [-1,1].forEach(side => {
-    const collar = new THREE.Mesh(new THREE.BoxGeometry(0.075, 0.15, 0.04), jacketDark);
-    collar.position.set(side * 0.075, 0.245, 0.205);
-    collar.rotation.z = side * 0.22;
-    collar.rotation.x = -0.12;
-    this.chest.add(collar);
-  });
-  // Premium David details: subtle gold trim and zipper pull. No chest badge.
-  const gold = new THREE.MeshStandardMaterial({ color: 0xe4b94f, roughness: 0.42, metalness: 0.55 });
-  const trimL = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.30, 0.020), gold);
-  trimL.position.set(-0.126, 0.075, 0.232);
-  this.chest.add(trimL);
-  const trimR = trimL.clone(); trimR.position.x = 0.126; this.chest.add(trimR);
-  // Modern jacket detailing: zipper and hem. No chest badge.
-  const zip = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.27, 0.018), jacketDark);
-  zip.position.set(0, 0.075, 0.236);
-  this.chest.add(zip);
-  const pull = new THREE.Mesh(new THREE.SphereGeometry(0.018, 10, 8), gold);
-  pull.position.set(0, -0.065, 0.255);
-  this.chest.add(pull);
-  const hem = new THREE.Mesh(new THREE.BoxGeometry(0.27, 0.035, 0.08), jacketDark);
-  hem.position.set(0, -0.105, 0.19);
-  this.chest.add(hem);
-  const collarLine = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.012, 0.018), gold);
-  collarLine.position.set(0, 0.215, 0.236);
-  this.chest.add(collarLine);
-  [-1,1].forEach(side => {
-    const seam = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.18, 0.014), jacketDark);
-    seam.position.set(side * 0.135, -0.005, 0.233);
-    seam.rotation.z = side * 0.08;
-    this.chest.add(seam);
-  });
-  // Brown sleeves with visible skin forearms and stylish wrist bands.
-  [this.armL, this.armR].forEach(a => {
-    safeHumanoidTraverse(a && a.upper, o => { if (o.isMesh) o.material = jacket; });
-    safeHumanoidTraverse(a && a.lower, o => { if (o.isMesh) o.material = skinMaterialFrom(opt); });
-    if (a && a.lower) {
-      const band = new THREE.Mesh(new THREE.TorusGeometry(0.058, 0.010, 7, 14), gold);
-      band.rotation.x = Math.PI / 2;
-      band.position.y = -0.02;
-      a.lower.add(band);
-    }
-  });
-
-  // Full-length navy trousers. David must NOT wear shorts or a skirt.
-  // Both upper and lower legs are covered, with the sneakers sitting over the cuffs.
-  [this.thighL, this.thighR].forEach(th => {
-    safeHumanoidTraverse(th, o => { if (o.isMesh) o.material = trousers; });
-  });
-  [this.shinL, this.shinR].forEach(sh => {
-    safeHumanoidTraverse(sh, o => { if (o.isMesh) o.material = trousersDark; });
-  });
-  // Trousers waistband and utility pockets give David a finished everyday outfit.
-  const waist = new THREE.Mesh(new THREE.BoxGeometry(0.31, 0.035, 0.22), trousers);
-  waist.position.set(0, 0.13, 0.02);
-  this.hips.add(waist);
-  const pocketMat = new THREE.MeshStandardMaterial({ color: 0x34425a, roughness: 0.9 });
-  [-1,1].forEach(side => {
-    const pocket = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.085, 0.018), pocketMat);
-    pocket.position.set(side * 0.095, 0.015, 0.12);
-    pocket.rotation.z = side * 0.08;
-    this.hips.add(pocket);
-  });
-
-  // Chunky white/gray sneakers, dark sole and clearly readable laces.
-  [this.footL, this.footR].forEach(foot => {
-    safeHumanoidTraverse(foot, o => { if (o.isMesh) o.material = sneaker; });
-    // High-top shoe collar rises slightly onto the lower leg so the footwear reads
-    // clearly as a shoe/ankle boot rather than a detached foot piece.
-    const ankle = new THREE.Mesh(new THREE.BoxGeometry(0.108, 0.085, 0.095), sneaker);
-    ankle.position.set(0, 0.055, -0.005);
-    foot.add(ankle);
-    const ankleBand = new THREE.Mesh(new THREE.BoxGeometry(0.112, 0.018, 0.098), sole);
-    ankleBand.position.set(0, 0.095, -0.005);
-    foot.add(ankleBand);
-    const soleMesh = new THREE.Mesh(new THREE.BoxGeometry(0.125, 0.025, 0.225), sole);
-    soleMesh.position.set(0, -0.035, 0.05);
-    foot.add(soleMesh);
-    const toe = new THREE.Mesh(new THREE.SphereGeometry(0.058, 12, 8), sneaker);
-    toe.scale.set(1.03, 0.55, 1.34);
-    toe.position.set(0, 0.008, 0.09);
-    foot.add(toe);
-    for (let i=0;i<3;i++) {
-      const ln = new THREE.Mesh(new THREE.BoxGeometry(0.075, 0.009, 0.012), lace);
-      ln.position.set(0, 0.026 + i*0.012, 0.045 + i*0.018);
-      foot.add(ln);
-    }
-  });
-
-  // Compact blue-gray backpack, visible behind the shoulders.
-  const backpack = new THREE.Group();
-  backpack.name = 'DavidBackpack';
-  const body = new THREE.Mesh(new THREE.BoxGeometry(0.255, 0.35, 0.13), pack);
-  body.position.set(0, 0.025, -0.155);
-  body.rotation.x = 0.05;
-  backpack.add(body);
-  const pocket = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.12, 0.035), packDark);
-  pocket.position.set(0, -0.07, -0.225);
-  backpack.add(pocket);
-  [-1,1].forEach(side => {
-    const strap = new THREE.Mesh(new THREE.BoxGeometry(0.034, 0.30, 0.035), packDark);
-    strap.position.set(side * 0.11, 0.08, 0.08);
-    strap.rotation.z = side * 0.10;
-    backpack.add(strap);
-  });
-  this.chest.add(backpack);
-
-  // Large swept-up brown hair, closely matching the reference silhouette.
-  const rear = new THREE.Mesh(new THREE.SphereGeometry(0.166, 24, 16), hairMat);
-  rear.scale.set(1.02, 1.12, 0.92);
-  rear.position.set(0, 0.02, -0.015);
-  this.head.add(rear);
-  for (let i=0;i<6;i++) {
-    const lock = new THREE.Mesh(new THREE.SphereGeometry(0.055, 12, 9), hairMat);
-    lock.scale.set(1.10 - i*0.04, 0.78 + i*0.04, 0.78);
-    lock.position.set(-0.095 + i*0.038, 0.095 + Math.abs(i-3)*0.008, 0.035 - Math.abs(i-3)*0.008);
-    lock.rotation.z = -0.28 + i*0.035;
-    this.head.add(lock);
-  }
-  const quiff = new THREE.Mesh(new THREE.SphereGeometry(0.105, 16, 12), hairMat);
-  quiff.scale.set(1.28, 0.82, 0.82);
-  quiff.position.set(0.045, 0.145, 0.025);
-  quiff.rotation.z = -0.30;
-  this.head.add(quiff);
-  const frontLock = new THREE.Mesh(new THREE.SphereGeometry(0.065, 14, 10), hairMat);
-  frontLock.scale.set(0.80, 1.25, 0.72);
-  frontLock.position.set(0.095, 0.105, 0.09);
-  frontLock.rotation.z = -0.38;
-  this.head.add(frontLock);
-
-  // Push the face toward the friendly, expressive reference look.
-  this.eyeL.scale.set(1.45, 1.42, 0.55);
-  this.eyeR.scale.set(1.45, 1.42, 0.55);
-  this.eyeL.material = new THREE.MeshLambertMaterial({ color: 0xfffdf6 });
-  this.eyeR.material = this.eyeL.material;
-  const iris = new THREE.MeshLambertMaterial({ color: 0x3a2418 });
-  const iL = new THREE.Mesh(new THREE.SphereGeometry(0.015, 10, 8), iris);
-  const iR = iL.clone();
-  iL.position.set(-0.046, 0.018, 0.15); iR.position.set(0.046, 0.018, 0.15);
-  this.head.add(iL, iR);
-  this.smile.scale.set(2.05, 0.70, 0.52);
-};
-
 function skinMaterialFrom(opt) {
   return new THREE.MeshStandardMaterial({ color: opt.skin || 0xf0bd98, roughness: 0.58, metalness: 0.03 });
 }
 
 
 Humanoid.prototype.addDavidFootwear = function (foot, style, boot, leather, accent) {
-  const s = ((Number(style)-1)%8+8)%8+1;
-  const sole = new THREE.Mesh(new THREE.BoxGeometry(0.115,0.018,0.205), new THREE.MeshStandardMaterial({color:0x2a211b,roughness:0.92}));
-  sole.position.set(0,-0.032,0.045); foot.add(sole);
-  if (s <= 4) {
-    const strap1 = new THREE.Mesh(new THREE.BoxGeometry(0.105,0.018,0.025), leather);
-    strap1.position.set(0,-0.002,0.015); strap1.rotation.y=(s%2?0.12:-0.12); foot.add(strap1);
-    const strap2 = strap1.clone(); strap2.position.z=0.075; strap2.rotation.y=-strap1.rotation.y; foot.add(strap2);
-  } else {
-    const toe = new THREE.Mesh(new THREE.SphereGeometry(0.057,12,8), boot);
-    toe.scale.set(1,0.48,1.35); toe.position.set(0,0.005,0.09); foot.add(toe);
-    const trim = new THREE.Mesh(new THREE.BoxGeometry(0.085,0.014,0.018), accent);
-    trim.position.set(0,0.035,0.055); foot.add(trim);
-  }
+  // Hand-crafted biblical leather sandals: rounded foot bed, raised heel,
+  // layered toe straps and a heel strap. No modern sneaker geometry.
+  const soleMat = new THREE.MeshStandardMaterial({color:0x241b16, roughness:0.94, metalness:0});
+  const sole = new THREE.Mesh(new THREE.SphereGeometry(0.105, 18, 10), soleMat);
+  sole.scale.set(1.0, 0.16, 1.28);
+  sole.position.set(0,-0.035,0.045); foot.add(sole);
+
+  const footbed = new THREE.Mesh(new THREE.SphereGeometry(0.092, 18, 10), leather);
+  footbed.scale.set(0.98,0.18,1.18);
+  footbed.position.set(0,-0.014,0.048); foot.add(footbed);
+
+  const strap = (z, y, rot) => {
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(0.010,0.014,0.105,8), leather);
+    m.rotation.z=Math.PI/2; m.rotation.y=rot||0;
+    m.position.set(0,y,z); foot.add(m); return m;
+  };
+  strap(0.005,0.010,0.10);
+  strap(0.055,0.014,-0.08);
+  strap(0.102,0.012,0.05);
+
+  const heel = new THREE.Mesh(new THREE.SphereGeometry(0.052, 14, 9), boot);
+  heel.scale.set(0.82,0.55,0.72);
+  heel.position.set(0,0.004,-0.048); foot.add(heel);
+
+  const heelStrap = new THREE.Mesh(new THREE.BoxGeometry(0.085,0.018,0.018), leather);
+  heelStrap.position.set(0,0.038,-0.045); foot.add(heelStrap);
 };
 
 Humanoid.prototype.addHelmet = function (style, armor, accent, leather) {
@@ -796,6 +640,49 @@ Humanoid.prototype.addHelmet = function (style, armor, accent, leather) {
   }
 };
 
+
+Humanoid.prototype.addDavidHeroDetails = function (skin, skinDark, shirt, leather, hairMat) {
+  // Final hero polish: youthful athletic anatomy, articulated empty hands and
+  // layered fabric. Keep the silhouette readable at gameplay distance.
+  const detail = (geo, mat, pos, scale, rot) => {
+    const m = new THREE.Mesh(geo, mat);
+    if (pos) m.position.set(pos[0], pos[1], pos[2]);
+    if (scale) m.scale.set(scale[0], scale[1], scale[2]);
+    if (rot) m.rotation.set(rot[0]||0, rot[1]||0, rot[2]||0);
+    return m;
+  };
+  const shoulderMat = shirt;
+  [-1,1].forEach(side => {
+    const deltoid = detail(new THREE.SphereGeometry(0.075, 16, 10), shoulderMat, [side*0.015, -0.015, 0], [1.15,0.82,0.92]);
+    this[side < 0 ? 'shoulderL' : 'shoulderR'].add(deltoid);
+  });
+  // Subtle forearm volume follows the real arm instead of a straight tube.
+  [-1,1].forEach(side => {
+    const arm = side < 0 ? this.armL : this.armR;
+    const fore = detail(new THREE.SphereGeometry(0.052, 14, 10), skin, [0,-0.145,0], [0.82,1.45,0.72]);
+    arm.elbow.add(fore);
+    // Empty-hand knuckles: separate rounded forms make the hands expressive.
+    arm.fingers.forEach((f, i) => {
+      const knuckle = detail(new THREE.SphereGeometry(0.010, 8, 6), skinDark, [0,0.015,0.010], [1.0,0.65,0.75]);
+      f.add(knuckle);
+    });
+  });
+  // Tunic collar and layered hem for a more premium cloth silhouette.
+  const collar = detail(new THREE.TorusGeometry(0.105,0.012,7,18), leather, [0,0.275,0.02], [1.18,0.72,0.9], [Math.PI/2,0,0]);
+  this.chest.add(collar);
+  [-1,1].forEach(side => {
+    const fold = detail(new THREE.SphereGeometry(0.065, 12, 9), shirt, [side*0.13,-0.14,0.12], [0.48,1.45,0.22], [0,0,side*0.08]);
+    this.chest.add(fold);
+  });
+  // A few individually placed curls break up the cap-like top hair silhouette.
+  [-1,1].forEach(side => {
+    for (let i=0;i<3;i++) {
+      const curl = detail(new THREE.SphereGeometry(0.036, 12, 9), hairMat, [side*(0.105+i*0.018),0.095-i*0.045,0.105], [0.9,1.18,0.72], [0,0,side*(0.12+i*0.05)]);
+      this.head.add(curl);
+    }
+  });
+};
+
 Humanoid.prototype.makeArm = function (side, skin, shirt, leather, isDavid) {
   const root = new THREE.Group();
   const upper = new THREE.Group();
@@ -815,14 +702,20 @@ Humanoid.prototype.makeArm = function (side, skin, shirt, leather, isDavid) {
   for (let i = 0; i < 4; i++) {
     const f = new THREE.Group();
     f.position.set((-0.024 + i * 0.016) * side, -0.06, 0.01);
-    f.add(mesh(new THREE.BoxGeometry(0.012, 0.05, 0.012), skin, 0, -0.02, 0));
+    const finger = new THREE.Mesh(new THREE.SphereGeometry(0.012, 10, 8), skin);
+    finger.scale.set(0.72, 1.65, 0.72);
+    finger.rotation.x = 0.08;
+    f.add(finger);
     hand.add(f);
     fingers.push(f);
   }
   const thumb = new THREE.Group();
   thumb.position.set(0.04 * side, -0.02, 0.02);
   thumb.rotation.z = -0.7 * side;
-  thumb.add(mesh(new THREE.BoxGeometry(0.014, 0.04, 0.014), skin, 0, -0.015, 0));
+  const thumbMesh = new THREE.Mesh(new THREE.SphereGeometry(0.013, 10, 8), skin);
+  thumbMesh.scale.set(0.78, 1.55, 0.78);
+  thumbMesh.rotation.z = 0.15;
+  thumb.add(thumbMesh);
   hand.add(thumb);
   return { root: root, upper: upper, elbow: elbow, hand: hand, fingers: fingers, thumb: thumb };
 };
@@ -1071,7 +964,7 @@ Humanoid.prototype.update = function (dt, state, extra) {
     }
   }
   if (this.mixer) this.mixer.update(dt);
-  this.face(extra.mood || (extra.fire ? 'determined' : state === 'HIT' ? 'pain' : state === 'CHASE' ? 'alert' : 'calm'));
+  this.face(extra.mood || (extra.fire ? 'determined' : state === 'HIT' ? 'pain' : state === 'CHASE' ? 'alert' : (this.isDavid ? 'determined' : 'calm')));
   this.cycle = (this.cycle || 0) + dt * 8;
 };
 
@@ -1099,10 +992,10 @@ function parentSafe(parent, child) {
 }
 window.getPlayableCharacterOptions = function () {
   return {
-    skin: 0xf0bd98, skinDark: 0xd49a79, shirt: 0x3d6579, pants: 0x26334a, boot: 0xdfe3e7,
-    hair: 0x2a1710, isDavid: true, modernDavid: true, leather: 0x754522, accent: 0xd7b56d,
-    pads: false, tunic: false, belt: false, sash: null, cloak: null, shoeStyle: 1,
-    pouchSide: 'right', pouch: 0x6f4728, wrap: 0x9a6a3c, sling: true, slingStyle: 1,
+    skin: 0xb98a68, skinDark: 0x8f6248, shirt: 0x8b7650, pants: 0x3b3027, boot: 0x5c3a22,
+    hair: 0x2a1710, isDavid: true, modernDavid: false, leather: 0x754522, accent: 0xb88a4a,
+    pads: false, tunic: true, belt: true, sash: null, cloak: null, shoeStyle: 1,
+    pouchSide: 'right', pouch: 0x6f4728, wrap: 0x9a6a3c, sling: false, slingStyle: 1,
     staff: false, helmet: false, eye: 0x3a2418
   };
 };

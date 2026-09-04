@@ -400,7 +400,7 @@ const Game = {
     if (!this.renderer) return;
     const data = SaveSystem.load();
     const g = (data.settings && data.settings.graphics) || 'medium';
-    const cap = g === 'low' ? 1 : g === 'medium' ? 1.25 : g === 'ultra' ? 1.6 : 1.4;
+    const cap = g === 'low' ? 1 : g === 'medium' ? 1.25 : g === 'ultra' ? 2.0 : 1.6;
     // Natural/organic presentation: keep the 3D render at a real display resolution.
     // The previous pixel-world render deliberately rendered below native resolution
     // and upscaled it, which made terrain, characters and foliage look blurry.
@@ -410,7 +410,7 @@ const Game = {
     this.renderer.userData.pixelWorld = false;
     this.renderer.userData.pixelScale = 1;
     this.renderer.shadowMap.enabled = g !== 'low';
-    const shadowSize = g === 'low' ? 0 : g === 'medium' ? 768 : g === 'ultra' ? 1024 : 768;
+    const shadowSize = g === 'low' ? 0 : g === 'medium' ? 1024 : g === 'ultra' ? 2048 : 1536;
     if (this.renderer.shadowMap.enabled && this.renderer.shadowMap.type !== undefined) {
       // Shadow map size is configured on lights when the world is built.
       this._shadowMapSize = shadowSize;
@@ -452,7 +452,7 @@ const Game = {
     if ('outputEncoding' in this.renderer && THREE.sRGBEncoding) this.renderer.outputEncoding = THREE.sRGBEncoding;
     const initialSave = SaveSystem.load();
     const initialGraphics = (initialSave.settings && initialSave.settings.graphics) || 'medium';
-    const initialCap = initialGraphics === 'low' ? 1 : initialGraphics === 'medium' ? 1.25 : initialGraphics === 'ultra' ? 1.6 : 1.4;
+    const initialCap = initialGraphics === 'low' ? 1 : initialGraphics === 'medium' ? 1.25 : initialGraphics === 'ultra' ? 2.0 : 1.6;
     this.renderer.userData = this.renderer.userData || {};
     this.renderer.userData.pixelWorld = false;
     this.renderer.userData.pixelScale = 1;
@@ -488,10 +488,7 @@ const Game = {
     const heroNameEl = document.querySelector('.hud-name');
     if (heroNameEl) heroNameEl.textContent = 'DAVID';
     this.player.enableSling();
-    // Give the Flame Sling a distinct visual design in every world.
-    if (this.player.humanoid && typeof this.player.humanoid.setSlingStyle === 'function') {
-      this.player.humanoid.setSlingStyle((((this.currentWorld || 1) - 1) % 40) + 1);
-    }
+    // David is intentionally an empty-hands hero; legacy sling setup is visual-only and disabled.
     this.player.stones = Math.max(this.player.stones, 5);
     this.applyInventoryToPlayer();
     const data = SaveSystem.load();
@@ -1074,7 +1071,7 @@ const Game = {
   },
 
   addCoins(n) {
-    const add = parseInt(n, 10) || 0;
+    const add = Math.round((parseInt(n, 10) || 0) * (this.player && this.player.coinMultiplier ? this.player.coinMultiplier : 1));
     if (!add) return;
     if (this.player) this.player.coins = (this.player.coins || 0) + add;
     if (window.SaveSystem) SaveSystem.addCoins(add);
@@ -1093,6 +1090,9 @@ const Game = {
     this.player.feathers = inv.feathers || 0;
     this.player.flint = inv.flint || 0;
     this.player.shieldBonus = inv.shieldBonus || 0;
+    this.player.speed = 6 + Math.min(1.5, (inv.speedCharms || 0) * 0.25);
+    this.player.coinMultiplier = 1 + Math.min(0.5, (inv.coinCharms || 0) * 0.10);
+    this.player.xpMultiplier = 1 + Math.min(0.5, (inv.xpScrolls || 0) * 0.10);
     this.player.maxArmor = 50 + (inv.armorUpgrades || 0) * 15;
     this.player.armor = Math.max(this.player.armor, Math.min(this.player.maxArmor, 30 + (inv.armorUpgrades || 0) * 10));
   },
@@ -1104,6 +1104,13 @@ const Game = {
 
   buyShopItem(item) {
     const result = SaveSystem.buyItem(item);
+    if (result.ok && this.player) {
+      const inv = result.inventory || SaveSystem.getInventory();
+      if (item === 'healthPotion') this.player.heal(25);
+      if (item === 'armorCore') { this.player.maxArmor += 10; this.player.armor = Math.min(this.player.maxArmor, this.player.armor + 25); }
+      if (item === 'faithCrystal') { this.player.faith = Math.min(this.player.maxFaith, this.player.faith + 40); }
+      if (item === 'speedCharm') this.player.speed = 6 + Math.min(1.5, (inv.speedCharms || 0) * 0.25);
+    }
     if (window.UI) {
       UI.showMessage(result.message, 1800);
       UI.renderShop(SaveSystem.getInventory());

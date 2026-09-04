@@ -364,7 +364,7 @@ html, body {
 
 #boss-hud {
   position: absolute;
-  top: 70px;
+  top: 42px;
   left: 50%;
   transform: translateX(-50%);
   background: rgba(40, 10, 20, 0.85);
@@ -955,3 +955,20 @@ kbd {
 #hud-left .faith-stat, #hud-left .stamina-stat, #hud-left .sprint-stat, #hud-left [data-stat="faith"], #hud-left [data-stat="stamina"] { display:none !important; }
 
 .shop-emotes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-top:8px}.shop-emotes .menu-btn{font-size:.68rem;padding:8px 5px}.emote-shop-card{grid-column:1/-1}.action-btn{touch-action:none}
+
+
+/* Mini-boss final note: compact and elevated so it does not block the play view. */
+#mini-boss-note {
+  position: fixed; left: 50%; top: 13%; transform: translate(-50%, -12px) scale(.96);
+  z-index: 120; opacity: 0; pointer-events: none; transition: opacity .22s ease, transform .22s ease;
+}
+#mini-boss-note.show { opacity: 1; transform: translate(-50%, 0) scale(1); pointer-events: auto; }
+.mini-boss-note-inner {
+  width: min(430px, 88vw); padding: 14px 18px; text-align:center; border-radius:14px;
+  background: rgba(18,12,10,.93); border: 2px solid rgba(240,193,75,.75);
+  box-shadow: 0 10px 30px rgba(0,0,0,.38); color:#fff;
+}
+.mini-boss-kicker { color:#f0c14b; font-weight:900; letter-spacing:1.5px; font-size:.72rem; }
+.mini-boss-note-inner h3 { margin:.25rem 0 .35rem; font-size:1.15rem; }
+.mini-boss-note-inner p { margin:0 0 .7rem; color:#eaf1f7; line-height:1.35; font-size:.84rem; }
+.mini-boss-note-inner button { border:0; border-radius:8px; padding:7px 13px; font-weight:800; cursor:pointer; }

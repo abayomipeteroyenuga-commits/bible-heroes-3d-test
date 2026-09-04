@@ -422,7 +422,10 @@ class ShadowGuardian {
       );
       window.Game.player.addScore(100);
       if (window.Game.addCoins) window.Game.addCoins(6);
-      if (window.UI) window.UI.showMessage('ENEMY DEFEATED! +100');
+      if (window.UI) {
+        window.UI.showMessage('ENEMY DEFEATED! +100');
+        if (window.UI.showMiniBossNote) window.UI.showMiniBossNote((this.variant && this.variant.name) || 'Shadow Guardian', 'Final Note: Faith and courage can overcome fear. Keep moving forward with God.');
+      }
       if (window.SaveSystem) SaveSystem.bumpStat('guardiansDefeated', 1);
       if (window.RewardSystem) {
         const helm = (this.variant && this.variant.helm) || 'band';

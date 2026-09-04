@@ -72,10 +72,10 @@ class Player {
     // Character identity is selected before a world starts. Both heroes share the
     // same combat/animation rig so switching characters never breaks gameplay.
     const opt = (window.getPlayableCharacterOptions && window.getPlayableCharacterOptions('david')) || {
-        skin: 0xf0bd98, skinDark: 0xd49a79, shirt: 0x3d6579, pants: 0x26334a, boot: 0xdfe3e7,
-        hair: 0x2a1710, isDavid: true, modernDavid: true, leather: 0x754522, accent: 0xd7b56d,
-        pads: false, tunic: false, belt: false, sash: null, cloak: null, shoeStyle: 1,
-        pouchSide: 'right', pouch: 0x6f4728, wrap: 0x9a6a3c, sling: true, slingStyle: 1,
+        skin: 0xb98a68, skinDark: 0x8f6248, shirt: 0x8b7655, pants: 0x4a3a2c, boot: 0x5c3a22,
+        hair: 0x2a1710, isDavid: true, modernDavid: false, leather: 0x754522, accent: 0xb88a4a,
+        pads: false, tunic: true, belt: true, sash: null, cloak: null, shoeStyle: 1,
+        pouchSide: 'right', pouch: 0x6f4728, wrap: 0x9a6a3c, sling: false, slingStyle: 1,
         staff: false, helmet: false, eye: 0x3a2418
       };
     this.humanoid = new Humanoid(this.group, opt);
@@ -1127,8 +1127,9 @@ class Player {
   }
 
   enableSling() {
+    // Legacy compatibility: David fights with empty hands.
     this.hasSling = true;
-    this.slingMesh.visible = true;
+    if (this.slingMesh) this.slingMesh.visible = false;
   }
 }
 

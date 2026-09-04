@@ -296,6 +296,21 @@ const UI = {
     if (el2) el2.textContent = String(n || 0);
   },
 
+  showMiniBossNote(name, note) {
+    let panel = document.getElementById('mini-boss-note');
+    if (!panel) {
+      panel = document.createElement('div');
+      panel.id = 'mini-boss-note';
+      panel.innerHTML = '<div class="mini-boss-note-inner"><div class="mini-boss-kicker">🏆 MINI-BOSS DEFEATED</div><h3></h3><p></p><button type="button">CONTINUE</button></div>';
+      document.body.appendChild(panel);
+      panel.querySelector('button').addEventListener('click', () => panel.classList.remove('show'));
+    }
+    panel.querySelector('h3').textContent = name || 'Guardian';
+    panel.querySelector('p').textContent = note || 'Courage grows when faith leads the way.';
+    panel.classList.add('show');
+    setTimeout(() => panel.classList.remove('show'), 4200);
+  },
+
   showRewardToast(text) {
     let host = document.getElementById('reward-toasts');
     if (!host) {
