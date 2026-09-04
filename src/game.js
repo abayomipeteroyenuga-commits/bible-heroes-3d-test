@@ -19,6 +19,11 @@ const Game = {
   faithUses: 0,
   animFrame: null,
   selectedCharacter: 'david',
+  _hudTimer: 0,
+  _hudSave: null,
+  _lastHUDLife: null,
+  _lastHUDArmor: null,
+  _lastHUDScore: null,
 
   init() {
     UI.init();
@@ -74,6 +79,12 @@ const Game = {
         if (this.player && this.player.playEmote) this.player.playEmote(btn.getAttribute('data-emote'));
         const panel = document.getElementById('emote-panel');
         if (panel) panel.classList.add('hidden');
+      });
+    });
+    document.querySelectorAll('[data-shop-emote]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (this.player && this.player.playEmote) this.player.playEmote(btn.getAttribute('data-shop-emote'));
+        UI.showMessage('EMOTE READY', 900);
       });
     });
     click('btn-hud-map', () => this.toggleGameMap());
@@ -292,6 +303,7 @@ const Game = {
     this._shakeTime = 0;
     this._shakeDur = 0;
     this.jaruscopeCooldown = 0;
+    this._hudTimer = 0; this._hudSave = null; this._lastHUDLife = null; this._lastHUDArmor = null; this._lastHUDScore = null;
     this.jaruscopeActive = 0;
     this.mapOpen = false;
     this.exploredCells = this.loadExploredCells(this.currentWorld);
@@ -342,6 +354,7 @@ const Game = {
       this._finishTimer = null;
     }
     this._loopRunning = false;
+    this.flushExploredSave();
     if (this.player && typeof this.player.destroy === 'function') {
       this.player.destroy();
     }
@@ -355,24 +368,53 @@ const Game = {
     this._scanPulse = null;
     this._scanMarks = [];
     if (this.scene) {
+      this.disposeSceneResources(this.scene);
       while (this.scene.children.length) this.scene.remove(this.scene.children[0]);
     }
+  },
+
+  disposeSceneResources(root) {
+    if (!root || typeof root.traverse !== 'function') return;
+    const geometries = new Set();
+    const materials = new Set();
+    const textures = new Set();
+    root.traverse(obj => {
+      if (!obj) return;
+      if (obj.geometry && typeof obj.geometry.dispose === 'function') geometries.add(obj.geometry);
+      const mats = Array.isArray(obj.material) ? obj.material : (obj.material ? [obj.material] : []);
+      mats.forEach(mat => {
+        if (!mat) return;
+        materials.add(mat);
+        Object.keys(mat).forEach(k => {
+          const v = mat[k];
+          if (v && v.isTexture && typeof v.dispose === 'function') textures.add(v);
+        });
+      });
+    });
+    geometries.forEach(g => g.dispose());
+    textures.forEach(t => t.dispose());
+    materials.forEach(m => m.dispose());
   },
 
   applyGraphics() {
     if (!this.renderer) return;
     const data = SaveSystem.load();
     const g = (data.settings && data.settings.graphics) || 'medium';
-    const cap = g === 'low' ? 1 : g === 'medium' ? 1.5 : g === 'ultra' ? 2 : 1.75;
+    const cap = g === 'low' ? 1 : g === 'medium' ? 1.25 : g === 'ultra' ? 1.6 : 1.4;
     // Natural/organic presentation: keep the 3D render at a real display resolution.
     // The previous pixel-world render deliberately rendered below native resolution
     // and upscaled it, which made terrain, characters and foliage look blurry.
-    const dpr = Math.min(window.devicePixelRatio || 1, cap, g === 'low' ? 1 : (g === 'medium' ? 1.35 : 1.8));
+    const dpr = Math.min(window.devicePixelRatio || 1, cap, g === 'low' ? 1 : (g === 'medium' ? 1.25 : (g === 'ultra' ? 1.6 : 1.4)));
     this.renderer.setPixelRatio(dpr);
     this.renderer.userData = this.renderer.userData || {};
     this.renderer.userData.pixelWorld = false;
     this.renderer.userData.pixelScale = 1;
     this.renderer.shadowMap.enabled = g !== 'low';
+    const shadowSize = g === 'low' ? 0 : g === 'medium' ? 768 : g === 'ultra' ? 1024 : 768;
+    if (this.renderer.shadowMap.enabled && this.renderer.shadowMap.type !== undefined) {
+      // Shadow map size is configured on lights when the world is built.
+      this._shadowMapSize = shadowSize;
+    }
     if (THREE.PCFSoftShadowMap) this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     if (THREE.ACESFilmicToneMapping) {
       this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -390,7 +432,8 @@ const Game = {
     this.camera.position.set(0, 2.4, 11);
 
     if (!this.renderer) {
-      const graphics = (SaveSystem.load().settings && SaveSystem.load().settings.graphics) || 'medium';
+      const settingsData = SaveSystem.load();
+      const graphics = (settingsData.settings && settingsData.settings.graphics) || 'medium';
       this.renderer = new THREE.WebGLRenderer({
         canvas: canvas,
         antialias: graphics !== 'low',
@@ -407,8 +450,9 @@ const Game = {
     }
     this.renderer.setPixelRatio(1);
     if ('outputEncoding' in this.renderer && THREE.sRGBEncoding) this.renderer.outputEncoding = THREE.sRGBEncoding;
-    const initialGraphics = (SaveSystem.load().settings && SaveSystem.load().settings.graphics) || 'medium';
-    const initialCap = initialGraphics === 'low' ? 1 : initialGraphics === 'medium' ? 1.5 : initialGraphics === 'ultra' ? 2 : 1.75;
+    const initialSave = SaveSystem.load();
+    const initialGraphics = (initialSave.settings && initialSave.settings.graphics) || 'medium';
+    const initialCap = initialGraphics === 'low' ? 1 : initialGraphics === 'medium' ? 1.25 : initialGraphics === 'ultra' ? 1.6 : 1.4;
     this.renderer.userData = this.renderer.userData || {};
     this.renderer.userData.pixelWorld = false;
     this.renderer.userData.pixelScale = 1;
@@ -444,6 +488,10 @@ const Game = {
     const heroNameEl = document.querySelector('.hud-name');
     if (heroNameEl) heroNameEl.textContent = 'DAVID';
     this.player.enableSling();
+    // Give the Flame Sling a distinct visual design in every world.
+    if (this.player.humanoid && typeof this.player.humanoid.setSlingStyle === 'function') {
+      this.player.humanoid.setSlingStyle((((this.currentWorld || 1) - 1) % 40) + 1);
+    }
     this.player.stones = Math.max(this.player.stones, 5);
     this.applyInventoryToPlayer();
     const data = SaveSystem.load();
@@ -561,13 +609,19 @@ const Game = {
       const start = new THREE.Vector3(0, 0, 8);
       if (playerPos.distanceTo(start) >= 6) this.exploredCamp = true;
     }
-    this.markExplored(playerPos);
+    this.markExplored(playerPos, dt);
     if (this.jaruscopeCooldown > 0) this.jaruscopeCooldown -= dt;
     if (this.jaruscopeActive > 0) {
       this.jaruscopeActive -= dt;
       this.updateJaruscopePulse(dt);
     }
-    if (this.mapOpen) this.drawGameMap();
+    if (this.mapOpen) {
+      this._mapDrawTimer = (this._mapDrawTimer || 0) - dt;
+      if (this._mapDrawTimer <= 0) {
+        this._mapDrawTimer = 0.12;
+        this.drawGameMap();
+      }
+    }
 
     // Keep legacy flags for HUD/compatibility, but make them match the same
     // visible landmarks used by MissionSystem.
@@ -629,7 +683,11 @@ const Game = {
       // silent - player presses E
     }
 
-    this.updateHUD();
+    this._hudTimer = (this._hudTimer || 0) - dt;
+    if (this._hudTimer <= 0) {
+      this._hudTimer = 0.15;
+      this.updateHUD();
+    }
     this.renderer.render(this.scene, this.camera);
   },
 
@@ -691,10 +749,7 @@ const Game = {
 
     if (item.type === 'stone') {
       this.player.stones++;
-      UI.showMessage(`STONE ${this.player.stones}/5`);
-    } else if (item.type === 'sling') {
-      this.player.enableSling();
-      UI.showMessage('SLING ACQUIRED!');
+      UI.showMessage('SMOOTH STONE ACQUIRED');
     } else if (item.type === 'health') {
       this.player.heal(25);
       UI.showMessage('❤️ +25 LIFE');
@@ -736,11 +791,14 @@ const Game = {
     }
     if (window.AudioSystem) AudioSystem.sling();
     const origin = this.player.getPosition().clone();
+    // David's facing angle is defined as the direction his body points.
+    // Use that same forward vector for the shot so the projectile can NEVER
+    // originate/fire from behind him.
     const dir = new THREE.Vector3(
-      -Math.sin(this.player.facing),
+      Math.sin(this.player.facing),
       0.15,
-      -Math.cos(this.player.facing)
-    );
+      Math.cos(this.player.facing)
+    ).normalize();
     // Aim toward nearest enemy or goliath if close
     let targetDir = dir;
     let nearest = null;
@@ -778,6 +836,7 @@ const Game = {
   },
 
   spawnParticles(pos, color, count) {
+    if (!this.combat || typeof this.combat.spawnParticles !== 'function') return;
     this.combat.spawnParticles(pos, color, count);
   },
 
@@ -815,18 +874,37 @@ const Game = {
     return new Set(Array.isArray(stored) ? stored : []);
   },
 
-  markExplored(pos) {
+  markExplored(pos, dt) {
     if (!pos) return;
     const cell = Math.round(pos.x / 8) + ':' + Math.round(pos.z / 8);
     if (this.exploredCells.has(cell)) return;
     this.exploredCells.add(cell);
     if (!window.SaveSystem) return;
+    // localStorage is synchronous. Debounce exploration saves so walking across
+    // several map cells cannot stall the render thread every time a cell changes.
+    this._exploreSavePending = true;
+    this._exploreSaveTimer = (this._exploreSaveTimer || 0) + (dt || 0);
+    if (this._exploreSaveTimer < 1) return;
+    this._exploreSaveTimer = 0;
     const data = SaveSystem.load();
     data.itemsFound = data.itemsFound || {};
     data.itemsFound.explored = data.itemsFound.explored || {};
     const key = 'w' + (this.currentWorld || 1);
     data.itemsFound.explored[key] = Array.from(this.exploredCells);
     SaveSystem.save(data);
+    this._exploreSavePending = false;
+  },
+
+  flushExploredSave() {
+    if (!this._exploreSavePending || !window.SaveSystem) return;
+    const data = SaveSystem.load();
+    data.itemsFound = data.itemsFound || {};
+    data.itemsFound.explored = data.itemsFound.explored || {};
+    const key = 'w' + (this.currentWorld || 1);
+    data.itemsFound.explored[key] = Array.from(this.exploredCells || []);
+    SaveSystem.save(data);
+    this._exploreSavePending = false;
+    this._exploreSaveTimer = 0;
   },
 
   useJaruscope() {
@@ -903,7 +981,13 @@ const Game = {
     this.mapOpen = !this.mapOpen;
     const el = document.getElementById('game-map-overlay');
     if (el) el.classList.toggle('hidden', !this.mapOpen);
-    if (this.mapOpen) this.drawGameMap();
+    if (this.mapOpen) {
+      this._mapDrawTimer = (this._mapDrawTimer || 0) - dt;
+      if (this._mapDrawTimer <= 0) {
+        this._mapDrawTimer = 0.12;
+        this.drawGameMap();
+      }
+    }
   },
 
   drawGameMap() {
@@ -1191,29 +1275,19 @@ const Game = {
 
   updateHUD() {
     if (!this.player) return;
-    UI.updateStats(
-      this.player.life, this.player.maxLife,
-      this.player.armor, this.player.maxArmor,
-      this.player.faith, this.player.maxFaith,
-      this.player.score
-    );
+    const life = this.player.life, armor = this.player.armor, score = this.player.score;
+    if (life !== this._lastHUDLife || armor !== this._lastHUDArmor || score !== this._lastHUDScore) {
+      UI.updateStats(life, this.player.maxLife, armor, this.player.maxArmor, score);
+      this._lastHUDLife = life; this._lastHUDArmor = armor; this._lastHUDScore = score;
+    }
     const coinsEl = document.getElementById('hud-coins');
     if (coinsEl) coinsEl.textContent = String(this.player.coins || 0);
+    if (!this._hudSave && window.SaveSystem) this._hudSave = SaveSystem.load();
+    const data = this._hudSave || { stats: {}, gems: 0 };
     const gemsEl = document.getElementById('hud-gems');
-    if (gemsEl && window.SaveSystem) gemsEl.textContent = String(SaveSystem.load().gems || 0);
-    const ammoEl = document.getElementById('hud-ammo');
-    if (ammoEl) {
-      ammoEl.textContent = this.player.hasBow
-        ? ('BOW ' + (this.player.arrows || 0))
-        : ('SLING ' + (this.player.stones || 0));
-    }
-    const stamBar = document.getElementById('stamina-bar');
-    const stamText = document.getElementById('stamina-text');
-    if (stamBar) stamBar.style.width = Math.max(0, Math.min(100, this.player.stamina || 0)) + '%';
-    if (stamText) stamText.textContent = Math.ceil(this.player.stamina || 0) + ' / ' + (this.player.maxStamina || 100);
+    if (gemsEl) gemsEl.textContent = String(data.gems || 0);
     const worldKills = this.enemiesDefeated || 0;
     const need = (this.world && this.world.theme && this.world.theme.needEnemies) || worldKills;
-    const data = window.SaveSystem ? SaveSystem.load() : { stats: {} };
     const totalKills = (data.stats && data.stats.guardiansDefeated) || 0;
     const bosses = (data.stats && data.stats.bossesDefeated) || 0;
     const maxW = (window.SaveSystem && SaveSystem.MAX_LEVEL) || 40;

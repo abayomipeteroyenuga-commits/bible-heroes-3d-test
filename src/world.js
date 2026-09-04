@@ -9,6 +9,10 @@ class World {
     this.interactables = [];
     this.uniqueObjects = [];
     this.colliders = [];
+    this._colliderGrid = new Map();
+    this._colliderCellSize = 8;
+    this._colliderQueryStamp = 0;
+    this._colliderCandidates = [];
     this.landscapeSeed = (worldId * 10007 + 7919) >>> 0;
     this._rand = () => {
       this.landscapeSeed = (this.landscapeSeed * 1664525 + 1013904223) >>> 0;
@@ -18,19 +22,68 @@ class World {
     this.build();
   }
 
+  _colliderCellKey(ix, iz) { return ix + ':' + iz; }
+
+  _indexCollider(c) {
+    const size = this._colliderCellSize;
+    const reachX = c.type === 'box' ? c.halfX : c.r;
+    const reachZ = c.type === 'box' ? c.halfZ : c.r;
+    const minX = Math.floor((c.x - reachX) / size);
+    const maxX = Math.floor((c.x + reachX) / size);
+    const minZ = Math.floor((c.z - reachZ) / size);
+    const maxZ = Math.floor((c.z + reachZ) / size);
+    for (let ix = minX; ix <= maxX; ix++) {
+      for (let iz = minZ; iz <= maxZ; iz++) {
+        const key = this._colliderCellKey(ix, iz);
+        let bucket = this._colliderGrid.get(key);
+        if (!bucket) { bucket = []; this._colliderGrid.set(key, bucket); }
+        bucket.push(c);
+      }
+    }
+  }
+
   addCollider(x, z, r) {
-    this.colliders.push({ type: 'circle', x: x, z: z, r: r });
+    const c = { type: 'circle', x: x, z: z, r: r };
+    this.colliders.push(c);
+    this._indexCollider(c);
   }
 
   addBoxCollider(x, z, halfX, halfZ) {
-    this.colliders.push({ type: 'box', x: x, z: z, halfX: halfX, halfZ: halfZ });
+    const c = { type: 'box', x: x, z: z, halfX: halfX, halfZ: halfZ };
+    this.colliders.push(c);
+    this._indexCollider(c);
+  }
+
+  _nearbyColliders(x, z, radius) {
+    const size = this._colliderCellSize;
+    const minX = Math.floor((x - radius) / size);
+    const maxX = Math.floor((x + radius) / size);
+    const minZ = Math.floor((z - radius) / size);
+    const maxZ = Math.floor((z + radius) / size);
+    const out = this._colliderCandidates;
+    out.length = 0;
+    const stamp = ++this._colliderQueryStamp;
+    for (let ix = minX; ix <= maxX; ix++) {
+      for (let iz = minZ; iz <= maxZ; iz++) {
+        const bucket = this._colliderGrid.get(this._colliderCellKey(ix, iz));
+        if (!bucket) continue;
+        for (let i = 0; i < bucket.length; i++) {
+          const c = bucket[i];
+          if (c._queryStamp === stamp) continue;
+          c._queryStamp = stamp;
+          out.push(c);
+        }
+      }
+    }
+    return out;
   }
 
   resolveCircle(x, z, radius) {
-    const list = this.colliders || [];
-    // Multiple passes handle corners and overlapping obstacles cleanly.
-    for (let pass = 0; pass < 3; pass++) {
+    // Spatially query only nearby colliders; the old full-list scan became expensive
+    // on later worlds with dense trees, rocks, fences and fortifications.
+    for (let pass = 0; pass < 2; pass++) {
       let changed = false;
+      const list = this._nearbyColliders(x, z, radius + 2.5);
       for (let i = 0; i < list.length; i++) {
         const c = list[i];
         if (c.type === 'box') {
@@ -115,8 +168,9 @@ class World {
     const sun = new THREE.DirectionalLight(sunCol, this.theme.dark ? 0.45 : 0.95);
     sun.position.set(30, 50, 20);
     sun.castShadow = true;
-    sun.shadow.mapSize.width = 1024;
-    sun.shadow.mapSize.height = 1024;
+    const shadowSize = this.theme.dark ? 512 : 768;
+    sun.shadow.mapSize.width = shadowSize;
+    sun.shadow.mapSize.height = shadowSize;
     sun.shadow.camera.near = 1;
     sun.shadow.camera.far = 120;
     sun.shadow.camera.left = -50;
@@ -245,14 +299,15 @@ class World {
       const x = side * (8.5 + r() * 34);
       const z = 22 - r() * 116;
       const g = new THREE.Group();
-      const h = 2.6 + r() * 2.8;
+      // Tall mature trees: David passes beneath the canopy instead of walking through it.
+      const h = 5.2 + r() * 2.6;
       const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.28, h, 7), trunkMat);
       trunk.position.y = h / 2;
       const crown = new THREE.Group();
       const lobes = 3 + Math.floor(r() * 3);
       for (let j = 0; j < lobes; j++) {
         const leaf = new THREE.Mesh(new THREE.SphereGeometry((0.9 + r() * 0.65) * canopy, 9, 7), leafMat);
-        leaf.position.set((r() - 0.5) * 1.5, h + 0.25 + r() * 1.1, (r() - 0.5) * 1.4);
+        leaf.position.set((r() - 0.5) * 1.7, h + 0.35 + r() * 1.35, (r() - 0.5) * 1.6);
         crown.add(leaf);
       }
       g.add(trunk, crown);
@@ -388,6 +443,8 @@ class World {
       const rail = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.12, 0.12), mat);
       rail.position.set(x + (x > 0 ? -1.2 : 1.2), 1.05, z);
       this.scene.add(post, rail);
+      this.addCollider(post.position.x, post.position.z, 0.2);
+      this.addBoxCollider(rail.position.x, rail.position.z, 1.25, 0.18);
     }
   }
   createWorldStonePillars(rand, stone, accent) {
@@ -417,6 +474,7 @@ class World {
       const x = (i % 2 ? 1 : -1) * (8 + rand() * 8), z = 8 - i * 8;
       const stal = new THREE.Mesh(new THREE.ConeGeometry(0.45 + rand() * 0.35, h, 6), mat);
       stal.position.set(x, h / 2, z); this.scene.add(stal);
+      this.addCollider(x, z, 0.55 + rand() * 0.18);
     }
   }
   createWorldMountainDetails(rand, stone, accent) {
@@ -426,6 +484,7 @@ class World {
       const m = new THREE.Mesh(new THREE.DodecahedronGeometry(s, 1), rock);
       m.position.set((rand() - 0.5) * 70, s * 0.45, -15 - rand() * 70); m.rotation.y = rand()*Math.PI;
       this.scene.add(m);
+      this.addCollider(m.position.x, m.position.z, s * 0.9);
     }
   }
   createWorldOutpostDetails(rand, wood, accent) {
@@ -449,6 +508,7 @@ class World {
       const x=(i%2?1:-1)*(12+rand()*5), z=5-i*9;
       const p=new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.08,4,6),poleMat); p.position.set(x,2,z);
       const f=new THREE.Mesh(new THREE.PlaneGeometry(1.2,0.8),new THREE.MeshLambertMaterial({color:accent,side:THREE.DoubleSide})); f.position.set(x+(x>0?-0.6:0.6),3.5,z); this.scene.add(p,f);
+      this.addCollider(x, z, 0.16);
     }
   }
   createWorldRiverDetails(rand, stone, accent) {
@@ -566,11 +626,12 @@ class World {
     const leafMat = new THREE.MeshLambertMaterial({ color: 0x2d5a27 });
     for (let i = 0; i < 25; i++) {
       const group = new THREE.Group();
-      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.3, 2.2, 6), trunkMat);
-      trunk.position.y = 1.1;
+      const treeH = 5.4 + this._rand() * 2.2;
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.34, treeH, 7), trunkMat);
+      trunk.position.y = treeH / 2;
       group.add(trunk);
-      const leaves = new THREE.Mesh(new THREE.ConeGeometry(1.4, 2.5, 7), leafMat);
-      leaves.position.y = 3.0;
+      const leaves = new THREE.Mesh(new THREE.ConeGeometry(1.8, 3.2, 8), leafMat);
+      leaves.position.y = treeH + 1.0;
       group.add(leaves);
       const x = (this._rand() > 0.5 ? 1 : -1) * (12 + this._rand() * 25);
       const z = 20 - this._rand() * 80;
@@ -597,6 +658,7 @@ class World {
       const post = new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.8, 0.3), woodMat);
       post.position.set(-8 + i * 3, 0.9, -25);
       this.scene.add(post);
+      this.addCollider(post.position.x, post.position.z, 0.22);
     }
   }
 
@@ -607,6 +669,7 @@ class World {
       const stone = new THREE.Mesh(new THREE.DodecahedronGeometry(0.6 + Math.random() * 0.4, 0), markerMat);
       stone.position.set((Math.random() - 0.5) * 20, 0.3, -45 + (Math.random() - 0.5) * 8);
       this.scene.add(stone);
+      this.addCollider(stone.position.x, stone.position.z, 0.7);
     }
   }
 
@@ -723,6 +786,7 @@ class World {
     const crateMat=new THREE.MeshLambertMaterial({color:0x7a4b2b});
     [[-10,-20],[10,-20],[-8,-40],[8,-40]].forEach((p,i)=>{
       const c=new THREE.Mesh(new THREE.BoxGeometry(2,1.5,2),crateMat); c.position.set(p[0],0.75,p[1]); this.scene.add(c);
+      this.addBoxCollider(c.position.x, c.position.z, 1.0, 1.0);
       this.addInteractable('supply',new THREE.Vector3(p[0],0,p[1]),'Secure supply '+(i+1),0xe6b04a);
     });
     this.createSign(new THREE.Vector3(0,0,-6),'PHILISTINE OUTPOST');
@@ -746,7 +810,7 @@ class World {
 
   createFinalBattleSetpiece() {
     const stoneMat=new THREE.MeshLambertMaterial({color:0xa6adb4});
-    for(let i=0;i<5;i++){ const s=new THREE.Mesh(new THREE.DodecahedronGeometry(0.55,0),stoneMat); const a=(i/5)*Math.PI*2; s.position.set(Math.cos(a)*5,0.5,-70+Math.sin(a)*5); this.scene.add(s); }
+    for(let i=0;i<5;i++){ const s=new THREE.Mesh(new THREE.DodecahedronGeometry(0.55,0),stoneMat); const a=(i/5)*Math.PI*2; s.position.set(Math.cos(a)*5,0.5,-70+Math.sin(a)*5); this.scene.add(s); this.addCollider(s.position.x,s.position.z,0.65); }
     this.addInteractable('arena',new THREE.Vector3(0,0,-70),'Enter final arena',0xf4d35e);
   }
 
@@ -765,8 +829,6 @@ class World {
       this.addCollectible(i === 0 ? 'faith' : 'stone', pos, i === 0 ? 'Faith Token' : ('Smooth Stone ' + (i + 1)));
     });
 
-    // Sling
-    this.addCollectible('sling', new THREE.Vector3(0, 0.4, -12), "David's Sling");
 
     // Health (2)
     this.addCollectible('health', new THREE.Vector3(-9, 0.4, 14), 'Health');
@@ -978,6 +1040,7 @@ class World {
       const rail = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.8, 16), plank);
       rail.position.set(x, 1.7, -30);
       this.scene.add(rail);
+      this.addBoxCollider(rail.position.x, rail.position.z, 0.08, 8.0);
     });
   }
 
@@ -1048,8 +1111,9 @@ class World {
     const addRock = (x,z,s=0.6) => add(new THREE.Mesh(new THREE.DodecahedronGeometry(s,1),mat(stone)),x,s*.45,z,Math.random()*6.28,s*.75);
     const addTree = (x,z,scale=1) => {
       const g=new THREE.Group();
-      const t=new THREE.Mesh(new THREE.CylinderGeometry(.16*scale,.28*scale,2.2*scale,7),mat(wood)); t.position.y=1.1*scale;
-      const l=new THREE.Mesh(new THREE.SphereGeometry(1.05*scale,10,7),mat(green)); l.position.y=2.45*scale;
+      const treeH=5.2*scale;
+      const t=new THREE.Mesh(new THREE.CylinderGeometry(.2*scale,.34*scale,treeH,7),mat(wood)); t.position.y=treeH/2;
+      const l=new THREE.Mesh(new THREE.SphereGeometry(1.35*scale,10,7),mat(green)); l.position.y=(treeH+1.0*scale);
       g.add(t,l); add(g,x,0,z,0,.7*scale);
     };
     const addTorch = (x,z) => {
@@ -1156,7 +1220,7 @@ class World {
       m.scale.y = 0.10 + rand() * 0.18;
       m.position.set(x, 0.03 + rand() * 0.06, z);
       m.rotation.y = rand() * Math.PI * 2;
-      m.receiveShadow = true;
+      m.receiveShadow = false;
       this.scene.add(m);
     }
 
@@ -1172,7 +1236,7 @@ class World {
         leaf.scale.y = 0.7;
         leaf.position.y = 0.62;
         g.add(stem, leaf); g.position.set(x,0,z); g.rotation.y=rand()*Math.PI*2;
-        g.castShadow = true; this.scene.add(g);
+        g.castShadow = false; this.scene.add(g);
       }
     }
 
@@ -1185,7 +1249,7 @@ class World {
         const m = new THREE.Mesh(new THREE.DodecahedronGeometry(r, 1), organicMat(rock));
         m.scale.set(1 + rand()*0.7, 0.65 + rand()*0.7, 0.8 + rand()*0.55);
         m.position.set(x, r*0.45, z); m.rotation.set(rand(),rand(),rand());
-        m.castShadow=true; m.receiveShadow=true; this.scene.add(m);
+        m.castShadow=false; m.receiveShadow=false; this.scene.add(m);
       }
     }
 
@@ -1195,7 +1259,7 @@ class World {
         const h=8+rand()*16, w=7+rand()*9;
         const m=new THREE.Mesh(new THREE.ConeGeometry(w,h,9), organicMat(rock));
         m.position.set(-48+i*12+(rand()-.5)*5,h*0.45-0.4,-108-rand()*12);
-        m.rotation.y=rand()*Math.PI; this.scene.add(m);
+        m.rotation.y=rand()*Math.PI; m.castShadow=false; m.receiveShadow=false; this.scene.add(m);
       }
     }
 
@@ -1215,7 +1279,7 @@ class World {
       for(let i=0;i<12;i++){
         const side=i%2?1:-1, x=side*(8+rand()*29), z=5-rand()*100;
         const m=new THREE.Mesh(new THREE.DodecahedronGeometry(1+rand()*2,1),caveMat);
-        m.scale.y=1.3+rand()*1.2; m.position.set(x,0.9,z); m.rotation.set(rand(),rand(),rand()); m.castShadow=true; this.scene.add(m);
+        m.scale.y=1.3+rand()*1.2; m.position.set(x,0.9,z); m.rotation.set(rand(),rand(),rand()); m.castShadow=false; m.receiveShadow=false; this.scene.add(m);
       }
       const mistMat=new THREE.MeshBasicMaterial({color:this.theme.fog||0x332b40,transparent:true,opacity:0.12,depthWrite:false});
       for(let i=0;i<5;i++){const m=new THREE.Mesh(new THREE.SphereGeometry(4+rand()*4,12,8),mistMat);m.scale.y=.35;m.position.set((rand()-.5)*30,1+rand()*1.5,-15-rand()*70);this.scene.add(m);}

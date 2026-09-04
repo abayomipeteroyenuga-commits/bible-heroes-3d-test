@@ -1,3 +1,7 @@
+
+function safeHumanoidTraverse(obj, fn) {
+  if (obj && typeof obj.traverse === 'function') obj.traverse(fn);
+}
 // Shared low-poly humanoid rig + animation clips for David, guardians and bosses.
 function Humanoid(parent, opt) {
   opt = opt || {};
@@ -23,7 +27,7 @@ Humanoid.prototype.build = function (opt) {
     }
     return new THREE.MeshPhongMaterial({ color: color, shininess: 18 });
   };
-  const skin = std(opt.skin || 0xf0c4a0, 0.58, 0.03);
+  const skin = std(opt.skin || 0xf0c4a0, 0.52, 0.02);
   const skinDark = std(opt.skinDark || 0xd9a07c, 0.62, 0.03);
   const shirt = std(opt.shirt || 0x4a7c59, 0.82, 0);
   const pants = std(opt.pants || 0x4a3a2c, 0.86, 0);
@@ -56,13 +60,35 @@ Humanoid.prototype.build = function (opt) {
     ? new THREE.Mesh(new THREE.SphereGeometry(0.245, 20, 14), shirt)
     : new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.22, 0.42, 14), shirt);
   torso.position.y = opt.isDavid ? 0.075 : 0.08;
-  if (opt.isDavid) torso.scale.set(0.96, 1.18, 0.72);
+  if (opt.isDavid) torso.scale.set(0.96, 1.16, 0.72);
   this.chest.add(torso);
   if (opt.isDavid) {
-    const chestPanel = new THREE.Mesh(new THREE.SphereGeometry(0.19, 16, 10), std(opt.shirt || 0x4a7c59, 0.76, 0));
+    const bodyMat = std(opt.shirt || 0x4a7c59, 0.78, 0);
+    const chestPanel = new THREE.Mesh(new THREE.SphereGeometry(0.19, 20, 14), bodyMat);
     chestPanel.scale.set(0.92, 0.72, 0.22);
     chestPanel.position.set(0, 0.12, 0.17);
     this.chest.add(chestPanel);
+
+    // Anatomical clothing volume: subtle pectoral and abdominal planes make
+    // the shirt/jacket follow a real human torso instead of a single sphere.
+    [-1, 1].forEach(side => {
+      const pec = new THREE.Mesh(new THREE.SphereGeometry(0.105, 16, 12), bodyMat);
+      pec.scale.set(0.95, 0.52, 0.16);
+      pec.position.set(side * 0.095, 0.14, 0.185);
+      this.chest.add(pec);
+    });
+    for (let i = 0; i < 2; i++) {
+      const abs = new THREE.Mesh(new THREE.SphereGeometry(0.075, 14, 10), bodyMat);
+      abs.scale.set(0.82, 0.52, 0.13);
+      abs.position.set(0, 0.035 - i * 0.075, 0.19);
+      this.chest.add(abs);
+    }
+    // A compact pelvis/waist transition gives the legs a natural hip anchor.
+    const pelvisMat = std(opt.pants || 0x26334a, 0.86, 0);
+    const pelvis = new THREE.Mesh(new THREE.SphereGeometry(0.19, 18, 12), pelvisMat);
+    pelvis.scale.set(1.02, 0.55, 0.70);
+    pelvis.position.set(0, -0.005, 0.005);
+    this.hips.add(pelvis);
   }
 
   // Layered biblical clothing: tunic hem, belt and optional sash/cloak make David
@@ -107,10 +133,15 @@ Humanoid.prototype.build = function (opt) {
   this.head = new THREE.Group();
   this.head.position.y = 0.16;
   this.neck.add(this.head);
-  const faceMat = new THREE.MeshLambertMaterial({ color: opt.skin || 0xf0c4a0 });
-  const skull = new THREE.Mesh(new THREE.SphereGeometry(0.16, 24, 16), faceMat);
+  const faceMat = new THREE.MeshStandardMaterial({ color: opt.skin || 0xf0c4a0, roughness: 0.55, metalness: 0 });
+  const skull = new THREE.Mesh(new THREE.SphereGeometry(0.16, 32, 22), faceMat);
   skull.scale.set(opt.isDavid ? 1.00 : 0.92, opt.isDavid ? 1.08 : 1.02, opt.isDavid ? 0.92 : 0.88);
   this.head.add(skull);
+  if (opt.isDavid) {
+    // More lifelike adult/teen human proportions: slightly smaller head,
+    // broader shoulders and a tapered torso rather than a toy-like shape.
+    this.head.scale.set(0.90, 0.92, 0.90);
+  }
   const hairMat = std(opt.hair || 0x2c1a0e, 0.86, 0);
   const hair = new THREE.Mesh(
     new THREE.SphereGeometry(0.168, 24, 14, 0, Math.PI * 2, 0, Math.PI * 0.46),
@@ -141,9 +172,29 @@ Humanoid.prototype.build = function (opt) {
   this.browR = mesh(new THREE.BoxGeometry(0.04, 0.008, 0.01), hairMat, 0.046, 0.058, 0.128);
   this.head.add(this.browL);
   this.head.add(this.browR);
-  const nose = mesh(new THREE.SphereGeometry(0.018, 8, 6), faceMat, 0, -0.008, 0.138);
+  const nose = mesh(new THREE.SphereGeometry(0.018, 12, 8), faceMat, 0, -0.008, 0.138);
   nose.scale.set(0.65, 0.85, 0.8);
   this.head.add(nose);
+  if (opt.isDavid) {
+    // Refined human facial planes: jaw, chin and subtle ears give David a
+    // recognizably human silhouette instead of a toy/mannequin face.
+    const jawMat = new THREE.MeshStandardMaterial({ color: opt.skin || 0xf0c4a0, roughness: 0.58 });
+    const jaw = new THREE.Mesh(new THREE.SphereGeometry(0.135, 24, 16), jawMat);
+    jaw.scale.set(1.03, 0.64, 0.86);
+    jaw.position.set(0, -0.045, 0.018);
+    this.head.add(jaw);
+    const chin = new THREE.Mesh(new THREE.SphereGeometry(0.052, 16, 12), jawMat);
+    chin.scale.set(0.82, 0.58, 0.62);
+    chin.position.set(0, -0.067, 0.122);
+    this.head.add(chin);
+    const earInnerMat = new THREE.MeshStandardMaterial({ color: opt.skinDark || 0xd49a79, roughness: 0.6 });
+    [-1,1].forEach(side => {
+      const inner = new THREE.Mesh(new THREE.SphereGeometry(0.017, 10, 8), earInnerMat);
+      inner.scale.set(0.55, 1.0, 0.42);
+      inner.position.set(side * 0.151, 0.0, 0.008);
+      this.head.add(inner);
+    });
+  }
   this.smile = new THREE.Mesh(
     new THREE.SphereGeometry(0.012, 8, 6),
     new THREE.MeshLambertMaterial({ color: 0xc47a72 })
@@ -169,10 +220,10 @@ Humanoid.prototype.build = function (opt) {
   }
 
   this.shoulderL = new THREE.Group();
-  this.shoulderL.position.set(opt.isDavid ? -0.245 : -0.22, 0.24, 0);
+  this.shoulderL.position.set(opt.isDavid ? -0.265 : -0.22, 0.24, 0);
   this.chest.add(this.shoulderL);
   this.shoulderR = new THREE.Group();
-  this.shoulderR.position.set(opt.isDavid ? 0.245 : 0.22, 0.24, 0);
+  this.shoulderR.position.set(opt.isDavid ? 0.265 : 0.22, 0.24, 0);
   this.chest.add(this.shoulderR);
   if (opt.pads) {
     this.shoulderL.add(mesh(new THREE.SphereGeometry(0.08, 8, 6), leather, 0, 0, 0));
@@ -185,13 +236,13 @@ Humanoid.prototype.build = function (opt) {
   this.shoulderR.add(this.armR.root);
 
   this.thighL = new THREE.Group();
-  this.thighL.position.set(opt.isDavid ? -0.105 : -0.09, 0, 0);
+  this.thighL.position.set(opt.isDavid ? -0.112 : -0.09, 0, 0);
   this.hips.add(this.thighL);
-  this.thighL.add(mesh(new THREE.CylinderGeometry(0.075, 0.065, 0.36, 8), pants, 0, -0.18, 0));
+  this.thighL.add(mesh(new THREE.CylinderGeometry(0.078, 0.067, 0.36, 12), pants, 0, -0.18, 0));
   this.shinL = new THREE.Group();
   this.shinL.position.y = -0.36;
   this.thighL.add(this.shinL);
-  this.shinL.add(mesh(new THREE.CylinderGeometry(0.06, 0.05, 0.34, 8), pantsDark, 0, -0.17, 0));
+  this.shinL.add(mesh(new THREE.CylinderGeometry(0.061, 0.051, 0.34, 12), pantsDark, 0, -0.17, 0));
   this.footL = new THREE.Group();
   this.footL.position.set(0, -0.34, 0.04);
   this.shinL.add(this.footL);
@@ -200,13 +251,13 @@ Humanoid.prototype.build = function (opt) {
   if (opt.isDavid) this.addDavidFootwear(this.footL, opt.shoeStyle || 1, boot, leather, accent);
 
   this.thighR = new THREE.Group();
-  this.thighR.position.set(opt.isDavid ? 0.105 : 0.09, 0, 0);
+  this.thighR.position.set(opt.isDavid ? 0.112 : 0.09, 0, 0);
   this.hips.add(this.thighR);
-  this.thighR.add(mesh(new THREE.CylinderGeometry(0.075, 0.065, 0.36, 8), pants, 0, -0.18, 0));
+  this.thighR.add(mesh(new THREE.CylinderGeometry(0.078, 0.067, 0.36, 12), pants, 0, -0.18, 0));
   this.shinR = new THREE.Group();
   this.shinR.position.y = -0.36;
   this.thighR.add(this.shinR);
-  this.shinR.add(mesh(new THREE.CylinderGeometry(0.06, 0.05, 0.34, 8), pantsDark, 0, -0.17, 0));
+  this.shinR.add(mesh(new THREE.CylinderGeometry(0.061, 0.051, 0.34, 12), pantsDark, 0, -0.17, 0));
   this.footR = new THREE.Group();
   this.footR.position.set(0, -0.34, 0.04);
   this.shinR.add(this.footR);
@@ -348,9 +399,9 @@ Humanoid.createSling = function (style, leather, accent) {
   // Fire designs: deliberately varied rather than a single repeated ember.
   // Each entry maps a world to a different fire silhouette/effect.
   const fireDesigns = {
-    5:'ember', 7:'crown', 9:'lava', 10:'twinfire', 12:'halo', 14:'magma',
-    16:'sun', 18:'wings', 20:'rune', 22:'phoenix', 24:'petals', 26:'eye',
-    28:'inferno', 30:'sacred', 32:'spiral', 35:'triple', 37:'flare', 39:'dragon', 40:'eternal'
+    2:'thunder', 3:'bomb', 4:'fireLong', 5:'ember', 6:'thunder', 7:'crown', 8:'bomb', 9:'lava', 10:'twinfire', 11:'fireLong', 12:'halo', 13:'thunder', 14:'magma',
+    15:'bomb', 16:'sun', 17:'fireLong', 18:'wings', 19:'thunder', 20:'rune', 21:'bomb', 22:'phoenix', 23:'fireLong', 24:'petals', 25:'thunder', 26:'eye',
+    27:'bomb', 28:'inferno', 29:'fireLong', 30:'sacred', 31:'thunder', 32:'spiral', 33:'bomb', 34:'fireLong', 35:'triple', 36:'thunder', 37:'flare', 38:'bomb', 39:'dragon', 40:'eternal'
   };
   const fireType = fireDesigns[i];
   if (fireType) {
@@ -435,6 +486,16 @@ Humanoid.createSling = function (style, leather, accent) {
   return g;
 };
 
+Humanoid.prototype.setSlingStyle = function (style) {
+  if (!this.sling || !this.armR || !this.armR.hand) return;
+  const parent = this.armR.hand;
+  parent.remove(this.sling);
+  this.sling = Humanoid.createSling(style || 1, new THREE.MeshStandardMaterial({color:0x754522,roughness:0.72}), new THREE.MeshStandardMaterial({color:0xd7b56d,roughness:0.4,metalness:0.35}));
+  this.sling.position.set(0.015,-0.015,0.045);
+  parent.add(this.sling);
+  this.slingMesh = this.sling;
+};
+
 Humanoid.prototype.addDavidHair = function (style, hairMat, faceMat) {
   const g = new THREE.Group();
   g.name = 'DavidHairStyle_' + style;
@@ -492,7 +553,7 @@ Humanoid.prototype.addModernDavidOutfit = function (opt, leather, accent, shirt,
   ['belt','sash','cloak'].forEach(k => { if (this[k]) this[k].visible = false; });
 
   // T-shirt is the visible base under the open jacket.
-  if (this.chest && typeof this.chest.traverse === 'function') this.chest.traverse(o => {
+  safeHumanoidTraverse(this.chest, o => {
     if (o.isMesh && o.position && o.position.z < 0.1) o.material = inner;
   });
   const tee = new THREE.Mesh(new THREE.SphereGeometry(0.205, 18, 12), inner);
@@ -516,26 +577,50 @@ Humanoid.prototype.addModernDavidOutfit = function (opt, leather, accent, shirt,
     collar.rotation.x = -0.12;
     this.chest.add(collar);
   });
+  // Premium David details: subtle gold trim and zipper pull. No chest badge.
+  const gold = new THREE.MeshStandardMaterial({ color: 0xe4b94f, roughness: 0.42, metalness: 0.55 });
+  const trimL = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.30, 0.020), gold);
+  trimL.position.set(-0.126, 0.075, 0.232);
+  this.chest.add(trimL);
+  const trimR = trimL.clone(); trimR.position.x = 0.126; this.chest.add(trimR);
   // Modern jacket detailing: zipper and hem. No chest badge.
   const zip = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.27, 0.018), jacketDark);
   zip.position.set(0, 0.075, 0.236);
   this.chest.add(zip);
+  const pull = new THREE.Mesh(new THREE.SphereGeometry(0.018, 10, 8), gold);
+  pull.position.set(0, -0.065, 0.255);
+  this.chest.add(pull);
   const hem = new THREE.Mesh(new THREE.BoxGeometry(0.27, 0.035, 0.08), jacketDark);
   hem.position.set(0, -0.105, 0.19);
   this.chest.add(hem);
-  // Brown sleeves with visible skin forearms.
+  const collarLine = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.012, 0.018), gold);
+  collarLine.position.set(0, 0.215, 0.236);
+  this.chest.add(collarLine);
+  [-1,1].forEach(side => {
+    const seam = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.18, 0.014), jacketDark);
+    seam.position.set(side * 0.135, -0.005, 0.233);
+    seam.rotation.z = side * 0.08;
+    this.chest.add(seam);
+  });
+  // Brown sleeves with visible skin forearms and stylish wrist bands.
   [this.armL, this.armR].forEach(a => {
-    if (a && a.upper && typeof a.upper.traverse === 'function') a.upper.traverse(o => { if (o.isMesh) o.material = jacket; });
-    if (a && a.lower && typeof a.lower.traverse === 'function') a.lower.traverse(o => { if (o.isMesh) o.material = skinMaterialFrom(opt); });
+    safeHumanoidTraverse(a && a.upper, o => { if (o.isMesh) o.material = jacket; });
+    safeHumanoidTraverse(a && a.lower, o => { if (o.isMesh) o.material = skinMaterialFrom(opt); });
+    if (a && a.lower) {
+      const band = new THREE.Mesh(new THREE.TorusGeometry(0.058, 0.010, 7, 14), gold);
+      band.rotation.x = Math.PI / 2;
+      band.position.y = -0.02;
+      a.lower.add(band);
+    }
   });
 
   // Full-length navy trousers. David must NOT wear shorts or a skirt.
   // Both upper and lower legs are covered, with the sneakers sitting over the cuffs.
   [this.thighL, this.thighR].forEach(th => {
-    if (th && typeof th.traverse === 'function') th.traverse(o => { if (o.isMesh) o.material = trousers; });
+    safeHumanoidTraverse(th, o => { if (o.isMesh) o.material = trousers; });
   });
   [this.shinL, this.shinR].forEach(sh => {
-    if (sh && typeof sh.traverse === 'function') sh.traverse(o => { if (o.isMesh) o.material = trousersDark; });
+    safeHumanoidTraverse(sh, o => { if (o.isMesh) o.material = trousersDark; });
   });
   // Trousers waistband and utility pockets give David a finished everyday outfit.
   const waist = new THREE.Mesh(new THREE.BoxGeometry(0.31, 0.035, 0.22), trousers);
@@ -551,7 +636,7 @@ Humanoid.prototype.addModernDavidOutfit = function (opt, leather, accent, shirt,
 
   // Chunky white/gray sneakers, dark sole and clearly readable laces.
   [this.footL, this.footR].forEach(foot => {
-    if (foot && typeof foot.traverse === 'function') foot.traverse(o => { if (o.isMesh) o.material = sneaker; });
+    safeHumanoidTraverse(foot, o => { if (o.isMesh) o.material = sneaker; });
     // High-top shoe collar rises slightly onto the lower leg so the footwear reads
     // clearly as a shoe/ankle boot rather than a detached foot piece.
     const ankle = new THREE.Mesh(new THREE.BoxGeometry(0.108, 0.085, 0.095), sneaker);
@@ -715,15 +800,17 @@ Humanoid.prototype.makeArm = function (side, skin, shirt, leather, isDavid) {
   const root = new THREE.Group();
   const upper = new THREE.Group();
   root.add(upper);
-  upper.add(mesh(new THREE.CylinderGeometry(isDavid ? 0.062 : 0.055, isDavid ? 0.054 : 0.048, 0.28, 10), shirt, 0, -0.14, 0));
+  upper.add(mesh(new THREE.CylinderGeometry(isDavid ? 0.072 : 0.055, isDavid ? 0.054 : 0.048, 0.28, 16), shirt, 0, -0.14, 0));
   const elbow = new THREE.Group();
   elbow.position.y = -0.28;
   upper.add(elbow);
-  elbow.add(mesh(new THREE.CylinderGeometry(isDavid ? 0.05 : 0.045, isDavid ? 0.044 : 0.04, 0.26, 10), skin, 0, -0.13, 0));
+  elbow.add(mesh(new THREE.CylinderGeometry(isDavid ? 0.055 : 0.045, isDavid ? 0.042 : 0.04, 0.26, 16), skin, 0, -0.13, 0));
   const hand = new THREE.Group();
   hand.position.y = -0.26;
   elbow.add(hand);
-  hand.add(mesh(new THREE.BoxGeometry(0.07, 0.08, 0.05), skin, 0, -0.02, 0.01));
+  const palm = mesh(new THREE.SphereGeometry(0.052, 14, 10), skin, 0, -0.02, 0.01);
+  palm.scale.set(0.82, 1.12, 0.62);
+  hand.add(palm);
   const fingers = [];
   for (let i = 0; i < 4; i++) {
     const f = new THREE.Group();
@@ -949,9 +1036,10 @@ Humanoid.prototype.update = function (dt, state, extra) {
   this.time = (this.time || 0) + dt;
   if (this.sling && this.sling.userData && this.sling.userData.fireSling) {
     const fu = this.sling.userData;
-    fu.firePhase = (fu.firePhase || 0) + dt * 3.8;
+    fu.firePhase = (Number.isFinite(fu.firePhase) ? fu.firePhase : 0) + Math.min(Math.max(dt, 0), 0.05) * 3.8;
     const pulse = 0.92 + Math.sin(fu.firePhase) * 0.10;
     (fu.fireParts || []).forEach((m, idx) => {
+      if (!m || !m.isObject3D || !m.scale || !m.position) return;
       const wobble = Math.sin(fu.firePhase * 1.7 + idx * 0.85) * 0.10;
       const bs = m.userData.baseScale || new THREE.Vector3(1,1,1);
       const bp = m.userData.basePos || m.position;

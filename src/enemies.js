@@ -1,3 +1,7 @@
+function safeEnemyTraverse(obj, fn) {
+  if (obj && typeof obj.traverse === 'function') obj.traverse(fn);
+}
+
 
 // Futuristic Guardian visual layer inspired by the supplied armored-guardian reference.
 // This is intentionally procedural so it remains lightweight, animated, and deployment-safe.
@@ -216,6 +220,25 @@ class ShadowGuardian {
 
     this.hpGroup = null;
     this.hpBar = null;
+    this.hpBack = null;
+    this._hpBillboardTimer = 0;
+    this._buildGuardianLifeBar();
+  }
+
+  _buildGuardianLifeBar() {
+    const group = new THREE.Group();
+    const backMat = new THREE.MeshBasicMaterial({ color: 0x111820, transparent: true, opacity: 0.9, depthTest: false });
+    const lifeMat = new THREE.MeshBasicMaterial({ color: 0x35d07f, transparent: true, opacity: 1, depthTest: false });
+    const back = new THREE.Mesh(new THREE.PlaneGeometry(1.55, 0.16), backMat);
+    const bar = new THREE.Mesh(new THREE.PlaneGeometry(1.45, 0.09), lifeMat);
+    bar.position.z = 0.006;
+    group.add(back, bar);
+    group.position.set(0, 2.55, 0);
+    this.group.add(group);
+    this.hpGroup = group;
+    this.hpBar = bar;
+    this.hpBack = back;
+    this.updateHealthBar();
   }
 
   _updateHumanFace() {
@@ -229,7 +252,15 @@ class ShadowGuardian {
     if (this.browR) this.browR.rotation.z = -z;
   }
 
-  updateHealthBar() {}
+  updateHealthBar() {
+    if (!this.hpBar) return;
+    const ratio = this.maxHealth > 0 ? Math.max(0, Math.min(1, this.health / this.maxHealth)) : 0;
+    this.hpBar.scale.x = ratio;
+    this.hpBar.position.x = -0.725 * (1 - ratio);
+    if (window.Game && window.Game.camera && this.hpGroup) {
+      this.hpGroup.lookAt(window.Game.camera.position);
+    }
+  }
 
   animate(dt) {
     let clip = this.state === 'PATROL' ? 'WALK' : this.state;
@@ -329,9 +360,15 @@ class ShadowGuardian {
     this.animate(dt);
     this.updateHealthBar();
 
-    // Billboard health bar toward camera
-    if (window.Game && window.Game.camera) {
-      if (this.hpGroup) this.hpGroup.lookAt(window.Game.camera.position);
+    // Billboard health bar toward camera (cheaply; only when the enemy is near enough to matter).
+    if (window.Game && window.Game.camera && this.hpGroup) {
+      this._hpBillboardTimer -= dt;
+      const dx = window.Game.camera.position.x - this.group.position.x;
+      const dz = window.Game.camera.position.z - this.group.position.z;
+      if (this._hpBillboardTimer <= 0 && dx * dx + dz * dz < 70 * 70) {
+        this._hpBillboardTimer = 0.1;
+        this.hpGroup.lookAt(window.Game.camera.position);
+      }
     }
   }
 
@@ -349,7 +386,7 @@ class ShadowGuardian {
     if (window.Game && window.Game.addCameraShake) window.Game.addCameraShake(0.07, 0.12);
 
     // Flash materials
-    if (this.group && typeof this.group.traverse === 'function') this.group.traverse(c => {
+    safeEnemyTraverse(this.group, c => {
       if (c.isMesh && c.material && c.material.emissive) {
         const prev = c.material.emissive.getHex();
         c.material.emissive.setHex(0xffffff);
@@ -402,7 +439,7 @@ class ShadowGuardian {
       t += 0.05;
       this.group.rotation.x = Math.min(1.2, t * 2);
       this.group.position.y = startY - t * 0.3;
-      if (this.group && typeof this.group.traverse === 'function') this.group.traverse(c => {
+      safeEnemyTraverse(this.group, c => {
         if (c.material) {
           c.material.transparent = true;
           c.material.opacity = Math.max(0, 1 - t);
@@ -991,7 +1028,7 @@ class Goliath {
     this.state = 'HIT';
     this.hitTimer = 0;
     // Flash
-    if (this.group && typeof this.group.traverse === 'function') this.group.traverse(c => {
+    safeEnemyTraverse(this.group, c => {
       if (c.isMesh && c.material && c.material.emissive) {
         const prev = c.material.emissive.getHex();
         c.material.emissive.setHex(0xff6666);
@@ -1028,7 +1065,7 @@ class Goliath {
       t += 0.04;
       this.group.rotation.x = Math.min(1.3, t * 1.5);
       this.group.position.y -= 0.08;
-      if (this.group && typeof this.group.traverse === 'function') this.group.traverse(c => {
+      safeEnemyTraverse(this.group, c => {
         if (c.material) {
           c.material.transparent = true;
           c.material.opacity = Math.max(0, 1 - t);
@@ -1278,7 +1315,7 @@ class WorldBoss {
       t += 0.05;
       this.group.rotation.x = Math.min(1.2, t * 1.6);
       this.group.position.y -= 0.06;
-      if (this.group && typeof this.group.traverse === 'function') this.group.traverse(c => {
+      safeEnemyTraverse(this.group, c => {
         if (c.material) {
           c.material.transparent = true;
           c.material.opacity = Math.max(0, 1 - t);

@@ -80,18 +80,6 @@
           <div class="bar-bg"><div id="armor-bar" class="bar armor"></div></div>
           <span id="armor-text">50 / 50</span>
         </div>
-        <div class="hud-stat">
-          <span class="icon">⚡</span>
-          <span class="label">FAITH</span>
-          <div class="bar-bg"><div id="faith-bar" class="bar faith"></div></div>
-          <span id="faith-text">100 / 100</span>
-        </div>
-        <div class="hud-stat">
-          <span class="icon">💨</span>
-          <span class="label">SPRINT</span>
-          <div class="bar-bg"><div id="stamina-bar" class="bar stamina"></div></div>
-          <span id="stamina-text">100 / 100</span>
-        </div>
       </div>
       <div id="hud-right">
         <div id="hud-world">WORLD 1</div>
@@ -99,7 +87,6 @@
         <div class="score-box">⭐ <span id="score-text">0</span></div>
         <div class="score-box">🪙 <span id="hud-coins">0</span></div>
         <div class="score-box">💎 <span id="hud-gems">0</span></div>
-        <div class="score-box" id="hud-ammo">SLING 12</div>
         <div class="score-box" id="hud-kills">GUARDIANS DEFEATED: 0  ·  TOTAL: 0</div>
         <div class="hud-quick-actions">
           <button id="btn-hud-map" class="hud-bible-btn" type="button" title="Game Map">🗺️ MAP</button>
@@ -143,12 +130,11 @@
         </div>
       </div>
       <div id="action-buttons">
-        <button id="btn-sprint" class="action-btn sprint">SPRINT</button>
         <button id="btn-attack" class="action-btn attack">ATTACK</button>
-        <button id="btn-special" class="action-btn special">FAITH</button>
         <button id="btn-jaruscope" class="action-btn">SCOPE</button>
         <button id="btn-game-map" class="action-btn">MAP</button>
         <button id="btn-emote" class="action-btn">EMOTE</button>
+        <button id="btn-jump" class="action-btn">JUMP</button>
         <button id="btn-interact" class="action-btn">E</button>
       </div>
     </div>
@@ -345,6 +331,19 @@
             <h3>Arrows</h3>
             <p>+10 arrows. You have <span id="shop-arrows">0</span></p>
             <button class="menu-btn primary" data-shop-item="arrows">BUY 20 🪙</button>
+          </div>
+        </div>
+        <div class="shop-card emote-shop-card">
+          <div class="shop-icon">🎭</div>
+          <h3>EMOTE COLLECTION</h3>
+          <p>Keep these 6 emotes available for David.</p>
+          <div class="shop-emotes">
+            <button type="button" class="menu-btn" data-shop-emote="wave">👋 WAVE</button>
+            <button type="button" class="menu-btn" data-shop-emote="thumbsup">👍 THANKS</button>
+            <button type="button" class="menu-btn" data-shop-emote="celebrate">🎉 CELEBRATE</button>
+            <button type="button" class="menu-btn" data-shop-emote="clap">👏 CLAP</button>
+            <button type="button" class="menu-btn" data-shop-emote="prayer">🙏 PRAYER</button>
+            <button type="button" class="menu-btn" data-shop-emote="victory">🏆 VICTORY</button>
           </div>
         </div>
         <div class="shop-grid weapon-shop-grid">

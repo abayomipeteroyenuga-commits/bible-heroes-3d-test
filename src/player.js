@@ -26,7 +26,7 @@ class Player {
     this.sprintHeld = false;
     this.score = 0;
     this.hasSling = true;
-    this.stones = 12;
+    this.stones = 5;
     this.coins = 0;
     this.hasBow = false;
     this.arrows = 0;
@@ -175,6 +175,12 @@ class Player {
         e.preventDefault();
         if (e.repeat) return;
         this.tryAttack();
+        return;
+      }
+
+      if (code === 'Space' || key === ' ') {
+        e.preventDefault();
+        this.tryJump();
         return;
       }
 
@@ -365,7 +371,8 @@ class Player {
       'btn-interact': () => { if (window.Game) window.Game.tryInteract(); },
       'btn-jaruscope': () => { if (window.Game) window.Game.useJaruscope(); },
       'btn-game-map': () => { if (window.Game) window.Game.toggleGameMap(); },
-      'btn-emote': () => this.toggleEmoteMenu()
+      'btn-emote': () => this.toggleEmoteMenu(),
+      'btn-jump': () => this.tryJump()
     };
     Object.keys(map).forEach(id => {
       const btn = document.getElementById(id);
@@ -422,7 +429,15 @@ class Player {
     this.keys = {};
   }
 
-  tryJump() {}
+  tryJump() {
+    if (this.state === 'HIT' || this.state === 'VICTORY' || this.action === 'HIT' || this.action === 'VICTORY') return;
+    if (!this.onGround || this.group.position.y > 0.04) return;
+    this.velocity.y = this.jumpForce;
+    this.onGround = false;
+    this.state = 'JUMP';
+    this.emote = null;
+    this.emoteTime = 0;
+  }
 
   playEmote(name) {
     if (this.action === 'HIT' || this.state === 'HIT' || this.state === 'VICTORY') return;
@@ -640,6 +655,23 @@ class Player {
       if (this.state !== 'EMOTE') this.state = 'IDLE';
     }
 
+    // Vertical jump physics. World ground is y=0.
+    if (!this.onGround || this.group.position.y > 0.001 || this.velocity.y > 0) {
+      this.velocity.y -= this.gravity * dt;
+      this.group.position.y += this.velocity.y * dt;
+      if (this.group.position.y <= 0) {
+        this.group.position.y = 0;
+        this.velocity.y = 0;
+        this.onGround = true;
+      } else {
+        this.onGround = false;
+      }
+    } else {
+      this.group.position.y = 0;
+      this.velocity.y = 0;
+      this.onGround = true;
+    }
+
     // Move in short collision-safe steps so David cannot tunnel through thin walls/stones at high speed.
     const moveX = this.velocity.x * dt;
     const moveZ = this.velocity.z * dt;
@@ -665,10 +697,6 @@ class Player {
         this.group.position.z = Math.max(worldBounds.minZ, Math.min(worldBounds.maxZ, this.group.position.z));
       }
     }
-    this.group.position.y = 0;
-    this.velocity.y = 0;
-    this.onGround = true;
-
     this.animate(dt);
 
     if (this.action === 'FIRE' && this.pendingProjectile) {
@@ -690,10 +718,6 @@ class Player {
     const horizontalSpeed = Math.sqrt(this.velocity.x * this.velocity.x + this.velocity.z * this.velocity.z);
     const isMoving = horizontalSpeed > 0.3;
     const isRunningKey = this.keys['ShiftLeft'] || this.keys['ShiftRight'] || this.sprintHeld;
-
-    if (this.state === 'JUMP') {
-      this.state = isMoving ? (isRunningKey ? 'RUN' : 'WALK') : 'IDLE';
-    }
 
     if (this.humanoid) {
       this.humanoid.update(dt, this.state, {

@@ -45,10 +45,8 @@ const UI = {
       confirmQuit: document.getElementById('confirm-quit'),
       lifeBar: document.getElementById('life-bar'),
       armorBar: document.getElementById('armor-bar'),
-      faithBar: document.getElementById('faith-bar'),
       lifeText: document.getElementById('life-text'),
       armorText: document.getElementById('armor-text'),
-      faithText: document.getElementById('faith-text'),
       scoreText: document.getElementById('score-text'),
       hudWorld: document.getElementById('hud-world'),
       hudWorldName: document.getElementById('hud-world-name'),
@@ -93,14 +91,12 @@ const UI = {
     return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || window.innerWidth < 800;
   },
 
-  updateStats(life, maxLife, armor, maxArmor, faith, maxFaith, score) {
-    this.elements.lifeBar.style.width = (life / maxLife * 100) + '%';
-    this.elements.armorBar.style.width = (armor / maxArmor * 100) + '%';
-    this.elements.faithBar.style.width = (faith / maxFaith * 100) + '%';
-    this.elements.lifeText.textContent = Math.ceil(life) + ' / ' + maxLife;
-    this.elements.armorText.textContent = Math.ceil(armor) + ' / ' + maxArmor;
-    this.elements.faithText.textContent = Math.ceil(faith) + ' / ' + maxFaith;
-    this.elements.scoreText.textContent = score;
+  updateStats(life, maxLife, armor, maxArmor, score) {
+    if (this.elements.lifeBar) this.elements.lifeBar.style.width = Math.max(0, Math.min(100, life / maxLife * 100)) + '%';
+    if (this.elements.armorBar) this.elements.armorBar.style.width = Math.max(0, Math.min(100, armor / maxArmor * 100)) + '%';
+    if (this.elements.lifeText) this.elements.lifeText.textContent = Math.ceil(life) + ' / ' + maxLife;
+    if (this.elements.armorText) this.elements.armorText.textContent = Math.ceil(armor) + ' / ' + maxArmor;
+    if (this.elements.scoreText) this.elements.scoreText.textContent = score;
   },
 
   setMission(text) {

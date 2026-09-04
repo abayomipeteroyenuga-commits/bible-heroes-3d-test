@@ -5,10 +5,25 @@ class CombatSystem {
     this.projectiles = [];
     this.particles = [];
     this.shockwaves = [];
+    // Hard caps prevent rapid fire/impact effects from building an ever-growing
+    // render/update queue on low-end devices.
+    this.maxProjectiles = 36;
+    this.maxParticles = 180;
+    this.maxShockwaves = 18;
   }
 
   spawnStone(origin, direction, isFaith = false, extraDmg = 0, projectileType = 'stone') {
     // Shared projectile path; weapon type only changes the visual and damage bonus.
+    // Drop the oldest projectile if the player fires unusually fast. This is a
+    // safety valve against runaway allocations/freezes, not a gameplay limit.
+    if (this.projectiles.length >= this.maxProjectiles) {
+      const old = this.projectiles.shift();
+      if (old && old.mesh) {
+        this.scene.remove(old.mesh);
+        if (old.mesh.geometry && old.mesh.geometry.dispose) old.mesh.geometry.dispose();
+        if (old.mesh.material && old.mesh.material.dispose) old.mesh.material.dispose();
+      }
+    }
     const type = projectileType || 'stone';
     const colors = { stone: 0xf5f0e6, arrow: 0x8b5a2b, blade: 0xd8e0e8, flame: 0xff6a00, faith: 0xffe066 };
     const color = colors[type] || (isFaith ? 0xffe066 : 0xf5f0e6);
@@ -40,6 +55,9 @@ class CombatSystem {
   }
 
   spawnParticles(position, color, count = 15) {
+    // Cap transient effects so repeated fire/impact effects cannot stall the loop.
+    const room = Math.max(0, this.maxParticles - this.particles.length);
+    count = Math.min(count, room);
     for (let i = 0; i < count; i++) {
       const geo = new THREE.SphereGeometry(0.08 + Math.random() * 0.1, 4, 3);
       const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 1 });
@@ -59,6 +77,14 @@ class CombatSystem {
   }
 
   spawnShockwave(position) {
+    if (this.shockwaves.length >= this.maxShockwaves) {
+      const old = this.shockwaves.shift();
+      if (old && old.mesh) {
+        this.scene.remove(old.mesh);
+        if (old.mesh.geometry && old.mesh.geometry.dispose) old.mesh.geometry.dispose();
+        if (old.mesh.material && old.mesh.material.dispose) old.mesh.material.dispose();
+      }
+    }
     const geo = new THREE.RingGeometry(0.5, 1.5, 24);
     const mat = new THREE.MeshBasicMaterial({
       color: 0xaaaaaa,
@@ -82,22 +108,29 @@ class CombatSystem {
       p.life -= dt;
       p.velocity.y -= 12 * dt; // slight arc
 
-      // Hit enemies
+      // Hit exactly one Guardian per projectile. A projectile is removed after the
+      // first valid hit so overlapping Guardians cannot all lose life from one shot.
       let hit = false;
-      enemies.forEach(e => {
-        if (!e.alive) return;
-        if (p.mesh.position.distanceTo(e.group.position.clone().add(new THREE.Vector3(0, 1, 0))) < 2.0) {
-          e.takeDamage(p.damage);
+      for (let ei = 0; ei < enemies.length; ei++) {
+        const e = enemies[ei];
+        if (!e || !e.alive || !e.group) continue;
+        const dx = p.mesh.position.x - e.group.position.x;
+        const dy = p.mesh.position.y - (e.group.position.y + 1);
+        const dz = p.mesh.position.z - e.group.position.z;
+        if (dx * dx + dy * dy + dz * dz < 4.0) {
+          // Every successful Guardian shot removes exactly 3 life.
+          e.takeDamage(3);
           hit = true;
           if (window.AudioSystem) {
             AudioSystem.impact();
             AudioSystem.enemyHit();
           }
+          break;
         }
-      });
+      }
 
       // Hit Goliath — zone from actual projectile position vs scaled body
-      if (goliath && goliath.alive) {
+      if (!hit && goliath && goliath.alive) {
         const gPos = goliath.group.position;
         const scale = goliath.group.scale.y || 3.4;
         // Local height relative to Goliath feet
@@ -122,6 +155,8 @@ class CombatSystem {
       if (p.life <= 0 || hit || p.mesh.position.y < 0) {
         if (!hit && window.AudioSystem) AudioSystem.miss();
         this.scene.remove(p.mesh);
+        if (p.mesh.geometry && p.mesh.geometry.dispose) p.mesh.geometry.dispose();
+        if (p.mesh.material && p.mesh.material.dispose) p.mesh.material.dispose();
         this.projectiles.splice(i, 1);
       }
     }
@@ -135,6 +170,8 @@ class CombatSystem {
       p.mesh.material.opacity = Math.max(0, p.life);
       if (p.life <= 0) {
         this.scene.remove(p.mesh);
+        if (p.mesh.geometry && p.mesh.geometry.dispose) p.mesh.geometry.dispose();
+        if (p.mesh.material && p.mesh.material.dispose) p.mesh.material.dispose();
         this.particles.splice(i, 1);
       }
     }
@@ -148,6 +185,8 @@ class CombatSystem {
       s.mesh.material.opacity = Math.max(0, s.life);
       if (s.life <= 0) {
         this.scene.remove(s.mesh);
+        if (s.mesh.geometry && s.mesh.geometry.dispose) s.mesh.geometry.dispose();
+        if (s.mesh.material && s.mesh.material.dispose) s.mesh.material.dispose();
         this.shockwaves.splice(i, 1);
       }
     }
