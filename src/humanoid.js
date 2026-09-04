@@ -479,7 +479,8 @@ Humanoid.prototype.addModernDavidOutfit = function (opt, leather, accent, shirt,
   const jacket = new THREE.MeshStandardMaterial({ color: 0x9b5638, roughness: 0.78 });
   const jacketDark = new THREE.MeshStandardMaterial({ color: 0x693a2a, roughness: 0.84 });
   const inner = new THREE.MeshStandardMaterial({ color: 0x3d6579, roughness: 0.82 });
-  const shorts = new THREE.MeshStandardMaterial({ color: 0x26334a, roughness: 0.88 });
+  const trousers = new THREE.MeshStandardMaterial({ color: 0x26334a, roughness: 0.88 });
+  const trousersDark = new THREE.MeshStandardMaterial({ color: 0x1b2538, roughness: 0.91 });
   const sneaker = new THREE.MeshStandardMaterial({ color: 0xdfe3e7, roughness: 0.72 });
   const sole = new THREE.MeshStandardMaterial({ color: 0x414852, roughness: 0.9 });
   const lace = new THREE.MeshStandardMaterial({ color: 0xf8f5ee, roughness: 0.7 });
@@ -528,15 +529,16 @@ Humanoid.prototype.addModernDavidOutfit = function (opt, leather, accent, shirt,
     if (a && a.lower && typeof a.lower.traverse === 'function') a.lower.traverse(o => { if (o.isMesh) o.material = skinMaterialFrom(opt); });
   });
 
-  // Knee-length navy shorts; lower legs stay skin colored.
+  // Full-length navy trousers. David must NOT wear shorts or a skirt.
+  // Both upper and lower legs are covered, with the sneakers sitting over the cuffs.
   [this.thighL, this.thighR].forEach(th => {
-    if (th && typeof th.traverse === 'function') th.traverse(o => { if (o.isMesh) o.material = shorts; });
+    if (th && typeof th.traverse === 'function') th.traverse(o => { if (o.isMesh) o.material = trousers; });
   });
   [this.shinL, this.shinR].forEach(sh => {
-    sh.traverse(o => { if (o.isMesh) o.material = skinMaterialFrom(opt); });
+    if (sh && typeof sh.traverse === 'function') sh.traverse(o => { if (o.isMesh) o.material = trousersDark; });
   });
-  // Shorts waistband and utility pockets give David a finished everyday outfit.
-  const waist = new THREE.Mesh(new THREE.BoxGeometry(0.31, 0.035, 0.22), shorts);
+  // Trousers waistband and utility pockets give David a finished everyday outfit.
+  const waist = new THREE.Mesh(new THREE.BoxGeometry(0.31, 0.035, 0.22), trousers);
   waist.position.set(0, 0.13, 0.02);
   this.hips.add(waist);
   const pocketMat = new THREE.MeshStandardMaterial({ color: 0x34425a, roughness: 0.9 });
