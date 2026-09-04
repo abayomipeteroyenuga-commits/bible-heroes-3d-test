@@ -18,9 +18,15 @@ const Game = {
   itemsCollected: 0,
   faithUses: 0,
   animFrame: null,
+  characterSelectMode: 'continue',
+  characterSelectWorld: 1,
+  characterPreviewScenes: {},
+  characterPreviewFrame: null,
+  selectedCharacter: 'david',
 
   init() {
     UI.init();
+    this.initCharacterPreviews();
     if (window.AudioSystem) AudioSystem.init();
     this.setupMenuButtons();
     this.bindSlingKeys();
@@ -34,7 +40,7 @@ const Game = {
       if (window.UI) UI.setWorldDisplay(SaveSystem.getContinueLevel());
       try {
         const params = new URLSearchParams(window.location.search || '');
-        if (params.get('play') === '1') this.startLevel(SaveSystem.getContinueLevel() || 1);
+        if (params.get('play') === '1') this.openCharacterSelect('continue', SaveSystem.getContinueLevel() || 1);
       } catch (e) {}
     }, 1200);
   },
@@ -55,8 +61,8 @@ const Game = {
         fn();
       });
     };
-    click('btn-play', () => { this.openCharacterSelect(); });
-    click('btn-characters', () => this.openCharacterSelect());
+    click('btn-play', () => { this.openCharacterSelect('world1', 1); });
+    click('btn-characters', () => this.openCharacterSelect('continue', SaveSystem.getContinueLevel() || 1));
     click('btn-next-world', () => this.continueNextWorld());
     document.querySelectorAll('[data-character]').forEach(card => {
       card.addEventListener('click', () => this.selectCharacter(card.getAttribute('data-character')));
@@ -244,39 +250,115 @@ const Game = {
     this.startWorld(1);
   },
 
-  openCharacterSelect() {
+  initCharacterPreviews() {
+    if (typeof THREE === 'undefined') return;
+    const canvases = document.querySelectorAll('.character-preview[data-preview-character]');
+    canvases.forEach((canvas) => {
+      const id = canvas.getAttribute('data-preview-character') === 'kelly' ? 'kelly' : 'david';
+      if (this.characterPreviewScenes[id]) return;
+      try {
+        const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: 'high-performance' });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+        renderer.setSize(280, 250, false);
+        renderer.setClearColor(0x000000, 0);
+        if ('outputEncoding' in renderer && THREE.sRGBEncoding) renderer.outputEncoding = THREE.sRGBEncoding;
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(25, 280 / 250, 0.1, 20);
+        camera.position.set(0, 0.95, 3.25);
+        camera.lookAt(0, 0.92, 0);
+        scene.add(new THREE.HemisphereLight(0xffffff, 0x405060, 1.9));
+        const key = new THREE.DirectionalLight(0xffffff, 2.0);
+        key.position.set(2, 3, 4); scene.add(key);
+        const fill = new THREE.DirectionalLight(0xb9d7ff, 0.75);
+        fill.position.set(-3, 1.5, 2); scene.add(fill);
+        const root = new THREE.Group();
+        const opt = window.getPlayableCharacterOptions ? window.getPlayableCharacterOptions(id) : {};
+        const humanoid = new Humanoid(root, opt);
+        root.position.y = -0.12;
+        root.scale.set(1.65, 1.65, 1.65);
+        scene.add(root);
+        this.characterPreviewScenes[id] = { renderer, scene, camera, root, humanoid, canvas, angle: id === 'kelly' ? 0.10 : -0.10 };
+      } catch (err) {
+        console.warn('Character preview unavailable:', id, err);
+      }
+    });
+    if (!this.characterPreviewFrame) this.animateCharacterPreviews();
+  },
+
+  animateCharacterPreviews() {
+    const render = () => {
+      const screen = document.getElementById('character-screen');
+      if (!screen || screen.classList.contains('hidden')) {
+        this.characterPreviewFrame = null;
+        return;
+      }
+      this.characterPreviewFrame = requestAnimationFrame(render);
+      Object.keys(this.characterPreviewScenes).forEach((id) => {
+        const v = this.characterPreviewScenes[id];
+        if (!v || !v.renderer) return;
+        v.angle += 0.004;
+        v.root.rotation.y = v.angle;
+        if (v.humanoid && v.humanoid.update) v.humanoid.update(0.016, 'IDLE', {});
+        v.renderer.render(v.scene, v.camera);
+      });
+    };
+    render();
+  },
+
+  openCharacterSelect(mode, worldId) {
     const data = SaveSystem.load();
+    this.characterSelectMode = mode === 'world1' ? 'world1' : 'continue';
+    this.characterSelectWorld = Math.max(1, Math.min(SaveSystem.MAX_LEVEL || 40, parseInt(worldId, 10) || (this.characterSelectMode === 'world1' ? 1 : SaveSystem.getContinueLevel())));
     const selected = data.selectedCharacter === 'kelly' ? 'kelly' : 'david';
+    this.selectedCharacter = selected;
     document.querySelectorAll('[data-character]').forEach(card => {
       card.classList.toggle('selected', card.getAttribute('data-character') === selected);
     });
-    const confirm = document.getElementById('btn-character-confirm');
-    if (confirm) confirm.textContent = selected === 'kelly' ? '▶️ CONTINUE AS KELLY' : '▶️ CONTINUE AS DAVID';
+    this.updateCharacterSelectionUI(selected);
     UI.show('character');
     this.state = 'menu';
+    this.initCharacterPreviews();
+  },
+
+  updateCharacterSelectionUI(character) {
+    const c = character === 'kelly' ? 'kelly' : 'david';
+    const confirm = document.getElementById('btn-character-confirm');
+    const label = document.getElementById('character-selected-label');
+    const world = this.characterSelectWorld || 1;
+    if (confirm) confirm.textContent = '▶️ PLAY WORLD ' + world + ' AS ' + (c === 'kelly' ? 'KELLY' : 'DAVID');
+    if (label) label.textContent = 'SELECTED: ' + (c === 'kelly' ? 'KELLY' : 'DAVID') + '  •  WORLD ' + world;
   },
 
   selectCharacter(id) {
     const character = id === 'kelly' ? 'kelly' : 'david';
     const data = SaveSystem.load();
     data.selectedCharacter = character;
+    this.selectedCharacter = character;
     SaveSystem.save(data);
     document.querySelectorAll('[data-character]').forEach(card => {
       card.classList.toggle('selected', card.getAttribute('data-character') === character);
     });
-    const confirm = document.getElementById('btn-character-confirm');
-    if (confirm) confirm.textContent = character === 'kelly' ? '▶️ CONTINUE AS KELLY' : '▶️ CONTINUE AS DAVID';
+    this.updateCharacterSelectionUI(character);
   },
 
   confirmCharacter() {
     const data = SaveSystem.load();
-    const allDone = (data.completedLevels || []).length >= (SaveSystem.MAX_LEVEL || 40);
-    if (allDone) {
+    const world = this.characterSelectMode === 'world1' ? 1 : (this.characterSelectWorld || SaveSystem.getContinueLevel());
+    const character = data.selectedCharacter === 'kelly' ? 'kelly' : 'david';
+    // Explicitly write the selected hero immediately before constructing Player.
+    // This prevents stale saves/session state from ever forcing Kelly on World 1.
+    data.selectedCharacter = character;
+    data.currentLevel = world;
+    SaveSystem.save(data);
+    this.currentWorld = world;
+    this.selectedCharacter = character;
+    if (!SaveSystem.isUnlocked(world)) {
+      if (window.UI) UI.showMessage('This world is locked. Returning to the Adventure Map.', 2400);
       this.populateMap();
       UI.show('map');
-    } else {
-      this.startWorld(SaveSystem.getContinueLevel());
+      return;
     }
+    this.startWorld(world);
   },
 
   playContinue() {
@@ -461,10 +543,14 @@ const Game = {
     this.scene.background = new THREE.Color(skyCol);
     this.renderer.setClearColor(skyCol, 1);
     const characterData = SaveSystem.load();
-    this.player = new Player(this.scene, this.camera, characterData.selectedCharacter || 'david');
+    const activeCharacter = this.selectedCharacter === 'kelly' ? 'kelly' : (characterData.selectedCharacter === 'kelly' ? 'kelly' : 'david');
+    characterData.selectedCharacter = activeCharacter;
+    SaveSystem.save(characterData);
+    this.selectedCharacter = activeCharacter;
+    this.player = new Player(this.scene, this.camera, activeCharacter);
     this.player.updateCamera(true);
     const heroNameEl = document.querySelector('.hud-name');
-    if (heroNameEl) heroNameEl.textContent = (characterData.selectedCharacter === 'kelly') ? 'KELLY' : 'DAVID';
+    if (heroNameEl) heroNameEl.textContent = activeCharacter === 'kelly' ? 'KELLY' : 'DAVID';
     this.player.enableSling();
     this.player.stones = Math.max(this.player.stones, 5);
     this.applyInventoryToPlayer();

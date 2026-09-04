@@ -1,17 +1,10 @@
-# Character + Bug Audit
+# Character Audit — David + Kelly
 
-## Fixed
-1. Victory screen was using a fallback of 20 for the maximum-world check even
-   though SaveSystem supports 40 worlds. It now derives the limit from
-   `SaveSystem.MAX_LEVEL` / `LEVELS.length`.
-2. David character lacked a strong gameplay-readable identity at distance.
-   Added a hip shepherd pouch, pouch flap and wrist wraps without changing the
-   existing face or animation rig.
-3. Guardian silhouettes were too close to generic humanoids. Added an armored
-   waist guard and chest crest to the shared guardian build while preserving
-   existing helmets, armor, clubs and animations.
-
-## Validation
-- All JavaScript files pass `node --check`.
-- No external character model dependency was introduced.
-- Existing input, combat, save, level and animation APIs remain unchanged.
+- Hero selection now renders transparent-background procedural 3D previews.
+- Reference JPGs are no longer displayed in the chooser.
+- David and Kelly are both playable 3D Humanoid characters.
+- Selection is normalized to `david` or `kelly` and persisted immediately.
+- PLAY WORLD 1 always launches World 1, regardless of the saved continue level.
+- CONTINUE / CHOOSE HERO launches the selected unlocked continue world.
+- HUD identity follows the selected hero.
+- New/fresh saves default to David.

@@ -1085,4 +1085,21 @@ function mesh(geo, mat, x, y, z) {
 function parentSafe(parent, child) {
   if (parent && child) parent.add(child);
 }
+window.getPlayableCharacterOptions = function (id) {
+  return id === 'kelly' ? {
+    skin: 0xf1c2aa, skinDark: 0xd79b82, shirt: 0xfff9f5, pants: 0xb8a5d8,
+    boot: 0x8d78ad, hair: 0x8b67b4, isDavid: true, modernKelly: true,
+    leather: 0x7b5d9d, accent: 0xd6b8ed, pads: false, tunic: false,
+    belt: false, sash: null, cloak: null, shoeStyle: 1, pouchSide: 'right',
+    pouch: 0x6f587f, wrap: 0x9a7ab0, sling: true, slingStyle: 1,
+    staff: false, helmet: false, eye: 0x3a2418
+  } : {
+    skin: 0xf0bd98, skinDark: 0xd49a79, shirt: 0x3d6579, pants: 0x26334a, boot: 0xdfe3e7,
+    hair: 0x2a1710, isDavid: true, modernDavid: true, leather: 0x754522, accent: 0xd7b56d,
+    pads: false, tunic: false, belt: false, sash: null, cloak: null, shoeStyle: 1,
+    pouchSide: 'right', pouch: 0x6f4728, wrap: 0x9a6a3c, sling: true, slingStyle: 1,
+    staff: false, helmet: false, eye: 0x3a2418
+  };
+};
+
 window.Humanoid = Humanoid;
