@@ -2,10 +2,13 @@
 const SaveSystem = {
   KEY: 'pastorAbayomiBibleHeroes_v1',
   MAX_LEVEL: 40,
+  SCHEMA_VERSION: 2,
 
   defaultData() {
     return {
+      schemaVersion: this.SCHEMA_VERSION,
       currentLevel: 1,
+      selectedCharacter: 'david',
       highestUnlockedLevel: 1,
       unlockedLevels: [1],
       completedLevels: [],
@@ -97,6 +100,7 @@ const SaveSystem = {
     const data = {
       ...def,
       ...(raw || {}),
+      schemaVersion: this.SCHEMA_VERSION,
       settings: { ...def.settings, ...((raw && raw.settings) || {}) },
       achievements: { ...def.achievements, ...((raw && raw.achievements) || {}) },
       stats: { ...def.stats, ...((raw && raw.stats) || {}) },

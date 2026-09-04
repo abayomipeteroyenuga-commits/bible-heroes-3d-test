@@ -1,41 +1,143 @@
+
+// Futuristic Guardian visual layer inspired by the supplied armored-guardian reference.
+// This is intentionally procedural so it remains lightweight, animated, and deployment-safe.
+function addFuturisticGuardianArmor(group, anchors, options) {
+  options = options || {};
+  const metal = new THREE.MeshStandardMaterial({
+    color: options.metal || 0x18384d, metalness: 0.82, roughness: 0.28
+  });
+  const dark = new THREE.MeshStandardMaterial({
+    color: options.dark || 0x07141d, metalness: 0.9, roughness: 0.2
+  });
+  const trim = new THREE.MeshStandardMaterial({
+    color: options.trim || 0x5bb9d6, metalness: 0.7, roughness: 0.22,
+    emissive: options.trim || 0x5bb9d6, emissiveIntensity: 0.16
+  });
+  const visor = new THREE.MeshStandardMaterial({
+    color: 0x071018, metalness: 0.65, roughness: 0.12,
+    emissive: options.visor || 0x1ac7ff, emissiveIntensity: 0.72
+  });
+
+  // Chest reactor / segmented breastplate.
+  if (anchors.torso) {
+    const chest = new THREE.Group();
+    chest.name = 'GuardianSciFiChest';
+    const plate = new THREE.Mesh(new THREE.BoxGeometry(0.82, 0.62, 0.16), metal);
+    plate.position.set(0, 0.62, 0.34);
+    plate.scale.set(1.05, 1, 1);
+    chest.add(plate);
+
+    const core = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.22, 0.035), trim);
+    core.position.set(0, 0.62, 0.435);
+    chest.add(core);
+
+    const ribL = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.42, 0.05), dark);
+    ribL.position.set(-0.30, 0.60, 0.42);
+    ribL.rotation.z = -0.08;
+    chest.add(ribL);
+    const ribR = ribL.clone();
+    ribR.position.x = 0.30;
+    ribR.rotation.z = 0.08;
+    chest.add(ribR);
+    anchors.torso.add(chest);
+
+    // Compact back power unit gives the silhouette the armored reference feel.
+    const pack = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.52, 0.18), dark);
+    pack.position.set(0, 0.68, -0.36);
+    anchors.torso.add(pack);
+  }
+
+  // Helmet shell + glowing horizontal visor.
+  if (anchors.head) {
+    const helmet = new THREE.Group();
+    helmet.name = 'GuardianSciFiHelmet';
+    const shell = new THREE.Mesh(
+      new THREE.SphereGeometry(0.43, 12, 10, 0, Math.PI * 2, 0, Math.PI * 0.62), metal
+    );
+    shell.scale.set(1.02, 0.98, 1.0);
+    shell.position.set(0, 0.22, -0.01);
+    helmet.add(shell);
+
+    const visorBar = new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.105, 0.055), visor);
+    visorBar.position.set(0, 0.09, 0.39);
+    helmet.add(visorBar);
+    const visorLower = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.045, 0.045), trim);
+    visorLower.position.set(0, 0.0, 0.405);
+    helmet.add(visorLower);
+
+    const sideL = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.30, 0.16), dark);
+    sideL.position.set(-0.34, 0.04, 0.06);
+    helmet.add(sideL);
+    const sideR = sideL.clone();
+    sideR.position.x = 0.34;
+    helmet.add(sideR);
+
+    const crest = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.26, 0.12), trim);
+    crest.position.set(0, 0.48, -0.02);
+    helmet.add(crest);
+    anchors.head.add(helmet);
+  }
+
+  // Heavy shoulders and forearm guards follow the existing humanoid animation groups.
+  [anchors.leftArm, anchors.rightArm].forEach((arm, i) => {
+    if (!arm) return;
+    const shoulder = new THREE.Mesh(new THREE.SphereGeometry(0.27, 8, 6), metal);
+    shoulder.position.set(i === 0 ? -0.08 : 0.08, 0.04, 0);
+    shoulder.scale.set(1.35, 0.78, 1.05);
+    arm.add(shoulder);
+
+    const fore = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.13, 0.34, 8), dark);
+    fore.position.y = -0.53;
+    arm.add(fore);
+    const foreTrim = new THREE.Mesh(new THREE.TorusGeometry(0.145, 0.018, 5, 10), trim);
+    foreTrim.rotation.x = Math.PI / 2;
+    foreTrim.position.y = -0.42;
+    arm.add(foreTrim);
+  });
+
+  // Knee/leg armor if leg animation groups are available.
+  [anchors.leftLeg, anchors.rightLeg].forEach((leg, i) => {
+    if (!leg) return;
+    const knee = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.22, 0.15), metal);
+    knee.position.set(0, -0.43, 0.05);
+    leg.add(knee);
+  });
+
+  return { metal, dark, trim, visor };
+}
+
 // Shadow Guardians (polished cartoon variants) + Goliath
 
 const GUARDIAN_VARIANTS = [
   {
-    name: 'Valley Guard',
-    body: 0x5a4634, armor: 0x8a6a48, accent: 0xc4a06a,
-    skin: 0xe0b08a, hair: 0x2a1a10, eye: 0x3a4a2a,
-    scale: 0.94, headScale: 0.92, bodyWide: 0.95, helm: 'band'
+    name: 'Azure Guardian', body: 0x163a52, armor: 0x2b536b, accent: 0x45c8ee,
+    skin: 0xc99670, hair: 0x111820, eye: 0x9feeff,
+    scale: 1.05, headScale: 0.92, bodyWide: 1.04, helm: 'armored'
   },
   {
-    name: 'Ridge Soldier',
-    body: 0x4a4038, armor: 0x6a6860, accent: 0xb0a090,
-    skin: 0xc99670, hair: 0x1a120c, eye: 0x4a3020,
-    scale: 1.02, headScale: 0.88, bodyWide: 1.12, helm: 'cap'
+    name: 'Steel Guardian', body: 0x1b2d3a, armor: 0x526878, accent: 0x7ed7f5,
+    skin: 0xb88860, hair: 0x101418, eye: 0x8de7ff,
+    scale: 1.10, headScale: 0.90, bodyWide: 1.10, helm: 'armored'
   },
   {
-    name: 'Camp Watchman',
-    body: 0x3a4a38, armor: 0x6a5a38, accent: 0xd0b060,
-    skin: 0xd2a07a, hair: 0x3a2414, eye: 0x2a3a5a,
-    scale: 0.96, headScale: 0.9, bodyWide: 1.0, helm: 'wrap'
+    name: 'Cobalt Guardian', body: 0x123a63, armor: 0x244e78, accent: 0x38bdf8,
+    skin: 0xd2a07a, hair: 0x15100c, eye: 0x9eeaff,
+    scale: 1.07, headScale: 0.91, bodyWide: 1.08, helm: 'elite'
   },
   {
-    name: 'Brook Sentinel',
-    body: 0x3a4a50, armor: 0x5a6a68, accent: 0x88b0b8,
-    skin: 0xf0c4a0, hair: 0x4a3020, eye: 0x2a5080,
-    scale: 0.93, headScale: 0.91, bodyWide: 0.92, helm: 'band'
+    name: 'Titan Guardian', body: 0x152c3c, armor: 0x35576b, accent: 0x61dafb,
+    skin: 0xf0c4a0, hair: 0x24170f, eye: 0xb8f4ff,
+    scale: 1.15, headScale: 0.87, bodyWide: 1.16, helm: 'heavy'
   },
   {
-    name: 'Iron Levy',
-    body: 0x3a3a40, armor: 0x6a6a72, accent: 0xc0c4c8,
-    skin: 0xb88860, hair: 0x120c08, eye: 0x2a2018,
-    scale: 1.05, headScale: 0.86, bodyWide: 1.16, helm: 'cap'
+    name: 'Obsidian Guardian', body: 0x0d1c28, armor: 0x263b49, accent: 0x29d3ff,
+    skin: 0xb88860, hair: 0x0c0c0c, eye: 0x7de7ff,
+    scale: 1.18, headScale: 0.86, bodyWide: 1.20, helm: 'commander'
   },
   {
-    name: 'Desert Scout',
-    body: 0x8a6a40, armor: 0xa08050, accent: 0xe8c070,
-    skin: 0xc08050, hair: 0x201408, eye: 0x3a2818,
-    scale: 0.95, headScale: 0.9, bodyWide: 0.98, helm: 'wrap'
+    name: 'Dune Guardian', body: 0x31404a, armor: 0x6d786f, accent: 0x8dd7e8,
+    skin: 0xc08050, hair: 0x201408, eye: 0xaeefff,
+    scale: 1.08, headScale: 0.89, bodyWide: 1.08, helm: 'armored'
   }
 ];
 
@@ -96,6 +198,21 @@ class ShadowGuardian {
     this.rightArm = this.rightArmGroup;
     this.browL = this.humanoid.browL;
     this.browR = this.humanoid.browR;
+
+    // Upgrade every Guardian with the futuristic armored silhouette from the supplied reference.
+    this.guardianArmor = addFuturisticGuardianArmor(this.group, {
+      torso: this.torsoGroup,
+      head: this.headGroup,
+      leftArm: this.leftArmGroup,
+      rightArm: this.rightArmGroup,
+      leftLeg: this.leftLegGroup,
+      rightLeg: this.rightLegGroup
+    }, {
+      metal: v.armor,
+      dark: v.body,
+      trim: v.accent,
+      visor: v.accent
+    });
 
     this.hpGroup = null;
     this.hpBar = null;
@@ -324,19 +441,19 @@ class Goliath {
     this.buildModel();
     this.group.position.copy(position);
     // True boss scale — much larger than David (~1.7) and guardians (~0.9)
-    this.group.scale.set(3.4, 3.4, 3.4);
+    this.group.scale.set(4.0, 4.0, 4.0);
     scene.add(this.group);
   }
 
   buildModel() {
     const skinMat = new THREE.MeshLambertMaterial({ color: 0xd4a574 });
     const skinDarkMat = new THREE.MeshLambertMaterial({ color: 0xb8885a });
-    const armorMat = new THREE.MeshLambertMaterial({ color: 0x5a6a7a });
-    const armorDarkMat = new THREE.MeshLambertMaterial({ color: 0x3a4a5a });
-    const bronzeMat = new THREE.MeshLambertMaterial({ color: 0xb8956a });
-    const bronzeDarkMat = new THREE.MeshLambertMaterial({ color: 0x8a6a40 });
-    const clothMat = new THREE.MeshLambertMaterial({ color: 0x6b3a2a });
-    const leatherMat = new THREE.MeshLambertMaterial({ color: 0x5c4030 });
+    const armorMat = new THREE.MeshLambertMaterial({ color: 0x5a3b28 });
+    const armorDarkMat = new THREE.MeshLambertMaterial({ color: 0x21150f });
+    const bronzeMat = new THREE.MeshLambertMaterial({ color: 0xc08a3e });
+    const bronzeDarkMat = new THREE.MeshLambertMaterial({ color: 0x70451e });
+    const clothMat = new THREE.MeshLambertMaterial({ color: 0x5a1f1f });
+    const leatherMat = new THREE.MeshLambertMaterial({ color: 0x3b2418 });
     const eyeMat = new THREE.MeshBasicMaterial({ color: 0x2a1a10 });
     const eyeWhiteMat = new THREE.MeshLambertMaterial({ color: 0xfff8f0 });
 
@@ -959,7 +1076,10 @@ class WorldBoss {
     this.attackProgress = 0;
     this.buildModel(spec);
     this.group.position.copy(position);
-    this.group.scale.set(spec.scale || 2, spec.scale || 2, spec.scale || 2);
+    const bossScale = spec.style === 'guardian-colossus'
+      ? Math.max(4.25, spec.scale || 4.25)
+      : (spec.scale || 2);
+    this.group.scale.setScalar(bossScale);
     scene.add(this.group);
   }
 
@@ -979,6 +1099,24 @@ class WorldBoss {
       helmet: 'boss'
     });
     this.root = this.humanoid.root;
+
+    // World 39 uses the oversized futuristic Guardian/Colossus style.
+    if (spec.style === 'guardian-colossus') {
+      this.guardianArmor = addFuturisticGuardianArmor(this.group, {
+        torso: this.humanoid.torsoGroup,
+        head: this.humanoid.headGroup,
+        leftArm: this.humanoid.armL.root,
+        rightArm: this.humanoid.armR.root,
+        leftLeg: this.humanoid.thighL,
+        rightLeg: this.humanoid.thighR
+      }, {
+        metal: spec.color || 0x173b52,
+        dark: 0x07151e,
+        trim: spec.accent || 0x45c8ee,
+        visor: spec.accent || 0x45c8ee
+      });
+    }
+
     this.leftArm = this.humanoid.armL.root;
     this.rightArm = this.humanoid.armR.root;
     this.leftLeg = this.humanoid.thighL;

@@ -55,8 +55,14 @@ const Game = {
         fn();
       });
     };
-    click('btn-play', () => this.playContinue());
+    click('btn-play', () => { this.openCharacterSelect(); });
+    click('btn-characters', () => this.openCharacterSelect());
     click('btn-next-world', () => this.continueNextWorld());
+    document.querySelectorAll('[data-character]').forEach(card => {
+      card.addEventListener('click', () => this.selectCharacter(card.getAttribute('data-character')));
+    });
+    click('btn-character-confirm', () => this.confirmCharacter());
+    click('btn-character-back', () => UI.show('mainMenu'));
     click('btn-map', () => { this.populateMap(); UI.show('map'); });
     click('btn-howto', () => UI.show('howto'));
     click('btn-achievements', () => {
@@ -238,9 +244,44 @@ const Game = {
     this.startWorld(1);
   },
 
+  openCharacterSelect() {
+    const data = SaveSystem.load();
+    const selected = data.selectedCharacter === 'kelly' ? 'kelly' : 'david';
+    document.querySelectorAll('[data-character]').forEach(card => {
+      card.classList.toggle('selected', card.getAttribute('data-character') === selected);
+    });
+    const confirm = document.getElementById('btn-character-confirm');
+    if (confirm) confirm.textContent = selected === 'kelly' ? '▶️ CONTINUE AS KELLY' : '▶️ CONTINUE AS DAVID';
+    UI.show('character');
+    this.state = 'menu';
+  },
+
+  selectCharacter(id) {
+    const character = id === 'kelly' ? 'kelly' : 'david';
+    const data = SaveSystem.load();
+    data.selectedCharacter = character;
+    SaveSystem.save(data);
+    document.querySelectorAll('[data-character]').forEach(card => {
+      card.classList.toggle('selected', card.getAttribute('data-character') === character);
+    });
+    const confirm = document.getElementById('btn-character-confirm');
+    if (confirm) confirm.textContent = character === 'kelly' ? '▶️ CONTINUE AS KELLY' : '▶️ CONTINUE AS DAVID';
+  },
+
+  confirmCharacter() {
+    const data = SaveSystem.load();
+    const allDone = (data.completedLevels || []).length >= (SaveSystem.MAX_LEVEL || 40);
+    if (allDone) {
+      this.populateMap();
+      UI.show('map');
+    } else {
+      this.startWorld(SaveSystem.getContinueLevel());
+    }
+  },
+
   playContinue() {
     const data = SaveSystem.load();
-    const allDone = (data.completedLevels || []).length >= (SaveSystem.MAX_LEVEL || 20);
+    const allDone = (data.completedLevels || []).length >= (SaveSystem.MAX_LEVEL || 40);
     if (allDone) {
       this.populateMap();
       UI.show('map');
@@ -252,7 +293,7 @@ const Game = {
 
   startWorld(id) {
     const n = parseInt(id, 10) || 1;
-    if (n < 1 || n > (SaveSystem.MAX_LEVEL || 20)) return;
+    if (n < 1 || n > (SaveSystem.MAX_LEVEL || 40)) return;
     if (!SaveSystem.isUnlocked(n)) {
       if (window.UI) UI.showMessage('This world is locked. Complete earlier worlds first.', 2400);
       return;
@@ -352,7 +393,7 @@ const Game = {
     // Natural/organic presentation: keep the 3D render at a real display resolution.
     // The previous pixel-world render deliberately rendered below native resolution
     // and upscaled it, which made terrain, characters and foliage look blurry.
-    const dpr = Math.min(window.devicePixelRatio || 1, cap);
+    const dpr = Math.min(window.devicePixelRatio || 1, cap, g === 'low' ? 1 : (g === 'medium' ? 1.35 : 1.8));
     this.renderer.setPixelRatio(dpr);
     this.renderer.userData = this.renderer.userData || {};
     this.renderer.userData.pixelWorld = false;
@@ -375,11 +416,13 @@ const Game = {
     this.camera.position.set(0, 2.4, 11);
 
     if (!this.renderer) {
+      const graphics = (SaveSystem.load().settings && SaveSystem.load().settings.graphics) || 'medium';
       this.renderer = new THREE.WebGLRenderer({
         canvas: canvas,
-        antialias: true,
+        antialias: graphics !== 'low',
         alpha: false,
-        failIfMajorPerformanceCaveat: false
+        failIfMajorPerformanceCaveat: false,
+        powerPreference: 'high-performance'
       });
       this.renderer.shadowMap.enabled = true;
       if (THREE.PCFSoftShadowMap) this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -412,23 +455,16 @@ const Game = {
     this.world = new World(this.scene, this.currentWorld || 1);
     const theme = window.getWorldTheme ? window.getWorldTheme(this.currentWorld || 1) : {};
     const skyCol = (theme.sky != null) ? theme.sky : 0x7ec8e8;
+    // The World already owns the real terrain and scene background. Avoid a second
+    // full-size ground plane and sky sphere: both were pure overdraw and could
+    // noticeably hurt mobile GPUs without adding visible detail.
     this.scene.background = new THREE.Color(skyCol);
     this.renderer.setClearColor(skyCol, 1);
-    // Unlit sky shell + ground so the view cannot render as a black void
-    const skyShell = new THREE.Mesh(
-      new THREE.SphereGeometry(80, 16, 12),
-      new THREE.MeshBasicMaterial({ color: skyCol, side: THREE.BackSide })
-    );
-    this.scene.add(skyShell);
-    const visGround = new THREE.Mesh(
-      new THREE.PlaneGeometry(120, 160),
-      new THREE.MeshBasicMaterial({ color: theme.ground || 0x4c8a46 })
-    );
-    visGround.rotation.x = -Math.PI / 2;
-    visGround.position.y = 0.02;
-    this.scene.add(visGround);
-    this.player = new Player(this.scene, this.camera);
+    const characterData = SaveSystem.load();
+    this.player = new Player(this.scene, this.camera, characterData.selectedCharacter || 'david');
     this.player.updateCamera(true);
+    const heroNameEl = document.querySelector('.hud-name');
+    if (heroNameEl) heroNameEl.textContent = (characterData.selectedCharacter === 'kelly') ? 'KELLY' : 'DAVID';
     this.player.enableSling();
     this.player.stones = Math.max(this.player.stones, 5);
     this.applyInventoryToPlayer();
@@ -570,8 +606,14 @@ const Game = {
     if (this.currentWorld === 9 && playerPos.distanceTo(new THREE.Vector3(0, 0, -60)) < 6) this.goliathTerritoryEntered = true;
 
     // Enemies
+    // Keep nearby enemies fully responsive while reducing AI/animation work for
+    // distant Guardians. This matters because later worlds can contain 40+ enemies.
+    this._enemyFrame = (this._enemyFrame || 0) + 1;
     this.enemies.forEach(e => {
-      e.update(dt, playerPos);
+      if (!e || !e.alive || !e.group) return;
+      const d2 = e.group.position.distanceToSquared(playerPos);
+      if (d2 > 35 * 35 && (this._enemyFrame & 1)) return;
+      e.update(d2 > 35 * 35 ? dt * 2 : dt, playerPos);
     });
     if (this.player && this.player.updateEmotion) this.player.updateEmotion(this);
     this.enemiesDefeated = this.enemies.filter(e => !e.alive).length;
@@ -1030,12 +1072,13 @@ const Game = {
   spawnGoliath() {
     if (this.goliath) return;
     const theme = window.getWorldTheme ? window.getWorldTheme(this.currentWorld || 1) : {};
+    const bossSpec = window.getWorldBoss ? window.getWorldBoss(this.currentWorld || 40) : null;
     const gp = theme.goliathPos || [0, 0, -70];
     this.goliath = new Goliath(this.scene, new THREE.Vector3(gp[0], gp[1], gp[2]));
-    if (theme.goliathHp) {
-      this.goliath.health = theme.goliathHp;
-      this.goliath.maxHealth = theme.goliathHp;
-    }
+    // Keep the final Goliath's displayed boss stats consistent with the world-boss table.
+    const hp = bossSpec && bossSpec.hp ? bossSpec.hp : (theme.goliathHp || this.goliath.maxHealth);
+    this.goliath.health = hp;
+    this.goliath.maxHealth = hp;
     UI.showBoss(this.goliath.health, this.goliath.maxHealth);
     UI.showMessage('GOLIATH — THE PHILISTINE GIANT!', 3000);
     this.addCameraShake(0.4, 0.7);
@@ -1065,7 +1108,7 @@ const Game = {
       this.player.state = 'VICTORY';
       this.player.addScore(500);
     }
-    UI.showMessage('DAVID: "I come with faith in God!"', 3000);
+    UI.showMessage((this.player && this.player.characterId === "kelly" ? "KELLY" : "DAVID") + ': "I come with faith in God!"', 3000);
     // MissionSystem detects goliathDefeated and calls finishWorld → completeCurrentWorld
   },
 
@@ -1140,13 +1183,13 @@ const Game = {
     if (starEl) starEl.textContent = '⭐'.repeat(stars);
     const unlockEl = document.querySelector('#victory-screen .unlock');
     if (unlockEl) {
-      unlockEl.textContent = worldId >= (SaveSystem.MAX_LEVEL || 20)
+      unlockEl.textContent = worldId >= (SaveSystem.MAX_LEVEL || 40)
         ? 'THE BIBLE HEROES ADVENTURE IS COMPLETE!'
         : ('NEXT WORLD: WORLD ' + nextId + (nextLv ? ' — ' + nextLv.name.toUpperCase() : ''));
     }
     const nextBtn = document.getElementById('btn-next-world');
     if (nextBtn) {
-      const showNext = worldId < (SaveSystem.MAX_LEVEL || 20) && nextId;
+      const showNext = worldId < (SaveSystem.MAX_LEVEL || 40) && nextId;
       nextBtn.classList.toggle('hidden', !showNext);
       if (showNext) nextBtn.textContent = 'PLAY WORLD ' + nextId;
     }
@@ -1159,7 +1202,7 @@ const Game = {
   continueNextWorld() {
     const completed = (this._pendingVictory && this._pendingVictory.worldId) || this.currentWorld || 1;
     const next = completed + 1;
-    if (next <= (SaveSystem.MAX_LEVEL || 20) && SaveSystem.isUnlocked(next)) {
+    if (next <= (SaveSystem.MAX_LEVEL || 40) && SaveSystem.isUnlocked(next)) {
       this.startWorld(next);
       return;
     }

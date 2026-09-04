@@ -336,7 +336,7 @@ const WORLD_BOSSES = {
   36: { name: 'Night Horror', title: 'WATCH BOSS', color: 0x2a2048, accent: 0x9977dd, hp: 840, dmg: 26, scale: 2.9, speed: 3.4 },
   37: { name: 'East Warlord', title: 'CAMP BOSS', color: 0xa03820, accent: 0xff7050, hp: 860, dmg: 26, scale: 2.9, speed: 3.4 },
   38: { name: 'Road Champion', title: 'ROAD BOSS', color: 0x8a4830, accent: 0xffa070, hp: 880, dmg: 27, scale: 2.95, speed: 3.45 },
-  39: { name: 'Gate Colossus', title: 'GATE BOSS', color: 0x5a2030, accent: 0xff6070, hp: 920, dmg: 28, scale: 3.1, speed: 3.5 },
+  39: { name: 'Gate Colossus', title: 'GUARDIAN COLOSSUS', color: 0x173b52, accent: 0x45d8ff, hp: 1450, dmg: 36, scale: 4.35, speed: 3.15, style: 'guardian-colossus', attacks: ['swing', 'charge', 'slam', 'shock'], range: 4.2, detect: 26, cooldown: 1.45 },
   40: { name: 'Goliath the Giant', title: 'FINAL PHILISTINE GIANT', color: 0x4a5a6a, accent: 0xc0a070, hp: 1100, dmg: 30, scale: 3.6, speed: 3.2 }
 };
 

@@ -1,8 +1,9 @@
 // Player (David) - third person controller with full procedural animation
 class Player {
-  constructor(scene, camera) {
+  constructor(scene, camera, characterId) {
     this.scene = scene;
     this.camera = camera;
+    this.characterId = characterId === 'kelly' ? 'kelly' : 'david';
     this.group = new THREE.Group();
     this.velocity = new THREE.Vector3();
     this.direction = new THREE.Vector3();
@@ -68,43 +69,23 @@ class Player {
   }
 
   buildModel() {
-    // David gets a distinct wardrobe for every world.  The look changes while his
-    // identity, face, sling and animation rig remain consistent.
-    const world = Math.max(1, Math.min(40, Number(window.Game && window.Game.currentWorld) || 1));
-    const wardrobes = [
-      [0x527a55,0x403225,0x70452a,0xc9a45a],[0x356b82,0x493526,0x6b4028,0xd3ad63],
-      [0x875044,0x3d3028,0x70442a,0xe0b76a],[0x62518f,0x44372c,0x62402a,0xd7b56d],
-      [0x7d7138,0x45362a,0x754b2b,0xcfa35b],[0x3e786a,0x49392c,0x5f3925,0xe0bb73],
-      [0x7d4b61,0x392f2a,0x70452c,0xd8a45d],[0x4c774b,0x51412e,0x7b522d,0xe7bd6e],
-      [0x41678b,0x4b392b,0x704127,0xd6a15c],[0x925b3b,0x3b3029,0x76462b,0xe0b56b],
-      [0x4c6d8b,0x3b3027,0x62412c,0xd3aa62],[0x76506e,0x44372d,0x70482d,0xe2bd72],
-      [0x3f7961,0x4b392c,0x674027,0xd8a65e],[0x8b4b42,0x413229,0x74472b,0xe4b86c],
-      [0x566c3e,0x403229,0x6d482a,0xd4ad63],[0x49607f,0x4a372a,0x75472b,0xe1b66a],
-      [0x78465f,0x3c302a,0x70462a,0xd8a861],[0x3e746f,0x47372c,0x694329,0xe3b56b],
-      [0x806039,0x3f3228,0x76492b,0xd8ad62],[0x5a527f,0x40342a,0x6e4529,0xe5bd76],
-      [0x8a4a38,0x423228,0x75462a,0xd9a05a],[0x3f7055,0x49372a,0x69432a,0xe4ba6e],
-      [0x6b4b78,0x3c312b,0x72452b,0xd9ad68],[0x426b82,0x46352a,0x6e4328,0xe5b970],
-      [0x7e553c,0x403329,0x774a2d,0xe2b36a],[0x3d765f,0x49382b,0x6a4329,0xd9a85e],
-      [0x714969,0x3d3029,0x74482b,0xe6bc73],[0x4b6385,0x44352a,0x70442a,0xd7a15a],
-      [0x8a513f,0x3e3028,0x76482b,0xe4b86b],[0x3e6e61,0x48372b,0x6c4329,0xdcae63],
-      [0x62507d,0x403229,0x73472c,0xe4ba70],[0x79633c,0x433329,0x784b2e,0xd9aa5f],
-      [0x4b785e,0x45362a,0x6c4329,0xe5bd72],[0x82475a,0x3c3029,0x76482b,0xdca45c],
-      [0x456b88,0x45352a,0x6e4329,0xe8bf76],[0x7b533e,0x3f3128,0x794a2d,0xe3b267],
-      [0x4b7869,0x45362a,0x6e442a,0xe9c17b],[0x694c82,0x3c3129,0x77492c,0xe2b96f],
-      [0x8c5337,0x3e3028,0x7a4b2d,0xe8ba68],[0x3e7464,0x45352a,0x70452a,0xe7bd73],
-      [0x5b5687,0x3d3029,0x75482c,0xe6bd77],[0x87613c,0x423329,0x7a4d2e,0xe8bc6c]
-    ];
-    const w = wardrobes[(world - 1) % wardrobes.length];
-    const accent = w[3];
-    const cloak = world >= 4 ? [0x2d4a3d,0x473a5b,0x5a3b32,0x374e68,0x66512d][(world - 4) % 5] : null;
-    const sash = [0x9b3d32,0x315c72,0x8a6a2e,0x6c3c62,0x6b5130][(world - 1) % 5];
-    this.humanoid = new Humanoid(this.group, {
-      skin: 0xf0bd98, skinDark: 0xd49a79, shirt: w[0], pants: w[1], boot: w[2],
-      hair: [0x24160e,0x321b12,0x3a2115,0x1f1510,0x4a2b18][(world-1)%5],
-      hairStyle: world, isDavid: true, leather: 0x754522, accent: accent, pads: false,
-      tunic: true, belt: true, sash: sash, sashSide: world % 2 ? 'left' : 'right', cloak: cloak,
-      shoeStyle: world, pouchSide: world % 2 ? 'right' : 'left', pouch: 0x6f4728, wrap: 0x9a6a3c, sling: true, slingStyle: world, staff: false, helmet: false, eye: world % 3 === 0 ? 0x4b7d72 : 0x31577d
-    });
+    // Character identity is selected before a world starts. Both heroes share the
+    // same combat/animation rig so switching characters never breaks gameplay.
+    const opt = this.characterId === 'kelly' ? {
+      skin: 0xf1c2aa, skinDark: 0xd79b82, shirt: 0xfff9f5, pants: 0xb8a5d8,
+      boot: 0x8d78ad, hair: 0x8b67b4, isDavid: true, modernKelly: true,
+      leather: 0x7b5d9d, accent: 0xd6b8ed, pads: false, tunic: false,
+      belt: false, sash: null, cloak: null, shoeStyle: 1, pouchSide: 'right',
+      pouch: 0x6f587f, wrap: 0x9a7ab0, sling: true, slingStyle: 1,
+      staff: false, helmet: false, eye: 0x3a2418
+    } : {
+      skin: 0xf0bd98, skinDark: 0xd49a79, shirt: 0x3d6579, pants: 0x26334a, boot: 0xdfe3e7,
+      hair: 0x2a1710, isDavid: true, modernDavid: true, leather: 0x754522, accent: 0xd7b56d,
+      pads: false, tunic: false, belt: false, sash: null, cloak: null, shoeStyle: 1,
+      pouchSide: 'right', pouch: 0x6f4728, wrap: 0x9a6a3c, sling: true, slingStyle: 1,
+      staff: false, helmet: false, eye: 0x3a2418
+    };
+    this.humanoid = new Humanoid(this.group, opt);
     this.root = this.humanoid.root;
     this.torsoGroup = this.humanoid.torsoGroup;
     this.headGroup = this.humanoid.headGroup;
@@ -119,6 +100,7 @@ class Player {
     this.smileMesh = this.humanoid.smile;
     this.eyeL = this.humanoid.eyeL;
     this.eyeR = this.humanoid.eyeR;
+    if (this.characterId === 'kelly' && this.humanoid.addModernKellyOutfit) this.humanoid.addModernKellyOutfit();
 
     this.shieldMesh = new THREE.Mesh(
       new THREE.SphereGeometry(1.3, 16, 12),
@@ -152,7 +134,9 @@ class Player {
     };
 
     this.group.position.set(0, 0, 8);
-    this.group.scale.set(1, 1, 1);
+    // Slightly taller silhouette, while keeping the same gameplay proportions/collision values.
+    this.group.scale.set(1.14, 1.14, 1.14);
+    this.group.position.y = 0.08;
   }
 
   _emptyPose() {

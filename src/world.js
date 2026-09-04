@@ -9,6 +9,11 @@ class World {
     this.interactables = [];
     this.uniqueObjects = [];
     this.colliders = [];
+    this.landscapeSeed = (worldId * 10007 + 7919) >>> 0;
+    this._rand = () => {
+      this.landscapeSeed = (this.landscapeSeed * 1664525 + 1013904223) >>> 0;
+      return this.landscapeSeed / 4294967296;
+    };
     this.bounds = { minX: -45, maxX: 45, minZ: -90, maxZ: 30 };
     this.build();
   }
@@ -76,6 +81,7 @@ class World {
     this.createLighting();
     this.createSky();
     this.createTerrain();
+    this.createNaturalLandscape();
     this.createWorldDressing();
     if (this.hasFeature('camp') || this.hasFeature('outpost') || this.hasFeature('camps')) this.createCamp();
     this.createPath();
@@ -175,6 +181,136 @@ class World {
     this.scene.add(path);
   }
 
+
+  // Natural landscape layer inspired by the supplied reference: bright open meadow,
+  // rolling terrain, mature trees, shrubs, flowers and a readable dirt trail. Each of
+  // the 40 worlds gets a deterministic visual profile so worlds are not clones.
+  createNaturalLandscape() {
+    const id = this.worldId;
+    const r = this._rand;
+    const palettes = [
+      [0x78a94f,0x3f7338,0x6f4b2f,0xc9b17b,0x8fcf67],
+      [0x6f9b55,0x315d3a,0x6a4a35,0xb79a6c,0x79bd61],
+      [0x82b35c,0x3f7f3b,0x745037,0xd0b77f,0xa2d875],
+      [0x5f8750,0x294d32,0x5b4437,0xa68c67,0x73b35c],
+      [0x8aa35d,0x4a713c,0x79553b,0xcdbd8b,0x9bd06c],
+      [0x6f8f61,0x355c3e,0x664833,0xb9a477,0x83c66a],
+      [0x739f4a,0x376b31,0x70472c,0xc4a66e,0x8bcf58],
+      [0x8ba85c,0x4e743b,0x76503a,0xd2bc84,0xa8d86e],
+      [0x668e58,0x2f5d39,0x614936,0xb59a78,0x78c871],
+      [0x7ea761,0x3b6d40,0x694a31,0xc7ae7a,0x93d06f]
+    ];
+    const p = palettes[(id - 1) % palettes.length];
+    const phase = Math.floor((id - 1) / 10);
+    const treeDensity = 18 + ((id * 7) % 19) + phase * 3;
+    const bushDensity = 12 + ((id * 5) % 15);
+    const flowerDensity = 18 + ((id * 11) % 24);
+    const hillCount = 5 + ((id * 3) % 6);
+    const pathWiggle = 0.8 + ((id * 13) % 18) / 10;
+    const canopy = 0.9 + ((id * 17) % 12) / 20;
+    const grassMat = new THREE.MeshLambertMaterial({ color: p[0] });
+    const leafMat = new THREE.MeshLambertMaterial({ color: p[1] });
+    const trunkMat = new THREE.MeshLambertMaterial({ color: p[2] });
+    const dirtMat = new THREE.MeshLambertMaterial({ color: p[3] });
+    const flowerMat = new THREE.MeshBasicMaterial({ color: p[4] });
+
+    // Meadow patches break up the flat ground and echo the open grassy reference.
+    for (let i = 0; i < 16; i++) {
+      const x = (r() - 0.5) * 88;
+      const z = 20 - r() * 118;
+      const sx = 3 + r() * 7;
+      const sz = 2 + r() * 6;
+      const patch = new THREE.Mesh(new THREE.CircleGeometry(1, 14), grassMat);
+      patch.rotation.x = -Math.PI / 2;
+      patch.scale.set(sx, sz, 1);
+      patch.position.set(x, 0.015, z);
+      patch.material = grassMat;
+      this.scene.add(patch);
+    }
+
+    // Winding secondary trail segments. The main mission corridor remains clear.
+    for (let i = 0; i < 12; i++) {
+      const z = 18 - i * 10;
+      const x = Math.sin(i * 0.72 + id * 0.19) * pathWiggle;
+      const seg = new THREE.Mesh(new THREE.PlaneGeometry(5.2 + r() * 1.5, 12), dirtMat);
+      seg.rotation.x = -Math.PI / 2;
+      seg.rotation.z = Math.sin(i * 0.5 + id) * 0.035;
+      seg.position.set(x, 0.022, z);
+      this.scene.add(seg);
+    }
+
+    // Mature trees: layered crowns instead of the single-cone look.
+    for (let i = 0; i < treeDensity; i++) {
+      const side = i % 2 ? 1 : -1;
+      const x = side * (8.5 + r() * 34);
+      const z = 22 - r() * 116;
+      const g = new THREE.Group();
+      const h = 2.6 + r() * 2.8;
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.28, h, 7), trunkMat);
+      trunk.position.y = h / 2;
+      const crown = new THREE.Group();
+      const lobes = 3 + Math.floor(r() * 3);
+      for (let j = 0; j < lobes; j++) {
+        const leaf = new THREE.Mesh(new THREE.SphereGeometry((0.9 + r() * 0.65) * canopy, 9, 7), leafMat);
+        leaf.position.set((r() - 0.5) * 1.5, h + 0.25 + r() * 1.1, (r() - 0.5) * 1.4);
+        crown.add(leaf);
+      }
+      g.add(trunk, crown);
+      g.rotation.y = r() * Math.PI * 2;
+      g.position.set(x, 0, z);
+      g.scale.y = 0.92 + r() * 0.35;
+      this.scene.add(g);
+      this.addCollider(x, z, 0.75);
+    }
+
+    // Low shrubs/bushes make the edges feel organic.
+    for (let i = 0; i < bushDensity; i++) {
+      const side = i % 2 ? 1 : -1;
+      const x = side * (7 + r() * 35);
+      const z = 20 - r() * 112;
+      const bush = new THREE.Mesh(new THREE.SphereGeometry(0.75 + r() * 0.7, 9, 7), leafMat);
+      bush.scale.y = 0.55 + r() * 0.25;
+      bush.position.set(x, 0.45, z);
+      this.scene.add(bush);
+    }
+
+    // Small flower clusters, with a unique density/layout in every world.
+    for (let i = 0; i < flowerDensity; i++) {
+      const x = (r() - 0.5) * 72;
+      const z = 18 - r() * 112;
+      const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.025, 0.28, 5), trunkMat);
+      const bloom = new THREE.Mesh(new THREE.SphereGeometry(0.075 + r() * 0.05, 6, 5), flowerMat);
+      const g = new THREE.Group();
+      stem.position.y = 0.14; bloom.position.y = 0.31; g.add(stem, bloom);
+      g.position.set(x, 0, z);
+      this.scene.add(g);
+    }
+
+    // Distant rolling hills reinforce the wide green landscape reference.
+    const hillMat = new THREE.MeshLambertMaterial({ color: p[1] });
+    for (let i = 0; i < hillCount; i++) {
+      const h = 7 + r() * 10;
+      const radius = 9 + r() * 8;
+      const hill = new THREE.Mesh(new THREE.SphereGeometry(1, 12, 8), hillMat);
+      hill.scale.set(radius, h, radius * 0.55);
+      hill.position.set(-48 + r() * 96, h * 0.45 - 1, -92 - r() * 35);
+      this.scene.add(hill);
+    }
+
+    // Water/pond variants: every 4th world gets a different natural water feature.
+    if (id % 4 === 0) {
+      const waterMat = new THREE.MeshPhongMaterial({ color: 0x5da9c8, transparent: true, opacity: 0.72, shininess: 70 });
+      const water = new THREE.Mesh(new THREE.CircleGeometry(4.5 + r() * 3, 24), waterMat);
+      water.rotation.x = -Math.PI / 2;
+      water.position.set((r() - 0.5) * 28, 0.035, -18 - r() * 62);
+      this.scene.add(water);
+    }
+
+    // World-specific atmospheric tint while preserving the bright readable look.
+    if (id % 5 === 0) {
+      this.scene.fog = new THREE.Fog(this.theme.fog || this.theme.sky || 0x87b8e0, 42, 155);
+    }
+  }
 
   // Extra visual dressing makes every world feel populated and intentionally designed.
   // It is deterministic per world so layouts stay stable between reloads.
@@ -411,14 +547,14 @@ class World {
     // Rocks along path
     const rockMat = new THREE.MeshLambertMaterial({ color: 0x7a7a6a });
     for (let i = 0; i < 18; i++) {
-      const s = 0.4 + Math.random() * 0.8;
+      const s = 0.4 + this._rand() * 0.8;
       const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(s, 0), rockMat);
       rock.position.set(
-        (Math.random() - 0.5) * 10,
+        (this._rand() - 0.5) * 10,
         s * 0.4,
-        5 - i * 5 + (Math.random() - 0.5) * 3
+        5 - i * 5 + (this._rand() - 0.5) * 3
       );
-      rock.rotation.set(Math.random(), Math.random(), Math.random());
+      rock.rotation.set(this._rand(), this._rand(), this._rand());
       rock.castShadow = true;
       this.scene.add(rock);
       this.addCollider(rock.position.x, rock.position.z, s * 0.9);
@@ -436,8 +572,8 @@ class World {
       const leaves = new THREE.Mesh(new THREE.ConeGeometry(1.4, 2.5, 7), leafMat);
       leaves.position.y = 3.0;
       group.add(leaves);
-      const x = (Math.random() > 0.5 ? 1 : -1) * (12 + Math.random() * 25);
-      const z = 20 - Math.random() * 80;
+      const x = (this._rand() > 0.5 ? 1 : -1) * (12 + this._rand() * 25);
+      const z = 20 - this._rand() * 80;
       group.position.set(x, 0, z);
       trunk.castShadow = true;
       leaves.castShadow = true;
@@ -448,7 +584,7 @@ class World {
     // Distant mountains
     const mtMat = new THREE.MeshLambertMaterial({ color: 0x6a7a6a });
     for (let i = 0; i < 8; i++) {
-      const mt = new THREE.Mesh(new THREE.ConeGeometry(8 + Math.random() * 6, 12 + Math.random() * 8, 5), mtMat);
+      const mt = new THREE.Mesh(new THREE.ConeGeometry(8 + this._rand() * 6, 12 + this._rand() * 8, 5), mtMat);
       mt.position.set(-40 + i * 12, 4, -95);
       this.scene.add(mt);
     }

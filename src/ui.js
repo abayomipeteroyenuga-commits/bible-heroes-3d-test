@@ -31,6 +31,7 @@ const UI = {
     this.elements = {
       loading: document.getElementById('loading-screen'),
       mainMenu: document.getElementById('main-menu'),
+      character: document.getElementById('character-screen'),
       intro: document.getElementById('intro-screen'),
       game: document.getElementById('game-container'),
       pause: document.getElementById('pause-menu'),
@@ -65,7 +66,7 @@ const UI = {
 
   show(screen) {
     const all = [
-      'loading', 'mainMenu', 'intro', 'game', 'pause', 'victory',
+      'loading', 'mainMenu', 'character', 'intro', 'game', 'pause', 'victory',
       'howto', 'settings', 'map', 'achievements', 'rewards', 'credits', 'shop', 'confirmReset', 'confirmQuit'
     ];
     all.forEach(s => {
@@ -128,7 +129,7 @@ const UI = {
     const play = document.getElementById('btn-play');
     if (play && window.SaveSystem) {
       const data = SaveSystem.load();
-      const maxW = SaveSystem.MAX_LEVEL || 20;
+      const maxW = SaveSystem.MAX_LEVEL || 40;
       const done = (data.completedLevels || []).length >= maxW;
       const next = SaveSystem.getContinueLevel();
       play.textContent = done ? '🗺️ ADVENTURE MAP' : ('▶️ PLAY WORLD ' + next);
