@@ -56,7 +56,7 @@ const Game = {
         fn();
       });
     };
-    click('btn-play', () => { this.startWorld(1); });
+    click('btn-play', () => { this.startWorld(1, { forceFreshStart: true }); });
     click('btn-next-world', () => this.continueNextWorld());
     click('btn-map', () => { this.populateMap(); UI.show('map'); });
     click('btn-howto', () => UI.show('howto'));
@@ -251,14 +251,23 @@ const Game = {
     this.startWorld(next);
   },
 
-  startWorld(id) {
+  startWorld(id, options) {
+    options = options || {};
     const n = parseInt(id, 10) || 1;
-    if (n < 1 || n > (SaveSystem.MAX_LEVEL || 40)) return;
+    const max = SaveSystem.MAX_LEVEL || 40;
+    if (n < 1 || n > max) return;
     if (!SaveSystem.isUnlocked(n)) {
       if (window.UI) UI.showMessage('This world is locked. Complete earlier worlds first.', 2400);
       return;
     }
+    // Always establish the requested world before building anything. The Play World 1
+    // button is intentionally deterministic and never inherits a stale world/character.
     this.currentWorld = n;
+    this.selectedCharacter = 'david';
+    const save = SaveSystem.load();
+    save.selectedCharacter = 'david';
+    if (options.forceFreshStart && n === 1) save.currentLevel = 1;
+    SaveSystem.save(save);
     if (window.UI) UI.setWorldDisplay(n);
     this.startLevel(n);
   },
@@ -297,10 +306,15 @@ const Game = {
     }
     try {
       this.initThree();
+      if (!this.renderer || !this.scene || !this.camera) throw new Error('3D renderer did not initialize');
     } catch (err) {
       console.error('initThree failed', err);
-      if (window.UI) UI.showMessage('Could not start the 3D world.', 6000);
       this.state = 'menu';
+      const errEl = document.getElementById('boot-error');
+      if (errEl) {
+        errEl.textContent = 'Could not start the 3D world: ' + (err && err.message ? err.message : err);
+        errEl.classList.remove('hidden');
+      }
       UI.show('mainMenu');
       return;
     }
@@ -1247,6 +1261,18 @@ const Game = {
 };
 
 window.Game = Game;
+
+// Never leave the player on a blank page after a late startup/runtime exception.
+window.addEventListener('error', (event) => {
+  const msg = event && event.error && event.error.message ? event.error.message : (event && event.message ? event.message : 'Unknown error');
+  console.error('Global game error:', event && event.error ? event.error : msg);
+  if (Game.state === 'playing' && !Game.player) {
+    Game.state = 'menu';
+    const el = document.getElementById('boot-error');
+    if (el) { el.textContent = 'Game startup error: ' + msg; el.classList.remove('hidden'); }
+    if (window.UI) UI.show('mainMenu');
+  }
+});
 
 window.addEventListener('keydown', (e) => {
   if (e.key && e.key.toLowerCase() === 'b' && Game.state === 'playing') {

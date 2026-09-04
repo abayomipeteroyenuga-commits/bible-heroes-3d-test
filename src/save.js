@@ -160,7 +160,6 @@ const SaveSystem = {
       const raw = localStorage.getItem(this.KEY);
       if (!raw) return this.defaultData();
       const data = this.normalize(JSON.parse(raw));
-      this.save(data);
       return data;
     } catch (e) {
       return this.defaultData();

@@ -108,7 +108,7 @@ const UI = {
   },
 
   getWorldInfo(worldId) {
-    const maxW = (window.SaveSystem && SaveSystem.MAX_LEVEL) || (window.LEVELS && LEVELS.length) || 20;
+    const maxW = (window.SaveSystem && SaveSystem.MAX_LEVEL) || (window.LEVELS && LEVELS.length) || 40;
     const n = Math.max(1, Math.min(maxW, parseInt(worldId, 10) || 1));
     const lv = (window.getLevel && window.getLevel(n)) ||
       (window.LEVELS && window.LEVELS[n - 1]) ||
