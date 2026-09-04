@@ -31,7 +31,6 @@ const UI = {
     this.elements = {
       loading: document.getElementById('loading-screen'),
       mainMenu: document.getElementById('main-menu'),
-      character: document.getElementById('character-screen'),
       intro: document.getElementById('intro-screen'),
       game: document.getElementById('game-container'),
       pause: document.getElementById('pause-menu'),

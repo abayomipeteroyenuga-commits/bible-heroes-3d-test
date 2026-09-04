@@ -110,7 +110,7 @@ const SaveSystem = {
       claimedRewards: { ...((raw && raw.claimedRewards) || {}) },
       badges: { ...((raw && raw.badges) || {}) }
     };
-    data.selectedCharacter = data.selectedCharacter === 'kelly' ? 'kelly' : 'david';
+    data.selectedCharacter = 'david';
     data.gems = Math.max(0, parseInt(data.gems, 10) || 0);
     data.totalXP = Math.max(0, parseInt(data.totalXP, 10) || 0);
 

@@ -30,41 +30,12 @@
       </div>
       <div class="menu-buttons">
         <button id="btn-play" class="menu-btn primary">▶️ PLAY WORLD 1</button>
-        <button id="btn-characters" class="menu-btn">🧑‍🤝‍🧑 CHOOSE HERO</button>
         <button id="btn-map" class="menu-btn">🗺️ ADVENTURE MAP</button>
         <button id="btn-howto" class="menu-btn">📖 HOW TO PLAY</button>
         <button id="btn-achievements" class="menu-btn">🏅 ACHIEVEMENTS</button>
         <button id="btn-rewards" class="menu-btn">💎 REWARDS</button>
         <button id="btn-shop" class="menu-btn">🛒 SHOP</button>
         <button id="btn-settings" class="menu-btn">⚙️ SETTINGS</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Character Selection -->
-  <div id="character-screen" class="screen hidden">
-    <div class="character-select-container">
-      <div class="character-select-head">
-        <p class="character-kicker">BIBLE HEROES ADVENTURE</p>
-        <h1>CHOOSE YOUR HERO</h1>
-        <p>Select who you want to play as. Your choice is saved automatically. Both heroes are real 3D playable characters.</p>
-      </div>
-      <div class="character-grid">
-        <button class="character-card selected" data-character="david" type="button">
-          <div class="character-portrait"><canvas class="character-preview" data-preview-character="david" aria-label="3D David preview"></canvas></div>
-          <div class="character-info"><h2>DAVID</h2><span>THE BRAVE SHEPHERD</span><p>Fast, faithful and ready for the adventure.</p></div>
-          <div class="character-check">✓</div>
-        </button>
-        <button class="character-card" data-character="kelly" type="button">
-          <div class="character-portrait"><canvas class="character-preview" data-preview-character="kelly" aria-label="3D Kelly preview"></canvas></div>
-          <div class="character-info"><h2>KELLY</h2><span>THE BOLD EXPLORER</span><p>Confident, energetic and ready to explore.</p></div>
-          <div class="character-check">✓</div>
-        </button>
-      </div>
-      <div class="character-selected-label" id="character-selected-label">SELECTED: DAVID</div>
-      <div class="character-actions">
-        <button id="btn-character-back" class="menu-btn">← BACK</button>
-        <button id="btn-character-confirm" class="menu-btn primary">▶️ CONTINUE AS DAVID</button>
       </div>
     </div>
   </div>
@@ -416,7 +387,7 @@
       <div class="menu-container wide">
         <img src="assets/ui/pastor-abayomi-bible-stories-logo.png" alt="Pastor Abayomi Bible Stories" class="brand-logo brand-logo-sm" onerror="this.onerror=null;this.src='assets/ui/logo.svg'" />
         <h2>🗺️ ADVENTURE MAP</h2>
-        <p class="map-subtitle">David &amp; Kelly vs the Guardians and Goliath — choose a world</p>
+        <p class="map-subtitle">David vs the Guardians and Goliath — choose a world</p>
         <div class="level-grid" id="level-list"></div>
         <button id="btn-map-back" class="menu-btn">BACK</button>
       </div>

@@ -1,10 +1,7 @@
-# Character Audit — David + Kelly
+# Character Audit — David Only
 
-- Hero selection now renders transparent-background procedural 3D previews.
-- Reference JPGs are no longer displayed in the chooser.
-- David and Kelly are both playable 3D Humanoid characters.
-- Selection is normalized to `david` or `kelly` and persisted immediately.
-- PLAY WORLD 1 always launches World 1, regardless of the saved continue level.
-- CONTINUE / CHOOSE HERO launches the selected unlocked continue world.
-- HUD identity follows the selected hero.
-- New/fresh saves default to David.
+- David is the only playable hero.
+- The hero chooser and Kelly implementation were removed.
+- Legacy saves are normalized to David.
+- David is created directly when World 1 or any unlocked world starts.
+- David uses the upgraded modern 3D outfit and existing combat/animation rig.

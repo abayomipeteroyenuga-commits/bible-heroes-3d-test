@@ -42,3 +42,9 @@ Guardian/Colossus + Goliath 40-world build.
 
 ## Note
 A full browser/WebGL run was attempted with headless Chromium, but the environment's Chromium process did not terminate cleanly in headless mode, so runtime validation was supplemented with static, VM-based data checks and syntax/DOM/asset audits. No unresolved source-level blocker was found after the fixes above.
+
+## Final character simplification
+- Kelly and the hero-selection screen were removed after final QA.
+- David is now the sole playable character.
+- Legacy Kelly selections are migrated to David on load/start.
+- PLAY WORLD 1 starts directly with David.

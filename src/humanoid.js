@@ -515,7 +515,13 @@ Humanoid.prototype.addModernDavidOutfit = function (opt, leather, accent, shirt,
     collar.rotation.x = -0.12;
     this.chest.add(collar);
   });
-
+  // Modern jacket detailing: zipper and hem. No chest badge.
+  const zip = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.27, 0.018), jacketDark);
+  zip.position.set(0, 0.075, 0.236);
+  this.chest.add(zip);
+  const hem = new THREE.Mesh(new THREE.BoxGeometry(0.27, 0.035, 0.08), jacketDark);
+  hem.position.set(0, -0.105, 0.19);
+  this.chest.add(hem);
   // Brown sleeves with visible skin forearms.
   [this.armL, this.armR].forEach(a => {
     a.upper.traverse(o => { if (o.isMesh) o.material = jacket; });
@@ -529,10 +535,29 @@ Humanoid.prototype.addModernDavidOutfit = function (opt, leather, accent, shirt,
   [this.shinL, this.shinR].forEach(sh => {
     sh.traverse(o => { if (o.isMesh) o.material = skinMaterialFrom(opt); });
   });
+  // Shorts waistband and utility pockets give David a finished everyday outfit.
+  const waist = new THREE.Mesh(new THREE.BoxGeometry(0.31, 0.035, 0.22), shorts);
+  waist.position.set(0, 0.13, 0.02);
+  this.hips.add(waist);
+  const pocketMat = new THREE.MeshStandardMaterial({ color: 0x34425a, roughness: 0.9 });
+  [-1,1].forEach(side => {
+    const pocket = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.085, 0.018), pocketMat);
+    pocket.position.set(side * 0.095, 0.015, 0.12);
+    pocket.rotation.z = side * 0.08;
+    this.hips.add(pocket);
+  });
 
   // Chunky white/gray sneakers, dark sole and clearly readable laces.
   [this.footL, this.footR].forEach(foot => {
     foot.traverse(o => { if (o.isMesh) o.material = sneaker; });
+    // High-top shoe collar rises slightly onto the lower leg so the footwear reads
+    // clearly as a shoe/ankle boot rather than a detached foot piece.
+    const ankle = new THREE.Mesh(new THREE.BoxGeometry(0.108, 0.085, 0.095), sneaker);
+    ankle.position.set(0, 0.055, -0.005);
+    foot.add(ankle);
+    const ankleBand = new THREE.Mesh(new THREE.BoxGeometry(0.112, 0.018, 0.098), sole);
+    ankleBand.position.set(0, 0.095, -0.005);
+    foot.add(ankleBand);
     const soleMesh = new THREE.Mesh(new THREE.BoxGeometry(0.125, 0.025, 0.225), sole);
     soleMesh.position.set(0, -0.035, 0.05);
     foot.add(soleMesh);
@@ -605,109 +630,6 @@ function skinMaterialFrom(opt) {
   return new THREE.MeshStandardMaterial({ color: opt.skin || 0xf0bd98, roughness: 0.58, metalness: 0.03 });
 }
 
-
-Humanoid.prototype.addModernKellyOutfit = function () {
-  // Kelly: a polished, friendly modern cartoon-girl silhouette based on the
-  // supplied reference. Keep the shared humanoid rig for identical gameplay.
-  const jacket = new THREE.MeshStandardMaterial({ color: 0x8b67ad, roughness: 0.76 });
-  const jacketDark = new THREE.MeshStandardMaterial({ color: 0x65477f, roughness: 0.82 });
-  const top = new THREE.MeshStandardMaterial({ color: 0xfffbf8, roughness: 0.72 });
-  const shorts = new THREE.MeshStandardMaterial({ color: 0xb59bcf, roughness: 0.82 });
-  const denimEdge = new THREE.MeshStandardMaterial({ color: 0x8e75aa, roughness: 0.86 });
-  const sock = new THREE.MeshStandardMaterial({ color: 0xc8b7dc, roughness: 0.82 });
-  const sneaker = new THREE.MeshStandardMaterial({ color: 0x8b78a8, roughness: 0.72 });
-  const sole = new THREE.MeshStandardMaterial({ color: 0x4f425f, roughness: 0.9 });
-  const lace = new THREE.MeshStandardMaterial({ color: 0xf7f2fb, roughness: 0.65 });
-  const hairMat = new THREE.MeshStandardMaterial({ color: 0x8b67b4, roughness: 0.78 });
-
-  // Remove/neutralize the generic shirt/shorts/foot colors from the base rig.
-  this.chest.traverse(o => { if (o.isMesh) o.material = top; });
-  this.chest.children.forEach(o => {
-    if (o.geometry && o.geometry.type === 'SphereGeometry') o.visible = false;
-  });
-
-  // Fitted white top.
-  const tank = new THREE.Mesh(new THREE.SphereGeometry(0.205, 18, 12), top);
-  tank.scale.set(0.90, 1.10, 0.60);
-  tank.position.set(0, 0.075, 0.18);
-  this.chest.add(tank);
-
-  // Open lavender jacket panels and collar.
-  const lp = new THREE.Mesh(new THREE.BoxGeometry(0.105, 0.36, 0.075), jacket);
-  lp.position.set(-0.115, 0.085, 0.19);
-  lp.rotation.z = -0.05;
-  this.chest.add(lp);
-  const rp = lp.clone(); rp.position.x = 0.115; rp.rotation.z = 0.05; this.chest.add(rp);
-  [-1, 1].forEach(side => {
-    const collar = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.15, 0.04), jacketDark);
-    collar.position.set(side * 0.074, 0.245, 0.205);
-    collar.rotation.z = side * 0.24;
-    collar.rotation.x = -0.12;
-    this.chest.add(collar);
-  });
-
-  // Jacket sleeves, exposed forearms/hands.
-  [this.armL, this.armR].forEach(a => {
-    a.upper.traverse(o => { if (o.isMesh) o.material = jacket; });
-    a.elbow.traverse(o => { if (o.isMesh) o.material = skinMaterialFrom(this.opt); });
-  });
-
-  // Lavender denim-style shorts, then long lavender leggings.
-  [this.thighL, this.thighR].forEach(th => {
-    th.traverse(o => { if (o.isMesh) o.material = shorts; });
-    const cuff = new THREE.Mesh(new THREE.TorusGeometry(0.066, 0.008, 6, 12), denimEdge);
-    cuff.rotation.x = Math.PI / 2;
-    cuff.position.y = -0.355;
-    th.add(cuff);
-  });
-  [this.shinL, this.shinR].forEach(sh => sh.traverse(o => { if (o.isMesh) o.material = sock; }));
-
-  // Chunky lavender high-top sneakers with light laces.
-  [this.footL, this.footR].forEach(foot => {
-    foot.traverse(o => { if (o.isMesh) o.material = sneaker; });
-    const outsole = new THREE.Mesh(new THREE.BoxGeometry(0.125, 0.02, 0.215), sole);
-    outsole.position.set(0, -0.034, 0.045); foot.add(outsole);
-    for (let i = 0; i < 3; i++) {
-      const l = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.012, 0.012), lace);
-      l.position.set(0, 0.02 + i * 0.018, 0.045 + i * 0.012);
-      l.rotation.y = (i % 2 ? 0.08 : -0.08); foot.add(l);
-    }
-  });
-
-  // Long curly/wavy purple hair: layered curls around the back/sides and crown.
-  const hairGroup = new THREE.Group();
-  hairGroup.name = 'KellyCurlyHair';
-  this.head.add(hairGroup);
-  const curl = (x, y, z, sx, sy, sz, rz) => {
-    const c = new THREE.Mesh(new THREE.SphereGeometry(0.052, 14, 10), hairMat);
-    c.position.set(x, y, z); c.scale.set(sx, sy, sz); c.rotation.z = rz || 0;
-    hairGroup.add(c);
-  };
-  for (let side of [-1, 1]) {
-    for (let i = 0; i < 6; i++) {
-      curl(side * (0.105 + (i % 2) * 0.018), 0.04 - i * 0.038, -0.045 + (i % 3) * 0.018,
-        0.85, 1.15, 0.78, side * (0.12 + i * 0.03));
-    }
-    for (let i = 0; i < 4; i++) {
-      curl(side * (0.075 + i * 0.022), 0.115 + i * 0.018, -0.01,
-        0.9, 0.95, 0.72, side * 0.12);
-    }
-  }
-  for (let i = 0; i < 5; i++) {
-    curl(-0.10 + i * 0.05, 0.115 + (i % 2) * 0.022, 0.015,
-      0.9, 0.8, 0.70, (i - 2) * 0.10);
-  }
-
-  // Soft, expressive feminine facial proportions.
-  this.eyeL.scale.set(1.55, 1.5, 0.55);
-  this.eyeR.scale.set(1.55, 1.5, 0.55);
-  const browMat = new THREE.MeshLambertMaterial({ color: 0x684a7d });
-  this.browL.material = browMat; this.browR.material = browMat;
-  this.smile.scale.set(1.8, 0.65, 0.5);
-
-  // Slight height increase, matching the user's request for a little height.
-  this.root.scale.set(1.08, 1.08, 1.08);
-};
 
 Humanoid.prototype.addDavidFootwear = function (foot, style, boot, leather, accent) {
   const s = ((Number(style)-1)%8+8)%8+1;
@@ -1085,15 +1007,8 @@ function mesh(geo, mat, x, y, z) {
 function parentSafe(parent, child) {
   if (parent && child) parent.add(child);
 }
-window.getPlayableCharacterOptions = function (id) {
-  return id === 'kelly' ? {
-    skin: 0xf1c2aa, skinDark: 0xd79b82, shirt: 0xfff9f5, pants: 0xb8a5d8,
-    boot: 0x8d78ad, hair: 0x8b67b4, isDavid: true, modernKelly: true,
-    leather: 0x7b5d9d, accent: 0xd6b8ed, pads: false, tunic: false,
-    belt: false, sash: null, cloak: null, shoeStyle: 1, pouchSide: 'right',
-    pouch: 0x6f587f, wrap: 0x9a7ab0, sling: true, slingStyle: 1,
-    staff: false, helmet: false, eye: 0x3a2418
-  } : {
+window.getPlayableCharacterOptions = function () {
+  return {
     skin: 0xf0bd98, skinDark: 0xd49a79, shirt: 0x3d6579, pants: 0x26334a, boot: 0xdfe3e7,
     hair: 0x2a1710, isDavid: true, modernDavid: true, leather: 0x754522, accent: 0xd7b56d,
     pads: false, tunic: false, belt: false, sash: null, cloak: null, shoeStyle: 1,

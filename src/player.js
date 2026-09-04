@@ -3,7 +3,7 @@ class Player {
   constructor(scene, camera, characterId) {
     this.scene = scene;
     this.camera = camera;
-    this.characterId = characterId === 'kelly' ? 'kelly' : 'david';
+    this.characterId = 'david';
     this.group = new THREE.Group();
     this.velocity = new THREE.Vector3();
     this.direction = new THREE.Vector3();
@@ -71,21 +71,13 @@ class Player {
   buildModel() {
     // Character identity is selected before a world starts. Both heroes share the
     // same combat/animation rig so switching characters never breaks gameplay.
-    const opt = (window.getPlayableCharacterOptions && window.getPlayableCharacterOptions(this.characterId))
-      || (this.characterId === 'kelly' ? {
-        skin: 0xf1c2aa, skinDark: 0xd79b82, shirt: 0xfff9f5, pants: 0xb8a5d8,
-        boot: 0x8d78ad, hair: 0x8b67b4, isDavid: true, modernKelly: true,
-        leather: 0x7b5d9d, accent: 0xd6b8ed, pads: false, tunic: false,
-        belt: false, sash: null, cloak: null, shoeStyle: 1, pouchSide: 'right',
-        pouch: 0x6f587f, wrap: 0x9a7ab0, sling: true, slingStyle: 1,
-        staff: false, helmet: false, eye: 0x3a2418
-      } : {
+    const opt = (window.getPlayableCharacterOptions && window.getPlayableCharacterOptions('david')) || {
         skin: 0xf0bd98, skinDark: 0xd49a79, shirt: 0x3d6579, pants: 0x26334a, boot: 0xdfe3e7,
         hair: 0x2a1710, isDavid: true, modernDavid: true, leather: 0x754522, accent: 0xd7b56d,
         pads: false, tunic: false, belt: false, sash: null, cloak: null, shoeStyle: 1,
         pouchSide: 'right', pouch: 0x6f4728, wrap: 0x9a6a3c, sling: true, slingStyle: 1,
         staff: false, helmet: false, eye: 0x3a2418
-      });
+      };
     this.humanoid = new Humanoid(this.group, opt);
     this.root = this.humanoid.root;
     this.torsoGroup = this.humanoid.torsoGroup;
@@ -101,7 +93,6 @@ class Player {
     this.smileMesh = this.humanoid.smile;
     this.eyeL = this.humanoid.eyeL;
     this.eyeR = this.humanoid.eyeR;
-    if (this.characterId === 'kelly' && this.humanoid.addModernKellyOutfit) this.humanoid.addModernKellyOutfit();
 
     this.shieldMesh = new THREE.Mesh(
       new THREE.SphereGeometry(1.3, 16, 12),
